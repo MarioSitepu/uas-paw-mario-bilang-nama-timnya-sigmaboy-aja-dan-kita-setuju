@@ -9,6 +9,7 @@ def includeme(config):
     # ==================== AUTH ROUTES ====================
     config.add_route('auth_register', '/api/auth/register')
     config.add_route('auth_login', '/api/auth/login')
+    config.add_route('auth_google', '/api/auth/google')
     config.add_route('auth_logout', '/api/auth/logout')
     config.add_route('auth_me', '/api/auth/me')
     

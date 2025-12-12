@@ -5,6 +5,8 @@ from ..models import User
 import json
 import secrets
 import datetime
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
 
 # Simple token storage (in production, use Redis or database)
 # Format: {token: {'user_id': id, 'expires': datetime}}
@@ -157,6 +159,66 @@ def login(request):
             'token': token,
             'user': user.to_dict()
         }
+    finally:
+        session.close()
+
+
+@view_config(route_name='auth_google', request_method='POST', renderer='json')
+def google_login(request):
+    """Handle Google Login"""
+    session = get_db_session(request)
+    try:
+        data = request.json_body
+        token = data.get('token')
+        
+        if not token:
+            return {'error': 'Token is required'}, 400
+
+        try:
+            # Verify the token
+            # Note: client_id is optional but recommended if you have multiple clients
+            id_info = id_token.verify_oauth2_token(token, google_requests.Request())
+            
+            email = id_info.get('email')
+            name = id_info.get('name')
+            
+            if not email:
+                return {'error': 'Email not found in Google credentials'}, 400
+
+            # Check if user exists
+            user = session.query(User).filter(User.email == email).first()
+            
+            if not user:
+                # Create new user automatically
+                # Generate random password since user logs in via Google
+                random_pass = secrets.token_urlsafe(16)
+                
+                user = User(
+                    name=name,
+                    email=email,
+                    role='patient' # Default role for Google Login
+                )
+                user.set_password(random_pass)
+                
+                session.add(user)
+                session.flush()
+                session.commit()
+            
+            # Generate app token
+            app_token = generate_token(user.id)
+            
+            return {
+                'message': 'Login successful',
+                'token': app_token,
+                'user': user.to_dict()
+            }
+            
+        except ValueError as e:
+            return {'error': 'Invalid Google token'}, 400
+            
+    except Exception as e:
+        session.rollback()
+        return {'error': str(e)}, 500
     finally:
         session.close()
 

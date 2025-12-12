@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { GoogleLogin } from '@react-oauth/google';
 
 const Login: React.FC = () => {
     const [email, setEmail] = useState('');
@@ -8,7 +9,7 @@ const Login: React.FC = () => {
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const { login } = useAuth();
+    const { login, googleLogin } = useAuth();
     const navigate = useNavigate();
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -23,6 +24,18 @@ const Login: React.FC = () => {
             setError(err.message || 'Failed to login');
         } finally {
             setIsSubmitting(false);
+        }
+    };
+
+    const handleGoogleSuccess = async (credentialResponse: any) => {
+        try {
+            if (credentialResponse.credential) {
+                await googleLogin(credentialResponse.credential);
+                navigate('/');
+            }
+        } catch (err: any) {
+            console.error(err);
+            setError(err.message || 'Failed to login with Google');
         }
     };
 
@@ -94,6 +107,26 @@ const Login: React.FC = () => {
                             {isSubmitting ? 'Signing in...' : 'Sign in'}
                         </button>
                     </div>
+
+                    <div className="relative my-6">
+                        <div className="absolute inset-0 flex items-center">
+                            <div className="w-full border-t border-gray-300"></div>
+                        </div>
+                        <div className="relative flex justify-center text-sm">
+                            <span className="px-2 bg-white text-gray-500">Or continue with</span>
+                        </div>
+                    </div>
+
+                    <div className="flex justify-center">
+                        <GoogleLogin
+                            onSuccess={handleGoogleSuccess}
+                            onError={() => {
+                                setError('Google Login Failed');
+                            }}
+                            useOneTap
+                        />
+                    </div>
+
                 </form>
             </div>
         </div>
