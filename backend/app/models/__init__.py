@@ -6,5 +6,8 @@ class Base(DeclarativeBase):
 
 # Import all models here
 from .user import User
+from .doctor import Doctor
+from .appointment import Appointment
+from .medical_record import MedicalRecord
 
-__all__ = ['Base', 'User']
+__all__ = ['Base', 'User', 'Doctor', 'Appointment', 'MedicalRecord']
