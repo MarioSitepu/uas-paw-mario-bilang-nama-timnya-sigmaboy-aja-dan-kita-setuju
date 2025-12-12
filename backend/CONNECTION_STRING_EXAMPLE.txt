@@ -1,0 +1,33 @@
+# Contoh Connection String untuk Neon PostgreSQL
+
+## Format Connection String
+postgresql://user:password@host/database?sslmode=require
+
+## Cara Mendapatkan Connection String dari Neon
+
+1. Login ke https://console.neon.tech
+2. Pilih project Anda
+3. Klik pada database
+4. Copy connection string yang tersedia
+5. Paste ke salah satu tempat berikut:
+
+### Opsi 1: Environment Variable (Recommended)
+Buat file .env di folder backend/:
+```
+DATABASE_URL=postgresql://user:password@host/database?sslmode=require
+```
+
+### Opsi 2: Langsung di development.ini
+Edit file backend/development.ini, ganti baris:
+```
+sqlalchemy.url = postgresql://user:password@host/database?sslmode=require
+```
+
+## Contoh Connection String (Ganti dengan yang asli dari Neon)
+postgresql://neondb_owner:your_password@ep-xxx-xxx.region.aws.neon.tech/neondb?sslmode=require
+
+## Catatan Penting
+- Jangan commit connection string yang berisi password ke git
+- File .env sudah di-ignore oleh .gitignore
+- Pastikan connection string dari Neon sudah include ?sslmode=require
+
