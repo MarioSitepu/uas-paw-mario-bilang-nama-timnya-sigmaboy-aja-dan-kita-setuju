@@ -7,5 +7,4 @@ def includeme(config):
     config.add_route('api_users', '/api/users')
     config.add_route('api_user', '/api/users/{id}')
     
-    # Add CORS support
-    config.add_cors_preflight_handler()
+    # CORS is handled via tween in __init__.py
