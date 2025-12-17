@@ -15,6 +15,8 @@ setup(
         'zope.sqlalchemy==3.1',
         'psycopg[binary]>=3.1.0',
         'python-dotenv>=1.0.0',
+        'google-auth>=2.0.0',
+        'requests>=2.31.0',
     ],
     entry_points={
         'paste.app_factory': [

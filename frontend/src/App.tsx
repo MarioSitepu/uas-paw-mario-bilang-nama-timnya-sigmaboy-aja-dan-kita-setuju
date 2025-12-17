@@ -33,9 +33,15 @@ import { MedicalRecords } from './pages/doctor/MedicalRecords';
 
 import './index.css';
 
-const GOOGLE_CLIENT_ID = '1046818974387-g50q8vuup1bip7pnh8acctl7kdljtcci.apps.googleusercontent.com';
+// Get Google Client ID from environment variable
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
 function App() {
+  // Warn if Google Client ID is not set
+  if (!GOOGLE_CLIENT_ID) {
+    console.warn('VITE_GOOGLE_CLIENT_ID is not set. Google OAuth will not work.');
+  }
+
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
       <Router>
