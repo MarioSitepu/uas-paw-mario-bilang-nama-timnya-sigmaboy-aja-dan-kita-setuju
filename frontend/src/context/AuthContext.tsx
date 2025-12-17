@@ -1,19 +1,7 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { authAPI } from '../services/api';
-
-interface User {
-    id: number;
-    name: string;
-    email: string;
-    role: 'patient' | 'doctor' | 'admin';
-    doctor_profile?: {
-        id: number;
-        specialization: string;
-        phone?: string;
-        bio?: string;
-        schedule?: Record<string, string[]>;
-    };
-}
+import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { authService } from '../services/mock/auth.service';
+import type { User } from '../types';
+import { UserRole } from '../types';
 
 interface AuthContextType {
     user: User | null;
@@ -31,8 +19,7 @@ interface RegisterData {
     name: string;
     email: string;
     password: string;
-    role?: string;
-    specialization?: string;
+    role: UserRole;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -44,25 +31,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     useEffect(() => {
         // Check for existing session
-        const storedToken = localStorage.getItem('token');
-        const storedUser = localStorage.getItem('user');
-
-        if (storedToken && storedUser) {
-            setToken(storedToken);
-            setUser(JSON.parse(storedUser));
-
-            // Verify token is still valid
-            authAPI.getMe()
-                .then((response) => {
-                    if (response.data.user) {
-                        setUser(response.data.user);
-                        localStorage.setItem('user', JSON.stringify(response.data.user));
+        const storedToken = authService.getToken();
+        
+        if (storedToken) {
+            authService.getMe()
+                .then((user) => {
+                    if (user) {
+                        setToken(storedToken);
+                        setUser(user);
+                    } else {
+                        setToken(null);
+                        setUser(null);
                     }
                 })
                 .catch(() => {
-                    // Token expired or invalid
-                    localStorage.removeItem('token');
-                    localStorage.removeItem('user');
                     setToken(null);
                     setUser(null);
                 })
@@ -75,56 +57,30 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }, []);
 
     const login = async (email: string, password: string) => {
-        const response = await authAPI.login({ email, password });
-
-        if (response.data.error) {
-            throw new Error(response.data.error);
-        }
-
-        const { token: newToken, user: newUser } = response.data;
-
+        const { token: newToken, user: newUser } = await authService.login(email, password);
         setToken(newToken);
         setUser(newUser);
-        localStorage.setItem('token', newToken);
-        localStorage.setItem('user', JSON.stringify(newUser));
     };
 
-    const googleLogin = async (token: string) => {
-        const response = await authAPI.googleLogin(token);
-
-        if (response.data.error) {
-            throw new Error(response.data.error);
-        }
-
-        const { token: newToken, user: newUser } = response.data;
-
+    const googleLogin = async (_credential: string) => {
+        // For mock, we'll just create a dummy user from Google
+        // In real app, verify credential with backend
+        const email = 'google@user.com'; // Extract from credential in real app
+        const { token: newToken, user: newUser } = await authService.login(email, 'google_password');
         setToken(newToken);
         setUser(newUser);
-        localStorage.setItem('token', newToken);
-        localStorage.setItem('user', JSON.stringify(newUser));
     };
 
     const register = async (data: RegisterData) => {
-        const response = await authAPI.register(data);
-
-        if (response.data.error) {
-            throw new Error(response.data.error);
-        }
-
-        const { token: newToken, user: newUser } = response.data;
-
+        const { token: newToken, user: newUser } = await authService.register(data);
         setToken(newToken);
         setUser(newUser);
-        localStorage.setItem('token', newToken);
-        localStorage.setItem('user', JSON.stringify(newUser));
     };
 
-    const logout = () => {
-        authAPI.logout().catch(() => { });
+    const logout = async () => {
+        await authService.logout();
         setToken(null);
         setUser(null);
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
     };
 
     const updateUser = (updatedUser: User) => {

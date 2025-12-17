@@ -1,4 +1,5 @@
-import React, { ReactNode } from 'react';
+import React, { type ReactNode } from 'react';
+import { UserRole } from '../types';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
@@ -42,7 +43,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                                         Dashboard
                                     </NavLink>
 
-                                    {user?.role === 'patient' && (
+                                    {user?.role === UserRole.PATIENT && (
                                         <NavLink
                                             to="/book-appointment"
                                             className={({ isActive }) =>
@@ -53,7 +54,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                                         </NavLink>
                                     )}
 
-                                    {user?.role === 'doctor' && (
+                                    {user?.role === UserRole.DOCTOR && (
                                         <NavLink
                                             to="/my-schedule"
                                             className={({ isActive }) =>
