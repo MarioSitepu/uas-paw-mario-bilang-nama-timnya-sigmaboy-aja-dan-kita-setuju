@@ -1,8 +1,7 @@
-from sqlalchemy.orm import DeclarativeBase, scoped_session, sessionmaker
+from sqlalchemy.orm import scoped_session, sessionmaker, declarative_base
 from sqlalchemy import create_engine
 
-class Base(DeclarativeBase):
-    pass
+Base = declarative_base()
 
 # Import all models here
 from .user import User

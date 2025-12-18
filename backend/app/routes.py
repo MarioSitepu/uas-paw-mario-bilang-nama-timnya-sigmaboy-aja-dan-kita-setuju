@@ -24,10 +24,11 @@ def includeme(config):
     config.add_route('api_specializations', '/api/specializations')
     
     # ==================== APPOINTMENTS ROUTES ====================
-    config.add_route('api_appointments', '/api/appointments')
-    config.add_route('api_appointment', '/api/appointments/{id}')
+    # Static routes MUST come before dynamic {id} route
     config.add_route('api_appointments_today', '/api/appointments/today')
     config.add_route('api_patient_history', '/api/appointments/history')
+    config.add_route('api_appointments', '/api/appointments')
+    config.add_route('api_appointment', '/api/appointments/{id}')
     
     # ==================== MEDICAL RECORDS ROUTES ====================
     config.add_route('api_medical_records', '/api/medical-records')
