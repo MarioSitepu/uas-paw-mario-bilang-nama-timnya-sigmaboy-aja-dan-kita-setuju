@@ -13,29 +13,33 @@ export const Header: React.FC = () => {
   const navItems = [
     { path: '/', label: 'Home' },
     { path: '#about', label: 'About' },
-    { path: '#services', label: 'Services' },
-    { path: '/patient/doctors-list', label: 'Doctors' },
+    { path: '#our-team', label: 'Our Team' },
+    { path: '#pricing', label: 'Pricing' },
     { path: '#testimonials', label: 'Testimonial' },
     { path: '#contact', label: 'Contact' },
   ];
 
   return (
-    <header className="sticky top-0 z-50 bg-white shadow-sm">
+    <header className="sticky top-0 z-50 bg-white shadow-md">
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between py-4">
+        <div className="flex items-center justify-between py-4 md:py-5">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 text-2xl font-bold text-blue-600">
-            <div className="text-3xl">💊</div>
-            <span>MedixWeb</span>
+          <Link to="/" className="flex items-center gap-2 text-xl md:text-2xl font-bold text-blue-600 flex-shrink-0">
+            <div className="text-2xl md:text-3xl">💊</div>
+            <span className="hidden sm:inline">MedixWeb</span>
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-8">
+          <nav className="hidden lg:flex items-center gap-1">
             {navItems.map((item) => (
               <a
                 key={item.label}
                 href={item.path}
-                className={`text-sm font-medium transition-colors hover:text-blue-600 ${isActive(item.path)}`}
+                className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                  isActive(item.path)
+                    ? 'text-blue-600 bg-blue-50'
+                    : 'text-gray-700 hover:text-blue-600 hover:bg-gray-50'
+                }`}
               >
                 {item.label}
               </a>
@@ -43,7 +47,7 @@ export const Header: React.FC = () => {
           </nav>
 
           {/* Desktop CTA Buttons */}
-          <div className="hidden md:flex items-center gap-4">
+          <div className="hidden md:flex items-center gap-3">
             <Link
               to="/auth/login"
               className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors"
@@ -52,9 +56,8 @@ export const Header: React.FC = () => {
             </Link>
             <Link
               to="/patient/book-appointment"
-              className="inline-flex items-center gap-2 px-5 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+              className="px-5 py-2 bg-blue-600 text-white rounded-lg font-medium text-sm hover:bg-blue-700 transition-colors"
             >
-              <span>📅</span>
               Book Appointment
             </Link>
           </div>
@@ -70,12 +73,12 @@ export const Header: React.FC = () => {
 
         {/* Mobile Navigation */}
         {isOpen && (
-          <div className="md:hidden pb-4 space-y-4 border-t">
+          <div className="md:hidden pb-4 space-y-2 border-t">
             {navItems.map((item) => (
               <a
                 key={item.label}
                 href={item.path}
-                className="block py-2 text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors"
+                className="block px-3 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-lg transition-colors"
                 onClick={() => setIsOpen(false)}
               >
                 {item.label}
@@ -84,15 +87,14 @@ export const Header: React.FC = () => {
             <div className="flex flex-col gap-2 pt-4 border-t">
               <Link
                 to="/auth/login"
-                className="px-4 py-2 text-center text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors"
+                className="px-4 py-2 text-center text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors rounded-lg"
               >
                 Sign In
               </Link>
               <Link
                 to="/patient/book-appointment"
-                className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium text-sm hover:bg-blue-700 transition-colors text-center"
               >
-                <span>📅</span>
                 Book Appointment
               </Link>
             </div>

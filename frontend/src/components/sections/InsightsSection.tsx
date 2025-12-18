@@ -33,7 +33,7 @@ export const InsightsSection: React.FC = () => {
     },
     {
       id: 3,
-      name: 'Mental Health Matters',
+      title: 'Mental Health Matters',
       excerpt: 'Breaking stigma and understanding the importance of mental health in overall wellbeing',
       date: 'Dec 8, 2024',
       image: '🧠',
@@ -77,7 +77,7 @@ export const InsightsSection: React.FC = () => {
                 </div>
 
                 <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-blue-600 transition-colors">
-                  {article.title || article.name}
+                  {article.title}
                 </h3>
 
                 <p className="text-gray-600 mb-4 line-clamp-2">{article.excerpt}</p>
