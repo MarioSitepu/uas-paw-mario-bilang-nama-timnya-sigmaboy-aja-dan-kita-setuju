@@ -113,6 +113,55 @@ def create_appointment(request):
         if apt_date < date.today():
             return {'error': 'Tidak dapat membuat appointment untuk tanggal yang sudah lewat'}
         
+        # Validasi jadwal dokter - cek apakah waktu termasuk break time
+        doctor_schedule = doctor.schedule or {}
+        # Python weekday: 0=Monday, 1=Tuesday, ... 6=Sunday
+        # But our schedule uses: monday, tuesday, ... sunday
+        # So we need to convert: weekday 0-6 (Mon-Sun) to day name
+        day_names = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+        day_of_week = day_names[apt_date.weekday()]
+        day_schedule = doctor_schedule.get(day_of_week, {})
+        
+        print(f'🔍 Appointment validation:')
+        print(f'  Date: {apt_date} (weekday={apt_date.weekday()}, day_name={day_of_week})')
+        print(f'  Time: {apt_time}')
+        print(f'  Doctor schedule: {doctor_schedule}')
+        print(f'  Day schedule: {day_schedule}')
+        
+        # Cek apakah dokter tersedia pada hari itu
+        if not day_schedule.get('available', False):
+            return {'error': 'Dokter tidak tersedia pada tanggal yang dipilih'}
+        
+        # Cek apakah waktu berada dalam jam kerja dokter
+        start_time = day_schedule.get('startTime', '')
+        end_time = day_schedule.get('endTime', '')
+        
+        if start_time and end_time:
+            start_hour, start_min = map(int, start_time.split(':'))
+            end_hour, end_min = map(int, end_time.split(':'))
+            apt_hour, apt_min = apt_time.hour, apt_time.minute
+            
+            start_minutes = start_hour * 60 + start_min
+            end_minutes = end_hour * 60 + end_min
+            apt_minutes = apt_hour * 60 + apt_min
+            
+            if apt_minutes < start_minutes or apt_minutes >= end_minutes:
+                return {'error': f'Waktu tidak termasuk jam kerja dokter ({start_time} - {end_time})'}
+            
+            # Cek apakah waktu berada dalam break time
+            break_start = day_schedule.get('breakStart', '')
+            break_end = day_schedule.get('breakEnd', '')
+            
+            if break_start and break_end and len(break_start) > 0 and len(break_end) > 0:
+                break_start_hour, break_start_min = map(int, break_start.split(':'))
+                break_end_hour, break_end_min = map(int, break_end.split(':'))
+                
+                break_start_minutes = break_start_hour * 60 + break_start_min
+                break_end_minutes = break_end_hour * 60 + break_end_min
+                
+                if break_start_minutes <= apt_minutes < break_end_minutes:
+                    return {'error': f'Waktu termasuk dalam break time dokter ({break_start} - {break_end})'}
+        
         # Cek konflik jadwal
         existing = session.query(Appointment).filter(
             Appointment.doctor_id == data['doctor_id'],

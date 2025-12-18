@@ -29,6 +29,7 @@ import { AppointmentDetail } from './pages/patient/AppointmentDetail';
 // Doctor Pages
 import { DoctorDashboard } from './pages/doctor/DoctorDashboard';
 import { Schedule } from './pages/doctor/Schedule';
+import { ScheduleSettings } from './pages/doctor/ScheduleSettings';
 import { DoctorAppointmentDetail } from './pages/doctor/AppointmentDetail';
 import { MedicalRecords } from './pages/doctor/MedicalRecords';
 
@@ -156,6 +157,16 @@ function App() {
                 <RequireRole allowedRoles={[UserRole.DOCTOR]}>
                   <AppLayout>
                     <Schedule />
+                  </AppLayout>
+                </RequireRole>
+              }
+            />
+            <Route
+              path="/app/doctor/schedule-settings"
+              element={
+                <RequireRole allowedRoles={[UserRole.DOCTOR]}>
+                  <AppLayout>
+                    <ScheduleSettings />
                   </AppLayout>
                 </RequireRole>
               }

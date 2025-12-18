@@ -96,11 +96,41 @@ def get_doctor_schedule(request):
         if not doctor:
             return {'error': 'Dokter tidak ditemukan'}
         
+        # If schedule is empty, return default schedule
+        schedule = doctor.schedule or {}
+        
+        # Ensure all days are present with valid structure
+        days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+        for day in days:
+            if day not in schedule:
+                schedule[day] = {
+                    'available': day not in ['saturday', 'sunday'],  # Default: weekdays only
+                    'startTime': '08:00' if day not in ['saturday', 'sunday'] else '',
+                    'endTime': '16:00' if day not in ['saturday', 'sunday'] else '',
+                    'breakStart': '',
+                    'breakEnd': ''
+                }
+            else:
+                # Clean up: ensure break times are consistent
+                day_data = schedule[day]
+                break_start = day_data.get('breakStart', '').strip() if day_data.get('breakStart') else ''
+                break_end = day_data.get('breakEnd', '').strip() if day_data.get('breakEnd') else ''
+                
+                # If one is empty but the other isn't, reset both
+                if (break_start and not break_end) or (not break_start and break_end):
+                    print(f'🧹 Cleaning inconsistent break time for {day}: "{break_start}" - "{break_end}" → empty')
+                    day_data['breakStart'] = ''
+                    day_data['breakEnd'] = ''
+                else:
+                    # Just ensure they're truly empty if not set
+                    day_data['breakStart'] = break_start
+                    day_data['breakEnd'] = break_end
+        
         return {
             'doctor_id': doctor.id,
             'doctor_name': doctor.user.name if doctor.user else None,
             'specialization': doctor.specialization,
-            'schedule': doctor.schedule or {}
+            'schedule': schedule
         }
     finally:
         session.close()
@@ -123,8 +153,21 @@ def update_doctor_schedule(request):
             return {'error': 'Anda tidak memiliki akses untuk mengubah jadwal ini'}
         
         data = request.json_body
-        doctor.schedule = data.get('schedule', {})
+        schedule_data = data.get('schedule', {})
         
+        # Clean up schedule - ensure empty break times are truly empty strings
+        cleaned_schedule = {}
+        for day, day_data in schedule_data.items():
+            if isinstance(day_data, dict):
+                cleaned_schedule[day] = {
+                    'available': bool(day_data.get('available', False)),
+                    'startTime': day_data.get('startTime', '') if day_data.get('available') else '',
+                    'endTime': day_data.get('endTime', '') if day_data.get('available') else '',
+                    'breakStart': day_data.get('breakStart', '') or '',  # Ensure truly empty
+                    'breakEnd': day_data.get('breakEnd', '') or ''  # Ensure truly empty
+                }
+        
+        doctor.schedule = cleaned_schedule
         session.commit()
         
         return {

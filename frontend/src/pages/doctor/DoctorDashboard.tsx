@@ -108,6 +108,13 @@ export const DoctorDashboard: React.FC = () => {
       link: '/app/doctor/schedule',
     },
     {
+      label: 'Manage Availability',
+      value: 'Settings',
+      icon: '⚙️',
+      color: 'bg-cyan-500',
+      link: '/app/doctor/schedule-settings',
+    },
+    {
       label: 'Medical Records',
       value: 'Records',
       icon: '📝',

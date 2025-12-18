@@ -22,6 +22,7 @@ export const BookAppointment: React.FC = () => {
   const [reason, setReason] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [doctorSchedule, setDoctorSchedule] = useState<any>(null);
   const { addToast } = useToastContext();
 
   useEffect(() => {
@@ -84,8 +85,104 @@ export const BookAppointment: React.FC = () => {
   const loadTimeSlots = async () => {
     if (!selectedDoctor || !selectedDate) return;
     try {
-      // For now, generate default time slots (9 AM - 5 PM in 1-hour intervals)
-      // In production, this could fetch from backend API
+      // Fetch doctor's schedule
+      const scheduleResponse = await authAPI.get(`/api/doctors/${selectedDoctor.id}/schedule`);
+      const doctorScheduleData = scheduleResponse.data.schedule || {};
+      
+      console.log('🔍 Full schedule response:', scheduleResponse.data);
+      console.log('📋 Doctor schedule data:', doctorScheduleData);
+      
+      setDoctorSchedule(doctorScheduleData);
+
+      // Get day of week from selected date
+      const date = new Date(selectedDate);
+      const dayOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][date.getDay()];
+      
+      console.log('📅 Selected date:', selectedDate, 'Day of week:', dayOfWeek);
+      
+      const daySchedule = doctorScheduleData[dayOfWeek];
+      
+      console.log('🗓️ Day schedule:', daySchedule);
+
+      const slots: TimeSlot[] = [];
+
+      // Check if doctor is available on this day
+      if (daySchedule && daySchedule.available) {
+        const startTime = daySchedule.startTime || '09:00';
+        const endTime = daySchedule.endTime || '17:00';
+        const breakStart = daySchedule.breakStart || '';
+        const breakEnd = daySchedule.breakEnd || '';
+
+        const startHour = parseInt(startTime.split(':')[0]);
+        const startMin = parseInt(startTime.split(':')[1]);
+        const endHour = parseInt(endTime.split(':')[0]);
+        const endMin = parseInt(endTime.split(':')[1]);
+
+        console.log('⏰ Start:', startTime, '| End:', endTime, '| Break:', breakStart, '-', breakEnd);
+
+        // Parse break times - only if both are provided and non-empty
+        const hasBreak = breakStart && breakStart.length > 0 && breakEnd && breakEnd.length > 0;
+        
+        let breakStartHour = null;
+        let breakStartMin = null;
+        let breakEndHour = null;
+        let breakEndMin = null;
+
+        if (hasBreak) {
+          breakStartHour = parseInt(breakStart.split(':')[0]);
+          breakStartMin = parseInt(breakStart.split(':')[1]);
+          breakEndHour = parseInt(breakEnd.split(':')[0]);
+          breakEndMin = parseInt(breakEnd.split(':')[1]);
+        }
+
+        console.log('🔔 Has break:', hasBreak, { breakStartHour, breakStartMin, breakEndHour, breakEndMin });
+
+        // Generate time slots in 30-minute intervals
+        let currentHour = startHour;
+        let currentMin = startMin;
+
+        while (currentHour < endHour || (currentHour === endHour && currentMin <= endMin)) {
+          const currentTimeStr = `${currentHour.toString().padStart(2, '0')}:${currentMin.toString().padStart(2, '0')}`;
+          const currentTimeInMinutes = currentHour * 60 + currentMin;
+
+          // Check if current time is during break
+          let isDuringBreak = false;
+          if (hasBreak && breakStartHour !== null && breakEndHour !== null && breakStartMin !== null && breakEndMin !== null) {
+            const breakStartInMinutes = breakStartHour * 60 + breakStartMin;
+            const breakEndInMinutes = breakEndHour * 60 + breakEndMin;
+            
+            isDuringBreak = currentTimeInMinutes >= breakStartInMinutes && currentTimeInMinutes < breakEndInMinutes;
+            
+            console.log(`  Time: ${currentTimeStr} (${currentTimeInMinutes}min) - Break: ${breakStartInMinutes}-${breakEndInMinutes}min - During break: ${isDuringBreak}`);
+          }
+
+          if (!isDuringBreak) {
+            slots.push({
+              time: currentTimeStr,
+              available: true
+            });
+          }
+
+          // Increment by 30 minutes
+          currentMin += 30;
+          if (currentMin >= 60) {
+            currentMin = 0;
+            currentHour += 1;
+          }
+        }
+      } else {
+        console.log('❌ Doctor not available on this day or no schedule');
+      }
+
+      console.log('✅ Final time slots:', slots);
+      setTimeSlots(slots);
+      
+      if (slots.length === 0) {
+        addToast('Doctor is not available on this date', 'info');
+      }
+    } catch (error) {
+      console.error('❌ Failed to load time slots:', error);
+      // Fallback to default slots if schedule fetch fails
       const slots: TimeSlot[] = [];
       for (let hour = 9; hour < 17; hour++) {
         slots.push({
@@ -99,9 +196,8 @@ export const BookAppointment: React.FC = () => {
           });
         }
       }
+      console.log('Using fallback slots:', slots);
       setTimeSlots(slots);
-    } catch (error) {
-      console.error('Failed to load time slots:', error);
     }
   };
 
