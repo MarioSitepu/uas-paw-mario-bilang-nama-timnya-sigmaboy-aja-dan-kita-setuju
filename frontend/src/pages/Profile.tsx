@@ -1,0 +1,278 @@
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { useToastContext } from '../components/ui/Toast';
+import { authAPI } from '../services/api';
+import { LoadingSkeleton } from '../components/ui/LoadingSkeleton';
+
+interface DoctorProfile {
+  id: string;
+  user_id: string;
+  specialization: string;
+  license_number?: string;
+  phone?: string;
+  bio?: string;
+}
+
+export const Profile: React.FC = () => {
+  const { user } = useAuth();
+  const { addToast } = useToastContext();
+  const [isEditing, setIsEditing] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [doctorData, setDoctorData] = useState<DoctorProfile | null>(null);
+  const [formData, setFormData] = useState({
+    specialization: '',
+    license_number: '',
+    phone: '',
+    bio: ''
+  });
+
+  const isDoctor = user?.doctor_profile?.id !== undefined;
+
+  useEffect(() => {
+    if (isDoctor && user?.doctor_profile?.id) {
+      loadDoctorProfile();
+    }
+  }, [isDoctor, user?.doctor_profile?.id]);
+
+  const loadDoctorProfile = async () => {
+    try {
+      setIsLoading(true);
+      const response = await authAPI.get(`/api/doctors/${user?.doctor_profile?.id}`);
+      
+      if (response.data.error) {
+        console.error('❌ Load error:', response.data.error);
+        addToast(response.data.error, 'error');
+        return;
+      }
+      
+      console.log('✅ Doctor profile loaded:', response.data);
+      setDoctorData(response.data);
+      setFormData({
+        specialization: response.data.specialization || '',
+        license_number: response.data.license_number || '',
+        phone: response.data.phone || '',
+        bio: response.data.bio || ''
+      });
+    } catch (error) {
+      console.error('❌ Failed to load doctor profile:', error);
+      addToast('Failed to load doctor profile', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!formData.specialization.trim()) {
+      addToast('Specialization is required', 'error');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      console.log('📤 Sending update request:', { doctor_id: user?.doctor_profile?.id, formData });
+      const response = await authAPI.put(`/api/doctors/${user?.doctor_profile?.id}`, formData);
+      console.log('✅ Profile update response:', response.data);
+      
+      if (response.data.error) {
+        console.error('❌ Update error:', response.data.error);
+        addToast(response.data.error, 'error');
+        return;
+      }
+      
+      addToast('Profile updated successfully', 'success');
+      setDoctorData(response.data);
+      setFormData({
+        specialization: response.data.specialization || '',
+        license_number: response.data.license_number || '',
+        phone: response.data.phone || '',
+        bio: response.data.bio || ''
+      });
+      setIsEditing(false);
+    } catch (error: any) {
+      console.error('❌ Failed to update profile:', error);
+      const errorMsg = error.response?.data?.error || error.message || 'Failed to update profile';
+      addToast(errorMsg, 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div className="max-w-2xl mx-auto space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-slate-800 mb-2">Profile</h1>
+        <p className="text-slate-600">Your account information</p>
+      </div>
+
+      <div className="bento-card space-y-6">
+        <div className="flex items-center justify-between gap-6 pb-6 border-b border-slate-200">
+          <div className="flex items-center gap-6">
+            <img
+              src={user?.photoUrl || `https://i.pravatar.cc/150?img=${user?.id || 1}`}
+              alt={user?.name}
+              className="w-24 h-24 rounded-full border-4 border-white shadow-lg"
+            />
+            <div>
+              <h2 className="text-2xl font-semibold text-slate-800">{user?.name}</h2>
+              <p className="text-slate-600">{user?.email}</p>
+              <span className="inline-block mt-2 px-3 py-1 bg-pastel-blue-100 text-pastel-blue-700 rounded-full text-sm font-medium capitalize">
+                {user?.role?.toLowerCase()}
+              </span>
+            </div>
+          </div>
+          {isDoctor && !isEditing && (
+            <button
+              onClick={() => setIsEditing(true)}
+              className="px-4 py-2 bg-pastel-blue-500 text-white rounded-lg font-medium hover:bg-pastel-blue-600 transition"
+            >
+              Edit
+            </button>
+          )}
+        </div>
+
+        {isEditing && isDoctor ? (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-slate-600">Name</label>
+              <p className="text-lg text-slate-800">{user?.name}</p>
+              <p className="text-xs text-slate-500 mt-1">Read-only</p>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-slate-600">Email</label>
+              <p className="text-lg text-slate-800">{user?.email}</p>
+              <p className="text-xs text-slate-500 mt-1">Read-only</p>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-slate-600">
+                Specialization <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="specialization"
+                value={formData.specialization}
+                onChange={handleInputChange}
+                placeholder="e.g., General Medicine"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pastel-blue-500"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-slate-600">License Number</label>
+              <input
+                type="text"
+                name="license_number"
+                value={formData.license_number}
+                onChange={handleInputChange}
+                placeholder="Your medical license number"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pastel-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-slate-600">Phone</label>
+              <input
+                type="tel"
+                name="phone"
+                value={formData.phone}
+                onChange={handleInputChange}
+                placeholder="Your contact number"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pastel-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-slate-600">Bio</label>
+              <textarea
+                name="bio"
+                value={formData.bio}
+                onChange={handleInputChange}
+                placeholder="Tell us about yourself"
+                rows={4}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pastel-blue-500 resize-none"
+              />
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="flex-1 px-4 py-2 bg-pastel-blue-500 text-white rounded-lg font-medium hover:bg-pastel-blue-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading ? 'Saving...' : 'Save Changes'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsEditing(false);
+                  loadDoctorProfile();
+                }}
+                className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50 transition"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        ) : (
+          <div className="space-y-4">
+            {isLoading ? (
+              <LoadingSkeleton count={3} />
+            ) : (
+              <>
+                <div>
+                  <label className="text-sm font-medium text-slate-600">Name</label>
+                  <p className="text-lg text-slate-800">{user?.name}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-600">Email</label>
+                  <p className="text-lg text-slate-800">{user?.email}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-600">Role</label>
+                  <p className="text-lg text-slate-800 capitalize">{user?.role?.toLowerCase()}</p>
+                </div>
+
+                {isDoctor && doctorData && (
+                  <>
+                    <div className="pt-4 mt-4 border-t border-slate-200">
+                      <h3 className="text-lg font-semibold text-slate-800 mb-4">Professional Information</h3>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-slate-600">Specialization</label>
+                      <p className="text-lg text-slate-800">{doctorData.specialization || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-slate-600">License Number</label>
+                      <p className="text-lg text-slate-800">{doctorData.license_number || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-slate-600">Phone</label>
+                      <p className="text-lg text-slate-800">{doctorData.phone || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-slate-600">Bio</label>
+                      <p className="text-lg text-slate-800">{doctorData.bio || 'Not provided'}</p>
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
