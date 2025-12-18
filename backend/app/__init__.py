@@ -25,7 +25,17 @@ def cors_tween_factory(handler, registry):
             response.status_int = 200
             response.headers['Content-Length'] = '0'
         else:
-            response = handler(request)
+            try:
+                response = handler(request)
+            except Exception as e:
+                # Even on exceptions, we need CORS headers
+                import traceback
+                traceback.print_exc()
+                response = Response(
+                    json_body={'error': str(e)},
+                    status=500,
+                    content_type='application/json'
+                )
         
         # Add CORS headers to ALL responses
         response.headers['Access-Control-Allow-Origin'] = '*'
@@ -69,6 +79,8 @@ def main(global_config, **settings):
         elif url.startswith('postgresql://') and not url.startswith('postgresql+psycopg://'):
             settings['sqlalchemy.url'] = url.replace('postgresql://', 'postgresql+psycopg://', 1)
     
+    # Add pool_pre_ping to handle disconnected connections (SSL timeout)
+    settings['sqlalchemy.pool_pre_ping'] = 'true'
     engine = engine_from_config(settings, 'sqlalchemy.')
     DBSession = sessionmaker(bind=engine)
     config.registry.dbmaker = DBSession

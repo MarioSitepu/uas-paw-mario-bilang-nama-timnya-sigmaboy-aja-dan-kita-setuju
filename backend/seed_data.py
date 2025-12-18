@@ -9,8 +9,8 @@ from app.models import Base, User, Doctor, Appointment, MedicalRecord
 from datetime import date, time, datetime, timedelta
 import json
 
-# Database URL - sesuaikan dengan development.ini (Supabase PostgreSQL)
-DATABASE_URL = "postgresql+psycopg://postgres.jvsovslnfabnayqdftjb:febriganteng123@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres?sslmode=require"
+# Database URL - sesuaikan dengan development.ini (Neon PostgreSQL)
+DATABASE_URL = "postgresql+psycopg://neondb_owner:npg_UTPw63cQrWFd@ep-billowing-resonance-a1xc0z9x-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require"
 
 engine = create_engine(DATABASE_URL)
 Session = sessionmaker(bind=engine)

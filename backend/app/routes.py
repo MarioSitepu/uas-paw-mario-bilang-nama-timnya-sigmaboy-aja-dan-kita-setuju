@@ -40,4 +40,8 @@ def includeme(config):
     # ==================== DASHBOARD ROUTES ====================
     config.add_route('api_dashboard', '/api/dashboard')
     
+    # ==================== UPLOAD ROUTES ====================
+    config.add_route('upload_profile_picture', '/api/upload/profile-picture')
+    config.add_route('delete_profile_picture', '/api/upload/profile-picture')
+    
     # CORS is handled via tween in __init__.py

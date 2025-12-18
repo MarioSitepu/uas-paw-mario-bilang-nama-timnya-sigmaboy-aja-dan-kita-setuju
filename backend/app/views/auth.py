@@ -178,9 +178,13 @@ def login(request):
         user = session.query(User).filter(User.email == email).first()
         
         # Debug
-        print(f"DEBUG: email={email}, user found={user is not None}")
+        import sys
+        print(f"DEBUG: email={email}, user found={user is not None}", flush=True)
+        sys.stdout.flush()
         if user:
-            print(f"DEBUG: check_password result={user.check_password(password)}")
+            result = user.check_password(password)
+            print(f"DEBUG: check_password result={result}", flush=True)
+            sys.stdout.flush()
         
         if not user or not user.check_password(password):
             return {'error': 'Invalid email or password'}
@@ -260,29 +264,33 @@ def google_login(request):
         user = session.query(User).filter(User.email == email).first()
         
         if not user:
-            # New user - let frontend handle profile setup
-            print(f'👤 New user detected: {email}')
-            return {
-                'message': 'New user - profile setup required',
-                'is_new_user': True,
-                'email': email,
-                'google_name': name,
-                'token': token  # Keep token for second step
-            }
+            # Auto-create new user with Google name
+            print(f'[INFO] Creating new user from Google: {email}')
+            random_pass = secrets.token_urlsafe(16)
+            
+            user = User(
+                name=name or email.split('@')[0],  # Use Google name or email prefix
+                email=email,
+                role='patient'  # Default role
+            )
+            user.set_password(random_pass)
+            
+            session.add(user)
+            session.commit()
+            print(f'[INFO] New user created: {email}')
         
-        # Existing user - login
-        print(f'✓ Existing user logged in: {email}')
+        # Login user
+        print(f'[INFO] User logged in: {email}')
         app_token = generate_token(request, user.id)
         
         return {
             'message': 'Login successful',
-            'is_new_user': False,
             'token': app_token,
             'user': user.to_dict()
         }
             
     except Exception as e:
-        print(f'❌ Unexpected error in google_login: {type(e).__name__}: {str(e)}')
+        print(f'[ERROR] Unexpected error in google_login: {type(e).__name__}: {str(e)}')
         traceback.print_exc()
         try:
             session.rollback()
