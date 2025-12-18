@@ -177,6 +177,11 @@ def login(request):
         
         user = session.query(User).filter(User.email == email).first()
         
+        # Debug
+        print(f"DEBUG: email={email}, user found={user is not None}")
+        if user:
+            print(f"DEBUG: check_password result={user.check_password(password)}")
+        
         if not user or not user.check_password(password):
             return {'error': 'Invalid email or password'}
         
