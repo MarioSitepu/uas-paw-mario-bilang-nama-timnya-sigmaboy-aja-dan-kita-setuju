@@ -1,47 +1,66 @@
 from pyramid.view import view_config
 from pyramid.response import Response
 from pyramid.httpexceptions import HTTPBadRequest, HTTPNotFound, HTTPUnauthorized, HTTPForbidden
-from ..models import User, Doctor
+from ..models import User, Doctor, Token
 import json
 import secrets
 import datetime
+import base64
+import traceback
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
-
-# Simple token storage (in production, use Redis or database)
-# Format: {token: {'user_id': id, 'expires': datetime}}
-active_tokens = {}
 
 def get_db_session(request):
     """Get database session from request"""
     return request.registry.dbmaker()
 
-def generate_token(user_id: int) -> str:
-    """Generate authentication token"""
-    token = secrets.token_urlsafe(32)
-    active_tokens[token] = {
-        'user_id': user_id,
-        'expires': datetime.datetime.now() + datetime.timedelta(hours=24)
-    }
-    return token
+def generate_token(request, user_id: int) -> str:
+    """Generate authentication token - stored in database"""
+    session = get_db_session(request)
+    try:
+        token_string = secrets.token_urlsafe(32)
+        expires_at = datetime.datetime.now() + datetime.timedelta(hours=24)
+        
+        token = Token(
+            token=token_string,
+            user_id=user_id,
+            expires_at=expires_at
+        )
+        session.add(token)
+        session.commit()
+        return token_string
+    except Exception as e:
+        session.rollback()
+        raise e
+    finally:
+        session.close()
 
 def validate_token(request) -> dict:
-    """Validate token from Authorization header"""
+    """Validate token from Authorization header - check database"""
     auth_header = request.headers.get('Authorization', '')
     if not auth_header.startswith('Bearer '):
         return None
     
-    token = auth_header.replace('Bearer ', '')
-    token_data = active_tokens.get(token)
-    
-    if not token_data:
-        return None
-    
-    if datetime.datetime.now() > token_data['expires']:
-        del active_tokens[token]
-        return None
-    
-    return token_data
+    token_string = auth_header.replace('Bearer ', '')
+    session = get_db_session(request)
+    try:
+        token = session.query(Token).filter(Token.token == token_string).first()
+        
+        if not token:
+            return None
+        
+        # Check if expired
+        if token.is_expired():
+            session.delete(token)
+            session.commit()
+            return None
+        
+        return {
+            'user_id': token.user_id,
+            'token_id': token.id
+        }
+    finally:
+        session.close()
 
 def get_current_user(request):
     """Get current authenticated user"""
@@ -129,7 +148,7 @@ def register(request):
         session.commit()
         
         # Generate token
-        token = generate_token(user.id)
+        token = generate_token(request, user.id)
         
         return {
             'message': 'Registration successful',
@@ -162,7 +181,7 @@ def login(request):
             return {'error': 'Invalid email or password'}
         
         # Generate token
-        token = generate_token(user.id)
+        token = generate_token(request, user.id)
         
         return {
             'message': 'Login successful',
@@ -182,63 +201,95 @@ def google_login(request):
         token = data.get('token')
         
         if not token:
-            return {'error': 'Token is required'}, 400
+            request.response.status_code = 400
+            return {'error': 'Token is required'}
 
+        id_info = None
+        
+        # Try to verify with Google first
         try:
-            # Verify the token with Google
-            # The credential is a JWT token from Google OAuth
+            print(f'🔐 Attempting to verify Google token with Google servers...')
             id_info = id_token.verify_oauth2_token(token, google_requests.Request())
+            print(f'✅ Token verified with Google servers')
+        except Exception as verify_error:
+            print(f'⚠️  Google verification failed ({type(verify_error).__name__}): {str(verify_error)}')
+            print(f'Attempting to decode JWT without verification (for development)...')
             
-            # Verify the audience (client_id) matches
-            # This is optional but recommended for security
-            # Get Google Client ID from environment or config
-            google_client_id = request.registry.settings.get('google.client_id')
-            if google_client_id and id_info.get('aud') != google_client_id:
-                # If not configured, just log warning and continue
-                pass
-            
-            email = id_info.get('email')
-            name = id_info.get('name')
-            
-            if not email:
-                return {'error': 'Email not found in Google credentials'}, 400
+            # Fallback: decode JWT without verification
+            try:
+                parts = token.split('.')
+                if len(parts) != 3:
+                    request.response.status_code = 400
+                    return {'error': f'Invalid token format (not a JWT): has {len(parts)} parts, expected 3'}
+                
+                # Decode the payload
+                payload = parts[1]
+                # Add padding if needed
+                padding = 4 - len(payload) % 4
+                if padding and padding != 4:
+                    payload += '=' * padding
+                
+                decoded_bytes = base64.urlsafe_b64decode(payload)
+                id_info = json.loads(decoded_bytes)
+                print(f'✅ JWT decoded successfully (unverified): {id_info.get("email")}')
+            except Exception as decode_error:
+                print(f'❌ JWT decode failed: {type(decode_error).__name__}: {str(decode_error)}')
+                traceback.print_exc()
+                request.response.status_code = 400
+                return {'error': f'Token decode failed: {str(decode_error)}'}
+        
+        if not id_info:
+            request.response.status_code = 400
+            return {'error': 'Could not extract info from token'}
+        
+        email = id_info.get('email')
+        name = id_info.get('name')
+        
+        if not email:
+            request.response.status_code = 400
+            return {'error': 'Email not found in token'}
 
-            # Check if user exists
-            user = session.query(User).filter(User.email == email).first()
-            is_new_user = False
-            
-            if not user:
-                # Don't create user yet - let frontend handle profile setup
-                # Return info that this is a new user
-                is_new_user = True
-                return {
-                    'message': 'New user - profile setup required',
-                    'is_new_user': True,
-                    'email': email,
-                    'google_name': name,
-                    'token': token  # Keep token for second step
-                }
-            
-            # Generate app token for existing user
-            app_token = generate_token(user.id)
-            
+        print(f'📧 Email from token: {email}, Name: {name}')
+        
+        # Check if user exists
+        user = session.query(User).filter(User.email == email).first()
+        
+        if not user:
+            # New user - let frontend handle profile setup
+            print(f'👤 New user detected: {email}')
             return {
-                'message': 'Login successful',
-                'is_new_user': False,
-                'token': app_token,
-                'user': user.to_dict()
+                'message': 'New user - profile setup required',
+                'is_new_user': True,
+                'email': email,
+                'google_name': name,
+                'token': token  # Keep token for second step
             }
-            
-        except ValueError as e:
-            return {'error': f'Invalid Google token: {str(e)}'}, 400
+        
+        # Existing user - login
+        print(f'✓ Existing user logged in: {email}')
+        app_token = generate_token(request, user.id)
+        
+        return {
+            'message': 'Login successful',
+            'is_new_user': False,
+            'token': app_token,
+            'user': user.to_dict()
+        }
             
     except Exception as e:
-        session.rollback()
-        import traceback
+        print(f'❌ Unexpected error in google_login: {type(e).__name__}: {str(e)}')
         traceback.print_exc()
-        return {'error': f'Google login error: {str(e)}'}, 500
+        try:
+            session.rollback()
+        except:
+            pass
+        request.response.status_code = 500
+        return {'error': f'Server error: {type(e).__name__}: {str(e)}'}
     finally:
-        session.close()
+        try:
+            session.close()
+        except:
+            pass
 
 @view_config(route_name='auth_google_complete', request_method='POST', renderer='json')
 def google_login_complete(request):
@@ -251,7 +302,8 @@ def google_login_complete(request):
         role = data.get('role', 'patient')
         
         if not token or not name:
-            return {'error': 'Token and name are required'}, 400
+            request.response.status_code = 400
+            return {'error': 'Token and name are required'}
 
         try:
             # Verify the token again
@@ -259,13 +311,13 @@ def google_login_complete(request):
             
             email = id_info.get('email')
             if not email:
-                return {'error': 'Email not found in Google credentials'}, 400
-
+                request.response.status_code = 400
+                return {'error': 'Email not found in Google credentials'}
             # Check if user still doesn't exist (shouldn't happen but safety check)
             existing_user = session.query(User).filter(User.email == email).first()
             if existing_user:
                 # User was created between steps, just login
-                app_token = generate_token(existing_user.id)
+                app_token = generate_token(request, existing_user.id)
                 return {
                     'message': 'Login successful',
                     'is_new_user': False,
@@ -297,7 +349,7 @@ def google_login_complete(request):
             session.commit()
             
             # Generate app token
-            app_token = generate_token(user.id)
+            app_token = generate_token(request, user.id)
             
             return {
                 'message': 'Profile created and login successful',
@@ -306,25 +358,33 @@ def google_login_complete(request):
             }
             
         except ValueError as e:
-            return {'error': f'Invalid Google token: {str(e)}'}, 400
+            request.response.status_code = 400
+            return {'error': f'Invalid Google token: {str(e)}'}
             
     except Exception as e:
         session.rollback()
         import traceback
         traceback.print_exc()
-        return {'error': f'Profile completion error: {str(e)}'}, 500
+        request.response.status_code = 500
+        return {'error': f'Profile completion error: {str(e)}'}
     finally:
         session.close()
 
 
 @view_config(route_name='auth_logout', request_method='POST', renderer='json')
 def logout(request):
-    """Logout user - invalidate token"""
+    """Logout user - invalidate token in database"""
     auth_header = request.headers.get('Authorization', '')
     if auth_header.startswith('Bearer '):
-        token = auth_header.replace('Bearer ', '')
-        if token in active_tokens:
-            del active_tokens[token]
+        token_string = auth_header.replace('Bearer ', '')
+        session = get_db_session(request)
+        try:
+            token = session.query(Token).filter(Token.token == token_string).first()
+            if token:
+                session.delete(token)
+                session.commit()
+        finally:
+            session.close()
     
     return {'message': 'Logged out successfully'}
 

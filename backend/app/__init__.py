@@ -19,28 +19,29 @@ except ImportError:
 def cors_tween_factory(handler, registry):
     """CORS tween to add CORS headers to all responses"""
     def cors_tween(request):
-        # Handle preflight requests first
+        # Handle preflight OPTIONS requests
         if request.method == 'OPTIONS':
             response = Response()
             response.status_int = 200
+            response.headers['Content-Length'] = '0'
         else:
             response = handler(request)
         
-        # Add CORS headers to all responses
+        # Add CORS headers to ALL responses
         response.headers['Access-Control-Allow-Origin'] = '*'
-        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS, HEAD'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS, HEAD, PATCH'
         response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With'
-        response.headers['Access-Control-Max-Age'] = '3600'
-        response.headers['Access-Control-Allow-Credentials'] = 'false'
+        response.headers['Access-Control-Max-Age'] = '86400'
         
         return response
+    
     return cors_tween
 
 def main(global_config, **settings):
     """This function returns a Pyramid WSGI application."""
     config = Configurator(settings=settings)
     
-    # Add CORS tween
+    # Add CORS tween - must be added EARLY
     config.add_tween('app.cors_tween_factory')
     
     # Include routes
