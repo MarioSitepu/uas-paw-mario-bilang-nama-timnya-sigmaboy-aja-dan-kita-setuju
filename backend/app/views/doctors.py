@@ -73,7 +73,9 @@ def update_doctor(request):
         if 'schedule' in data:
             doctor.schedule = data['schedule']
         if 'license_number' in data:
-            doctor.license_number = data['license_number']
+            # Convert empty string to None to avoid unique constraint violation
+            license_number = data['license_number']
+            doctor.license_number = license_number if license_number and license_number.strip() else None
         
         session.commit()
         
