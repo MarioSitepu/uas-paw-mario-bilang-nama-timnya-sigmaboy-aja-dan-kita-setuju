@@ -82,3 +82,4 @@ python -m pyramid.scripts.pserve production.ini --listen=*:10000
 - Pastikan path benar
 - Jika service root di `backend/`, gunakan: `python start_server.py`
 - Jika service root di project root, gunakan: `python backend/start_server.py`
+
