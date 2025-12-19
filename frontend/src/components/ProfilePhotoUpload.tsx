@@ -28,12 +28,6 @@ export const ProfilePhotoUpload: React.FC<ProfilePhotoUploadProps> = ({
     large: 'w-48 h-48'
   };
 
-  const imageSizeClasses = {
-    small: 'w-24 h-24',
-    medium: 'w-32 h-32',
-    large: 'w-48 h-48'
-  };
-
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
