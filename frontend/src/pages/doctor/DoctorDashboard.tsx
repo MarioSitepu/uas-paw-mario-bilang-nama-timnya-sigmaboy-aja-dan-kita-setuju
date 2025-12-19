@@ -121,13 +121,6 @@ export const DoctorDashboard: React.FC = () => {
       color: 'bg-purple-500',
       link: '/app/doctor/records',
     },
-    {
-      label: 'Edit Profile',
-      value: 'Profile',
-      icon: '👤',
-      color: 'bg-orange-500',
-      link: '/app/profile',
-    },
   ];
 
   return (

@@ -26,15 +26,11 @@ export const DoctorsList: React.FC = () => {
         id: doc.id,
         name: doc.name || 'Unknown',
         specialization: doc.specialization || 'General',
-        photoUrl: doc.photoUrl || 'https://via.placeholder.com/200?text=' + (doc.name || 'Doctor'),
+        photoUrl: doc.profile_photo_url || `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2'%3E%3Cpath d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'/%3E%3Ccircle cx='12' cy='7' r='4'/%3E%3C/svg%3E`,
         rating: doc.rating || 4.5,
         clinic: doc.clinic || 'Medical Clinic',
         bio: doc.bio || 'Experienced healthcare professional',
-        schedule: doc.schedule ? Object.entries(doc.schedule).map(([day, times]: [string, any]) => ({
-          day: day.charAt(0).toUpperCase() + day.slice(1),
-          start: Array.isArray(times) ? times[0]?.split('-')[0] : '09:00',
-          end: Array.isArray(times) ? times[0]?.split('-')[1] : '17:00'
-        })) : []
+        schedule: doc.schedule || {}
       }));
       
       setDoctors(allDoctors);

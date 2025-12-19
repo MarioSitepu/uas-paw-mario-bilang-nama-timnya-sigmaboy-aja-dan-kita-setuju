@@ -14,6 +14,12 @@ def includeme(config):
     config.add_route('auth_google_complete', '/api/auth/google/complete')
     config.add_route('auth_logout', '/api/auth/logout')
     config.add_route('auth_me', '/api/auth/me')
+    config.add_route('upload_profile_photo', '/api/auth/upload-photo')
+    
+    # ==================== PROFILE ROUTES ====================
+    config.add_route('get_profile', '/api/profile')
+    config.add_route('update_profile', '/api/profile')
+    config.add_route('update_profile_photo', '/api/profile/photo')
     
     # ==================== USERS ROUTES ====================
     config.add_route('api_users', '/api/users')

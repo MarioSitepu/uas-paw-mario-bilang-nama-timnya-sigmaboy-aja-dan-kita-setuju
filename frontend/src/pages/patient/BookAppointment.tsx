@@ -23,6 +23,7 @@ export const BookAppointment: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [doctorSchedule, setDoctorSchedule] = useState<any>(null);
+  const [availableDates, setAvailableDates] = useState<string[]>([]);
   const { addToast } = useToastContext();
 
   useEffect(() => {
@@ -39,6 +40,17 @@ export const BookAppointment: React.FC = () => {
   }, [doctorIdParam, doctors]);
 
   useEffect(() => {
+    if (selectedDoctor) {
+      loadAvailableDates();
+    } else {
+      setAvailableDates([]);
+      setSelectedDate('');
+      setTimeSlots([]);
+      setSelectedTime('');
+    }
+  }, [selectedDoctor]);
+
+  useEffect(() => {
     if (selectedDoctor && selectedDate) {
       loadTimeSlots();
     } else {
@@ -46,6 +58,50 @@ export const BookAppointment: React.FC = () => {
       setSelectedTime('');
     }
   }, [selectedDoctor, selectedDate]);
+
+  const loadAvailableDates = async () => {
+    if (!selectedDoctor) return;
+    try {
+      // Fetch doctor's schedule
+      const scheduleResponse = await authAPI.get(`/api/doctors/${selectedDoctor.id}/schedule`);
+      const doctorScheduleData = scheduleResponse.data.schedule || {};
+      
+      console.log('📅 Doctor schedule for available dates:', doctorScheduleData);
+      
+      // Generate available dates for next 30 days based on schedule
+      const availableDatesArray: string[] = [];
+      const today = new Date();
+      
+      for (let i = 0; i < 30; i++) {
+        const date = new Date(today);
+        date.setDate(date.getDate() + i);
+        
+        const dayOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][date.getDay()];
+        const daySchedule = doctorScheduleData[dayOfWeek];
+        
+        // If doctor is available on this day of week, include the date
+        if (daySchedule && daySchedule.available) {
+          const dateString = date.toISOString().split('T')[0];
+          availableDatesArray.push(dateString);
+        }
+      }
+      
+      console.log('✅ Available dates:', availableDatesArray);
+      setAvailableDates(availableDatesArray);
+    } catch (error) {
+      console.error('❌ Failed to load available dates:', error);
+      // If fetch fails, allow all dates
+      const availableDatesArray: string[] = [];
+      const today = new Date();
+      for (let i = 0; i < 30; i++) {
+        const date = new Date(today);
+        date.setDate(date.getDate() + i);
+        const dateString = date.toISOString().split('T')[0];
+        availableDatesArray.push(dateString);
+      }
+      setAvailableDates(availableDatesArray);
+    }
+  };
 
   const loadDoctors = async () => {
     try {
@@ -58,7 +114,7 @@ export const BookAppointment: React.FC = () => {
         id: doc.id,
         name: doc.name || 'Unknown',
         specialization: doc.specialization || 'General',
-        photoUrl: doc.photoUrl || 'https://via.placeholder.com/200?text=' + (doc.name || 'Doctor'),
+        photoUrl: doc.profile_photo_url || `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2'%3E%3Cpath d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'/%3E%3Ccircle cx='12' cy='7' r='4'/%3E%3C/svg%3E`,
         rating: doc.rating || 4.5,
         clinic: doc.clinic || 'Medical Clinic',
         bio: doc.bio || 'Experienced healthcare professional',
@@ -296,13 +352,16 @@ export const BookAppointment: React.FC = () => {
         </div>
 
         {/* Date Selection */}
-        <DatePicker
-          label="Select Date"
-          value={selectedDate}
-          onChange={setSelectedDate}
-          required
-          min={new Date().toISOString().split('T')[0]}
-        />
+        {selectedDoctor && (
+          <DatePicker
+            label={`Select Date${availableDates.length > 0 ? ' (Based on Doctor Availability)' : ''}`}
+            value={selectedDate}
+            onChange={setSelectedDate}
+            required
+            min={new Date().toISOString().split('T')[0]}
+            availableDates={availableDates}
+          />
+        )}
 
         {/* Time Slot Selection */}
         {selectedDate && selectedDoctor && (

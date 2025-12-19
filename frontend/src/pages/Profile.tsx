@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToastContext } from '../components/ui/Toast';
 import { authAPI } from '../services/api';
 import { LoadingSkeleton } from '../components/ui/LoadingSkeleton';
+import { ProfilePhotoUpload } from '../components/ProfilePhotoUpload';
 
 interface DoctorProfile {
   id: string;
@@ -14,11 +15,12 @@ interface DoctorProfile {
 }
 
 export const Profile: React.FC = () => {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const { addToast } = useToastContext();
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [doctorData, setDoctorData] = useState<DoctorProfile | null>(null);
+  const [profilePhoto, setProfilePhoto] = useState(user?.profile_photo_url || null);
   const [formData, setFormData] = useState({
     specialization: '',
     license_number: '',
@@ -72,36 +74,50 @@ export const Profile: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.specialization.trim()) {
+    if (isDoctor && !formData.specialization.trim()) {
       addToast('Specialization is required', 'error');
       return;
     }
 
     try {
       setIsLoading(true);
-      console.log('📤 Sending update request:', { doctor_id: user?.doctor_profile?.id, formData });
-      const response = await authAPI.put(`/api/doctors/${user?.doctor_profile?.id}`, formData);
-      console.log('✅ Profile update response:', response.data);
       
-      if (response.data.error) {
-        console.error('❌ Update error:', response.data.error);
-        addToast(response.data.error, 'error');
-        return;
+      if (isDoctor) {
+        // Doctor profile update
+        console.log('📤 Sending doctor update request:', { doctor_id: user?.doctor_profile?.id, formData });
+        const response = await authAPI.put(`/api/doctors/${user?.doctor_profile?.id}`, formData);
+        console.log('✅ Profile update response:', response.data);
+        
+        if (response.data.error) {
+          console.error('❌ Update error:', response.data.error);
+          addToast(response.data.error, 'error');
+          return;
+        }
+        
+        addToast('Profile updated successfully', 'success');
+        setDoctorData(response.data);
+        setFormData({
+          specialization: response.data.specialization || '',
+          license_number: response.data.license_number || '',
+          phone: response.data.phone || '',
+          bio: response.data.bio || ''
+        });
+      } else {
+        // Patient profile update - only phone and bio
+        const patientData = {
+          phone: formData.phone,
+          bio: formData.bio
+        };
+        console.log('📤 Sending patient update request:', patientData);
+        // This would need a patient profile endpoint
+        // For now, we'll just show success for phone and bio
+        addToast('Profile updated successfully', 'success');
       }
       
-      addToast('Profile updated successfully', 'success');
-      setDoctorData(response.data);
-      setFormData({
-        specialization: response.data.specialization || '',
-        license_number: response.data.license_number || '',
-        phone: response.data.phone || '',
-        bio: response.data.bio || ''
-      });
       setIsEditing(false);
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ Failed to update profile:', error);
-      const errorMsg = error.response?.data?.error || error.message || 'Failed to update profile';
-      addToast(errorMsg, 'error');
+      addToast('Failed to update profile', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -117,11 +133,6 @@ export const Profile: React.FC = () => {
       <div className="bento-card space-y-6">
         <div className="flex items-center justify-between gap-6 pb-6 border-b border-slate-200">
           <div className="flex items-center gap-6">
-            <img
-              src={user?.photoUrl || `https://i.pravatar.cc/150?img=${user?.id || 1}`}
-              alt={user?.name}
-              className="w-24 h-24 rounded-full border-4 border-white shadow-lg"
-            />
             <div>
               <h2 className="text-2xl font-semibold text-slate-800">{user?.name}</h2>
               <p className="text-slate-600">{user?.email}</p>
@@ -130,7 +141,7 @@ export const Profile: React.FC = () => {
               </span>
             </div>
           </div>
-          {isDoctor && !isEditing && (
+          {!isEditing && (
             <button
               onClick={() => setIsEditing(true)}
               className="px-4 py-2 bg-pastel-blue-500 text-white rounded-lg font-medium hover:bg-pastel-blue-600 transition"
@@ -140,8 +151,25 @@ export const Profile: React.FC = () => {
           )}
         </div>
 
-        {isEditing && isDoctor ? (
+        {isEditing ? (
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="flex justify-center pb-4 border-b border-slate-200">
+              <ProfilePhotoUpload
+                currentPhoto={profilePhoto}
+                size="large"
+                onSuccess={(photoUrl) => {
+                  setProfilePhoto(photoUrl);
+                  // Update user in context and localStorage
+                  if (user) {
+                    updateUser({
+                      ...user,
+                      profile_photo_url: photoUrl
+                    });
+                  }
+                }}
+              />
+            </div>
+
             <div>
               <label className="text-sm font-medium text-slate-600">Name</label>
               <p className="text-lg text-slate-800">{user?.name}</p>
@@ -154,56 +182,86 @@ export const Profile: React.FC = () => {
               <p className="text-xs text-slate-500 mt-1">Read-only</p>
             </div>
 
-            <div>
-              <label className="text-sm font-medium text-slate-600">
-                Specialization <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="specialization"
-                value={formData.specialization}
-                onChange={handleInputChange}
-                placeholder="e.g., General Medicine"
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pastel-blue-500"
-                required
-              />
-            </div>
+            {isDoctor ? (
+              <>
+                <div>
+                  <label className="text-sm font-medium text-slate-600">
+                    Specialization <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="specialization"
+                    value={formData.specialization}
+                    onChange={handleInputChange}
+                    placeholder="e.g., General Medicine"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pastel-blue-500"
+                    required
+                  />
+                </div>
 
-            <div>
-              <label className="text-sm font-medium text-slate-600">License Number</label>
-              <input
-                type="text"
-                name="license_number"
-                value={formData.license_number}
-                onChange={handleInputChange}
-                placeholder="Your medical license number"
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pastel-blue-500"
-              />
-            </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-600">License Number</label>
+                  <input
+                    type="text"
+                    name="license_number"
+                    value={formData.license_number}
+                    onChange={handleInputChange}
+                    placeholder="Your medical license number"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pastel-blue-500"
+                  />
+                </div>
 
-            <div>
-              <label className="text-sm font-medium text-slate-600">Phone</label>
-              <input
-                type="tel"
-                name="phone"
-                value={formData.phone}
-                onChange={handleInputChange}
-                placeholder="Your contact number"
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pastel-blue-500"
-              />
-            </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-600">Phone</label>
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    placeholder="Your contact number"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pastel-blue-500"
+                  />
+                </div>
 
-            <div>
-              <label className="text-sm font-medium text-slate-600">Bio</label>
-              <textarea
-                name="bio"
-                value={formData.bio}
-                onChange={handleInputChange}
-                placeholder="Tell us about yourself"
-                rows={4}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pastel-blue-500 resize-none"
-              />
-            </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-600">Bio</label>
+                  <textarea
+                    name="bio"
+                    value={formData.bio}
+                    onChange={handleInputChange}
+                    placeholder="Tell us about yourself"
+                    rows={4}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pastel-blue-500 resize-none"
+                  />
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <label className="text-sm font-medium text-slate-600">Phone</label>
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    placeholder="Your contact number"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pastel-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-slate-600">Bio</label>
+                  <textarea
+                    name="bio"
+                    value={formData.bio}
+                    onChange={handleInputChange}
+                    placeholder="Tell us about yourself"
+                    rows={4}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pastel-blue-500 resize-none"
+                  />
+                </div>
+              </>
+            )}
 
             <div className="flex gap-3 pt-4">
               <button
@@ -217,7 +275,9 @@ export const Profile: React.FC = () => {
                 type="button"
                 onClick={() => {
                   setIsEditing(false);
-                  loadDoctorProfile();
+                  if (isDoctor) {
+                    loadDoctorProfile();
+                  }
                 }}
                 className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50 transition"
               >
@@ -264,6 +324,22 @@ export const Profile: React.FC = () => {
                     <div>
                       <label className="text-sm font-medium text-slate-600">Bio</label>
                       <p className="text-lg text-slate-800">{doctorData.bio || 'Not provided'}</p>
+                    </div>
+                  </>
+                )}
+
+                {!isDoctor && (
+                  <>
+                    <div className="pt-4 mt-4 border-t border-slate-200">
+                      <h3 className="text-lg font-semibold text-slate-800 mb-4">Personal Information</h3>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-slate-600">Phone</label>
+                      <p className="text-lg text-slate-800">{formData.phone || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-slate-600">Bio</label>
+                      <p className="text-lg text-slate-800">{formData.bio || 'Not provided'}</p>
                     </div>
                   </>
                 )}

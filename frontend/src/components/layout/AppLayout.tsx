@@ -88,9 +88,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           <div className="pt-4 border-t border-white/30">
             <div className="flex items-center gap-3 mb-4 px-4">
               <img
-                src={user?.photoUrl || `https://i.pravatar.cc/150?img=${user?.id || 1}`}
+                src={user?.profile_photo_url || `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2'%3E%3Cpath d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'/%3E%3Ccircle cx='12' cy='7' r='4'/%3E%3C/svg%3E`}
                 alt={user?.name}
-                className="w-10 h-10 rounded-full border-2 border-white"
+                className="w-10 h-10 rounded-full border-2 border-white object-cover"
               />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-slate-800 truncate">{user?.name}</p>

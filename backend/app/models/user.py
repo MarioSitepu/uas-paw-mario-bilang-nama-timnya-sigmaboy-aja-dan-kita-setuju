@@ -21,6 +21,7 @@ class User(Base):
     password_hash = Column(String(256), nullable=False)
     salt = Column(String(64), nullable=False)
     role = Column(String(20), nullable=False, default='patient')
+    profile_photo_url = Column(String(500), nullable=True)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, onupdate=func.now())
     
@@ -55,6 +56,7 @@ class User(Base):
             'name': self.name,
             'email': self.email,
             'role': self.role.lower() if self.role else 'patient',  # Normalize to lowercase
+            'profile_photo_url': self.profile_photo_url,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
