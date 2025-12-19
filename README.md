@@ -183,7 +183,7 @@ Frontend akan berjalan di `http://localhost:5173`
 - **Status:** ✅ Live dan berfungsi
 
 ### Backend
-- **URL:** [https://mario-bilang-nama-timnya-sigmaboy-a.onrender.com](https://uas-paw-mario-bilang-nama-timnya.onrender.com)
+- **URL:** [https://mario-bilang-nama-timnya.onrender.com](https://uas-paw-mario-bilang-nama-timnya.onrender.com)
 - **Platform:** Render
 - **Status:** ✅ Live dan berfungsi
 - **Database:** Supabase PostgreSQL (Connection Pooler)
