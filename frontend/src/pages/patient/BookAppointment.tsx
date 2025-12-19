@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { doctorsService } from '../../services/mock/doctors.service';
@@ -25,29 +25,12 @@ export const BookAppointment: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { addToast } = useToastContext();
 
-  useEffect(() => {
-    loadDoctors();
-  }, []);
+  const getErrorMessage = (err: unknown, fallback: string) => {
+    if (err instanceof Error && err.message) return err.message;
+    return fallback;
+  };
 
-  useEffect(() => {
-    if (doctorIdParam) {
-      const doctor = doctors.find((d) => d.id === parseInt(doctorIdParam));
-      if (doctor) {
-        setSelectedDoctor(doctor);
-      }
-    }
-  }, [doctorIdParam, doctors]);
-
-  useEffect(() => {
-    if (selectedDoctor && selectedDate) {
-      loadTimeSlots();
-    } else {
-      setTimeSlots([]);
-      setSelectedTime('');
-    }
-  }, [selectedDoctor, selectedDate]);
-
-  const loadDoctors = async () => {
+  const loadDoctors = useCallback(async () => {
     try {
       setIsLoading(true);
       const allDoctors = await doctorsService.getAll();
@@ -61,9 +44,9 @@ export const BookAppointment: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [doctorIdParam]);
 
-  const loadTimeSlots = async () => {
+  const loadTimeSlots = useCallback(async () => {
     if (!selectedDoctor || !selectedDate) return;
     try {
       const slots = await appointmentsService.getAvailableTimeSlots(selectedDoctor.id, selectedDate);
@@ -71,7 +54,29 @@ export const BookAppointment: React.FC = () => {
     } catch (error) {
       console.error('Failed to load time slots:', error);
     }
-  };
+  }, [selectedDate, selectedDoctor]);
+
+  useEffect(() => {
+    void loadDoctors();
+  }, [loadDoctors]);
+
+  useEffect(() => {
+    if (doctorIdParam) {
+      const doctor = doctors.find((d) => d.id === parseInt(doctorIdParam));
+      if (doctor) {
+        setSelectedDoctor(doctor);
+      }
+    }
+  }, [doctorIdParam, doctors]);
+
+  useEffect(() => {
+    if (selectedDoctor && selectedDate) {
+      void loadTimeSlots();
+    } else {
+      setTimeSlots([]);
+      setSelectedTime('');
+    }
+  }, [loadTimeSlots, selectedDate, selectedDoctor]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,8 +96,8 @@ export const BookAppointment: React.FC = () => {
       });
       addToast('Appointment booked successfully!', 'success');
       navigate('/app/patient/appointments');
-    } catch (error: any) {
-      addToast(error.message || 'Failed to book appointment', 'error');
+    } catch (error: unknown) {
+      addToast(getErrorMessage(error, 'Failed to book appointment'), 'error');
     } finally {
       setIsSubmitting(false);
     }

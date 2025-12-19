@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { appointmentsService } from '../../services/mock/appointments.service';
@@ -24,23 +24,22 @@ export const Schedule: React.FC = () => {
     return new Date(today.getFullYear(), today.getMonth(), 1);
   });
 
-  useEffect(() => {
-    if (user?.id) {
-      loadAppointments();
-    }
-  }, [user]);
-
-  const loadAppointments = async () => {
+  const loadAppointments = useCallback(async () => {
+    if (!user?.id) return;
     try {
       setIsLoading(true);
-      const all = await appointmentsService.getAll({ doctorId: user!.id });
+      const all = await appointmentsService.getAll({ doctorId: user.id });
       setAppointments(all.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time)));
     } catch (error) {
       console.error('Failed to load appointments:', error);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user?.id]);
+
+  useEffect(() => {
+    void loadAppointments();
+  }, [loadAppointments]);
 
   const handleStatusUpdate = async (appointmentId: number, newStatus: AppointmentStatus) => {
     try {

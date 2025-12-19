@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { recordsService } from '../../services/mock/records.service';
@@ -11,23 +11,22 @@ export const MedicalRecords: React.FC = () => {
   const [records, setRecords] = useState<MedicalRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    if (user?.id) {
-      loadRecords();
-    }
-  }, [user]);
-
-  const loadRecords = async () => {
+  const loadRecords = useCallback(async () => {
+    if (!user?.id) return;
     try {
       setIsLoading(true);
-      const all = await recordsService.getAll({ doctorId: user!.id });
+      const all = await recordsService.getAll({ doctorId: user.id });
       setRecords(all.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
     } catch (error) {
       console.error('Failed to load records:', error);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user?.id]);
+
+  useEffect(() => {
+    void loadRecords();
+  }, [loadRecords]);
 
   return (
     <div className="space-y-6">

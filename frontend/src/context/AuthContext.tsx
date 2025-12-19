@@ -52,7 +52,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                     setIsLoading(false);
                 });
         } else {
-            setIsLoading(false);
+            Promise.resolve().then(() => setIsLoading(false));
         }
     }, []);
 
@@ -63,6 +63,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     const googleLogin = async (_credential: string) => {
+        void _credential;
         // For mock, we'll just create a dummy user from Google
         // In real app, verify credential with backend
         const email = 'google@user.com'; // Extract from credential in real app

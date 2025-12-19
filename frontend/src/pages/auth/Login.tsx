@@ -14,6 +14,11 @@ export const Login: React.FC = () => {
   const { addToast } = useToastContext();
   const navigate = useNavigate();
 
+  const getErrorMessage = (err: unknown, fallback: string) => {
+    if (err instanceof Error && err.message) return err.message;
+    return fallback;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -23,25 +28,27 @@ export const Login: React.FC = () => {
       await login(email, password);
       addToast('Login successful!', 'success');
       navigate('/app');
-    } catch (err: any) {
-      setError(err.message || 'Failed to login');
-      addToast(err.message || 'Failed to login', 'error');
+    } catch (err: unknown) {
+      const message = getErrorMessage(err, 'Failed to login');
+      setError(message);
+      addToast(message, 'error');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   // Google login handler
-  const handleGoogleSuccess = async (credentialResponse: any) => {
+  const handleGoogleSuccess = async (credentialResponse: { credential?: string }) => {
     try {
       if (credentialResponse.credential) {
         await googleLogin(credentialResponse.credential);
         addToast('Login successful!', 'success');
         navigate('/app');
       }
-    } catch (err: any) {
-      setError(err.message || 'Failed to login with Google');
-      addToast(err.message || 'Failed to login with Google', 'error');
+    } catch (err: unknown) {
+      const message = getErrorMessage(err, 'Failed to login with Google');
+      setError(message);
+      addToast(message, 'error');
     }
   };
 

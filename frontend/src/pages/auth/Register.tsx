@@ -19,6 +19,11 @@ export const Register: React.FC = () => {
   const { addToast } = useToastContext();
   const navigate = useNavigate();
 
+  const getErrorMessage = (err: unknown, fallback: string) => {
+    if (err instanceof Error && err.message) return err.message;
+    return fallback;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -44,9 +49,10 @@ export const Register: React.FC = () => {
       });
       addToast('Registration successful!', 'success');
       navigate('/app');
-    } catch (err: any) {
-      setError(err.message || 'Failed to register');
-      addToast(err.message || 'Failed to register', 'error');
+    } catch (err: unknown) {
+      const message = getErrorMessage(err, 'Failed to register');
+      setError(message);
+      addToast(message, 'error');
     } finally {
       setIsSubmitting(false);
     }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
@@ -11,6 +11,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [topBarVisible, setTopBarVisible] = useState(true);
+  const lastScrollYRef = useRef(0);
 
   const handleLogout = () => {
     logout();
@@ -18,6 +20,42 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   };
 
   const isActive = (path: string) => location.pathname === path;
+
+  useEffect(() => {
+    lastScrollYRef.current = window.scrollY;
+
+    let rafId = 0;
+    const onScroll = () => {
+      if (rafId) return;
+      rafId = window.requestAnimationFrame(() => {
+        const currentY = window.scrollY;
+        const delta = currentY - lastScrollYRef.current;
+
+        if (currentY < 16) {
+          setTopBarVisible(true);
+        } else if (delta > 8) {
+          setTopBarVisible(false);
+        } else if (delta < -8) {
+          setTopBarVisible(true);
+        }
+
+        lastScrollYRef.current = currentY;
+        rafId = 0;
+      });
+    };
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      if (rafId) window.cancelAnimationFrame(rafId);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (sidebarOpen) {
+      Promise.resolve().then(() => setTopBarVisible(true));
+    }
+  }, [sidebarOpen]);
 
   const patientMenu = [
     { path: '/app/patient/dashboard', label: 'Dashboard', icon: '📊' },
@@ -111,7 +149,13 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       {/* Main Content */}
       <div className="lg:pl-64">
         {/* Top Bar */}
-        <header className="sticky top-0 z-30 glass-strong border-b border-white/30">
+        <header
+          className={[
+            'fixed top-0 left-0 right-0 lg:left-64 z-40 glass-strong border-b border-white/30',
+            'transition-transform duration-300 ease-out will-change-transform',
+            topBarVisible ? 'translate-y-0' : '-translate-y-full',
+          ].join(' ')}
+        >
           <div className="flex items-center justify-between px-6 py-4">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -131,7 +175,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         </header>
 
         {/* Page Content */}
-        <main className="p-6">{children}</main>
+        <main className="p-6 pt-[88px]">{children}</main>
       </div>
     </div>
   );

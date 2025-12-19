@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { appointmentsService } from '../../services/mock/appointments.service';
@@ -13,19 +13,12 @@ export const AppointmentsList: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<AppointmentStatus | 'all'>('all');
 
-  useEffect(() => {
-    if (user?.id) {
-      loadAppointments();
-    }
-  }, [user, statusFilter]);
-
-  const loadAppointments = async () => {
+  const loadAppointments = useCallback(async () => {
+    if (!user?.id) return;
     try {
       setIsLoading(true);
-      const filters: any = { patientId: user!.id };
-      if (statusFilter !== 'all') {
-        filters.status = statusFilter;
-      }
+      const filters: { patientId: number; status?: AppointmentStatus } = { patientId: user.id };
+      if (statusFilter !== 'all') filters.status = statusFilter;
       const all = await appointmentsService.getAll(filters);
       setAppointments(all.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
     } catch (error) {
@@ -33,7 +26,11 @@ export const AppointmentsList: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [statusFilter, user?.id]);
+
+  useEffect(() => {
+    void loadAppointments();
+  }, [loadAppointments]);
 
   const handleAction = (action: string, appointmentId: number) => {
     if (action === 'reschedule') {

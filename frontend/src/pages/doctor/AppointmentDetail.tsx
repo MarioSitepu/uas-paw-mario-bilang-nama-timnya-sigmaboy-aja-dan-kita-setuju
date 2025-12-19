@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { appointmentsService } from '../../services/mock/appointments.service';
@@ -27,13 +27,12 @@ export const DoctorAppointmentDetail: React.FC = () => {
   });
   const { addToast } = useToastContext();
 
-  useEffect(() => {
-    if (id) {
-      loadAppointment();
-    }
-  }, [id]);
+  const getErrorMessage = (err: unknown, fallback: string) => {
+    if (err instanceof Error && err.message) return err.message;
+    return fallback;
+  };
 
-  const loadAppointment = async () => {
+  const loadAppointment = useCallback(async () => {
     if (!id) return;
     try {
       setIsLoading(true);
@@ -57,7 +56,13 @@ export const DoctorAppointmentDetail: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [addToast, id, navigate, user?.id]);
+
+  useEffect(() => {
+    if (id) {
+      void loadAppointment();
+    }
+  }, [id, loadAppointment]);
 
   const handleStatusUpdate = async (newStatus: AppointmentStatus) => {
     if (!appointment) return;
@@ -65,9 +70,9 @@ export const DoctorAppointmentDetail: React.FC = () => {
     try {
       await appointmentsService.updateStatus(appointment.id, newStatus);
       addToast('Status updated successfully', 'success');
-      loadAppointment();
-    } catch (error: any) {
-      addToast(error.message || 'Failed to update status', 'error');
+      await loadAppointment();
+    } catch (error: unknown) {
+      addToast(getErrorMessage(error, 'Failed to update status'), 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -95,8 +100,8 @@ export const DoctorAppointmentDetail: React.FC = () => {
       setShowRecordModal(false);
       addToast('Medical record created successfully', 'success');
       setRecordForm({ diagnosis: '', notes: '', symptoms: '', treatment: '', prescription: '' });
-    } catch (error: any) {
-      addToast(error.message || 'Failed to create medical record', 'error');
+    } catch (error: unknown) {
+      addToast(getErrorMessage(error, 'Failed to create medical record'), 'error');
     } finally {
       setIsSubmitting(false);
     }

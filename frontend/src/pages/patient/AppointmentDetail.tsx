@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { appointmentsService } from '../../services/mock/appointments.service';
@@ -27,27 +27,12 @@ export const AppointmentDetail: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { addToast } = useToastContext();
 
-  useEffect(() => {
-    if (id) {
-      loadAppointment();
-    }
-  }, [id]);
+  const getErrorMessage = (err: unknown, fallback: string) => {
+    if (err instanceof Error && err.message) return err.message;
+    return fallback;
+  };
 
-  useEffect(() => {
-    if (action === 'cancel') {
-      setShowCancelModal(true);
-    } else if (action === 'reschedule') {
-      setShowRescheduleModal(true);
-    }
-  }, [action]);
-
-  useEffect(() => {
-    if (showRescheduleModal && appointment?.doctorId && rescheduleDate) {
-      loadTimeSlots();
-    }
-  }, [showRescheduleModal, appointment, rescheduleDate]);
-
-  const loadAppointment = async () => {
+  const loadAppointment = useCallback(async () => {
     if (!id) return;
     try {
       setIsLoading(true);
@@ -68,9 +53,23 @@ export const AppointmentDetail: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [addToast, id, navigate, showRescheduleModal, user?.id]);
 
-  const loadTimeSlots = async () => {
+  useEffect(() => {
+    if (id) {
+      void loadAppointment();
+    }
+  }, [id, loadAppointment]);
+
+  useEffect(() => {
+    if (action === 'cancel') {
+      setShowCancelModal(true);
+    } else if (action === 'reschedule') {
+      setShowRescheduleModal(true);
+    }
+  }, [action]);
+
+  const loadTimeSlots = useCallback(async () => {
     if (!appointment?.doctorId || !rescheduleDate) return;
     try {
       const slots = await appointmentsService.getAvailableTimeSlots(appointment.doctorId, rescheduleDate);
@@ -78,7 +77,13 @@ export const AppointmentDetail: React.FC = () => {
     } catch (error) {
       console.error('Failed to load time slots:', error);
     }
-  };
+  }, [appointment?.doctorId, rescheduleDate]);
+
+  useEffect(() => {
+    if (showRescheduleModal && appointment?.doctorId && rescheduleDate) {
+      void loadTimeSlots();
+    }
+  }, [appointment?.doctorId, rescheduleDate, showRescheduleModal, loadTimeSlots]);
 
   const handleCancel = async () => {
     if (!appointment) return;
@@ -88,8 +93,8 @@ export const AppointmentDetail: React.FC = () => {
       addToast('Appointment cancelled successfully', 'success');
       setShowCancelModal(false);
       navigate('/app/patient/appointments');
-    } catch (error: any) {
-      addToast(error.message || 'Failed to cancel appointment', 'error');
+    } catch (error: unknown) {
+      addToast(getErrorMessage(error, 'Failed to cancel appointment'), 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -105,9 +110,9 @@ export const AppointmentDetail: React.FC = () => {
       await appointmentsService.reschedule(appointment.id, rescheduleDate, rescheduleTime);
       addToast('Appointment rescheduled successfully', 'success');
       setShowRescheduleModal(false);
-      loadAppointment();
-    } catch (error: any) {
-      addToast(error.message || 'Failed to reschedule appointment', 'error');
+      await loadAppointment();
+    } catch (error: unknown) {
+      addToast(getErrorMessage(error, 'Failed to reschedule appointment'), 'error');
     } finally {
       setIsSubmitting(false);
     }

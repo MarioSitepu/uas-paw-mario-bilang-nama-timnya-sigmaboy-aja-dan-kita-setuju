@@ -60,11 +60,11 @@ export const doctorsAPI = {
 
   getById: (id: number) => api.get(`/api/doctors/${id}`),
 
-  update: (id: number, data: any) => api.put(`/api/doctors/${id}`, data),
+  update: (id: number, data: unknown) => api.put(`/api/doctors/${id}`, data),
 
   getSchedule: (id: number) => api.get(`/api/doctors/${id}/schedule`),
 
-  updateSchedule: (id: number, schedule: any) =>
+  updateSchedule: (id: number, schedule: unknown) =>
     api.put(`/api/doctors/${id}/schedule`, { schedule }),
 
   getSpecializations: () => api.get('/api/specializations'),
@@ -84,7 +84,7 @@ export const appointmentsAPI = {
     reason?: string;
   }) => api.post('/api/appointments', data),
 
-  update: (id: number, data: any) => api.put(`/api/appointments/${id}`, data),
+  update: (id: number, data: unknown) => api.put(`/api/appointments/${id}`, data),
 
   cancel: (id: number) => api.delete(`/api/appointments/${id}`),
 
@@ -108,7 +108,7 @@ export const medicalRecordsAPI = {
     notes?: string;
   }) => api.post('/api/medical-records', data),
 
-  update: (id: number, data: any) => api.put(`/api/medical-records/${id}`, data),
+  update: (id: number, data: unknown) => api.put(`/api/medical-records/${id}`, data),
 
   getByAppointment: (appointmentId: number) =>
     api.get(`/api/appointments/${appointmentId}/record`),
@@ -128,9 +128,9 @@ export const usersAPI = {
 
   getById: (id: number) => api.get(`/api/users/${id}`),
 
-  create: (data: any) => api.post('/api/users', data),
+  create: (data: unknown) => api.post('/api/users', data),
 
-  update: (id: number, data: any) => api.put(`/api/users/${id}`, data),
+  update: (id: number, data: unknown) => api.put(`/api/users/${id}`, data),
 
   delete: (id: number) => api.delete(`/api/users/${id}`),
 };

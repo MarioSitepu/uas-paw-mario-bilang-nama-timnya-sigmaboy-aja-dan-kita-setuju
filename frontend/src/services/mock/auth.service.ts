@@ -67,6 +67,7 @@ export const authService = {
   },
 
   async login(email: string, _password: string): Promise<{ user: User; token: string }> {
+    void _password;
     const users = initializeMockUsers();
     const user = users.find((u) => u.email === email);
 

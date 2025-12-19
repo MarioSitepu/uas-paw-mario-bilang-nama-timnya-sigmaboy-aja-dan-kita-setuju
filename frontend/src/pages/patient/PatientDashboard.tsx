@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { appointmentsService } from '../../services/mock/appointments.service';
@@ -12,16 +12,11 @@ export const PatientDashboard: React.FC = () => {
   const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    if (user?.id) {
-      loadAppointments();
-    }
-  }, [user]);
-
-  const loadAppointments = async () => {
+  const loadAppointments = useCallback(async () => {
+    if (!user?.id) return;
     try {
       setIsLoading(true);
-      const all = await appointmentsService.getAll({ patientId: user!.id });
+      const all = await appointmentsService.getAll({ patientId: user.id });
       const upcoming = all
         .filter((apt) => ['pending', 'confirmed'].includes(apt.status))
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
@@ -32,7 +27,11 @@ export const PatientDashboard: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user?.id]);
+
+  useEffect(() => {
+    void loadAppointments();
+  }, [loadAppointments]);
 
   const stats = [
     {
