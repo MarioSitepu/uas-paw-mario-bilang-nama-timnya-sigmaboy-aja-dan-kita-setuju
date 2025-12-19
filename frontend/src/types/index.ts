@@ -63,6 +63,12 @@ export interface MedicalRecord {
   treatment?: string;
   prescription?: string;
   createdAt: string;
+  patient?: {
+    id: number;
+    name: string;
+    email: string;
+    profile_photo_url?: string;
+  };
 }
 
 export interface TimeSlot {

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import { authService } from '../services/mock/auth.service';
+
 import type { User } from '../types';
 import { UserRole } from '../types';
 
@@ -9,7 +9,7 @@ interface AuthContextType {
     isLoading: boolean;
     isAuthenticated: boolean;
     login: (email: string, password: string) => Promise<void>;
-    googleLogin: (token: string) => Promise<void>;
+    googleLogin: (token: string, role?: string) => Promise<void>;
     register: (data: RegisterData) => Promise<void>;
     logout: () => void;
     updateUser: (user: User) => void;
@@ -36,55 +36,84 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     useEffect(() => {
         // Check for existing session
-        const storedToken = authService.getToken();
-        
-        if (storedToken) {
-            authService.getMe()
-                .then((user) => {
-                    if (user) {
-                        setToken(storedToken);
-                        setUser(user);
-                    } else {
+        const storedToken = localStorage.getItem('token');
+        const storedUser = localStorage.getItem('user');
+
+        if (storedToken && storedUser) {
+            setToken(storedToken);
+            setUser(JSON.parse(storedUser));
+            setIsLoading(false);
+
+            // Verify session with backend
+            import('../services/api').then(({ authAPI }) => {
+                authAPI.getMe()
+                    .then((response) => {
+                        const { user } = response.data;
+                        if (user) {
+                            setUser(user);
+                            localStorage.setItem('user', JSON.stringify(user));
+                        }
+                    })
+                    .catch(() => {
+                        // If token invalid, logout
                         setToken(null);
                         setUser(null);
-                    }
-                })
-                .catch(() => {
-                    setToken(null);
-                    setUser(null);
-                })
-                .finally(() => {
-                    setIsLoading(false);
-                });
+                        localStorage.removeItem('token');
+                        localStorage.removeItem('user');
+                    });
+            });
         } else {
-            Promise.resolve().then(() => setIsLoading(false));
+            setIsLoading(false);
         }
     }, []);
 
     const login = async (email: string, password: string) => {
-        const { token: newToken, user: newUser } = await authService.login(email, password);
+        const { authAPI } = await import('../services/api');
+        const response = await authAPI.login({ email, password });
+        const { token: newToken, user: newUser } = response.data;
+
+        localStorage.setItem('token', newToken);
+        localStorage.setItem('user', JSON.stringify(newUser));
+
         setToken(newToken);
         setUser(newUser);
     };
 
-    const googleLogin = async (_credential: string) => {
-        void _credential;
-        // For mock, we'll just create a dummy user from Google
-        // In real app, verify credential with backend
-        const email = 'google@user.com'; // Extract from credential in real app
-        const { token: newToken, user: newUser } = await authService.login(email, 'google_password');
+    const googleLogin = async (credential: string, role?: string) => {
+        // Call real backend API for Google OAuth
+        const { authAPI } = await import('../services/api');
+        const response = await authAPI.googleLogin(credential, role);
+        const { token: newToken, user: newUser } = response.data;
+
+        // Store token
+        localStorage.setItem('token', newToken);
+        localStorage.setItem('user', JSON.stringify(newUser));
+
         setToken(newToken);
         setUser(newUser);
     };
 
     const register = async (data: RegisterData) => {
-        const { token: newToken, user: newUser } = await authService.register(data);
+        const { authAPI } = await import('../services/api');
+        const response = await authAPI.register(data);
+        const { token: newToken, user: newUser } = response.data;
+
+        localStorage.setItem('token', newToken);
+        localStorage.setItem('user', JSON.stringify(newUser));
+
         setToken(newToken);
         setUser(newUser);
     };
 
     const logout = async () => {
-        await authService.logout();
+        try {
+            const { authAPI } = await import('../services/api');
+            await authAPI.logout();
+        } catch (error) {
+            console.error('Logout failed', error);
+        }
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
         setToken(null);
         setUser(null);
     };

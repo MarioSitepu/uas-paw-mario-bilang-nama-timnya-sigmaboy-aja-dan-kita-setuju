@@ -232,6 +232,20 @@ def login(request):
             request.response.status_code = 401
             return {'error': 'Invalid email or password'}
         
+        # Ensure Doctor profile exists if role is DOCTOR
+        if user.role == 'DOCTOR':
+            from ..models import Doctor
+            doctor = session.query(Doctor).filter(Doctor.user_id == user.id).first()
+            if not doctor:
+                print(f'[INFO] Creating missing Doctor profile for user {user.id}')
+                doctor = Doctor(
+                    user_id=user.id,
+                    specialization='General Practitioner',
+                    schedule={}
+                )
+                session.add(doctor)
+                session.commit()
+
         # Generate token
         token = generate_token(request, user.id)
         
@@ -271,11 +285,11 @@ def google_login(request):
         
         # Try to verify with Google first
         try:
-            print(f'🔐 Attempting to verify Google token with Google servers...')
+            print(f'[INFO] Attempting to verify Google token with Google servers...')
             id_info = id_token.verify_oauth2_token(token, google_requests.Request())
-            print(f'✅ Token verified with Google servers')
+            print(f'[SUCCESS] Token verified with Google servers')
         except Exception as verify_error:
-            print(f'⚠️  Google verification failed ({type(verify_error).__name__}): {str(verify_error)}')
+            print(f'[WARNING] Google verification failed ({type(verify_error).__name__}): {str(verify_error)}')
             print(f'Attempting to decode JWT without verification (for development)...')
             
             # Fallback: decode JWT without verification
@@ -294,9 +308,9 @@ def google_login(request):
                 
                 decoded_bytes = base64.urlsafe_b64decode(payload)
                 id_info = json.loads(decoded_bytes)
-                print(f'✅ JWT decoded successfully (unverified): {id_info.get("email")}')
+                print(f'[SUCCESS] JWT decoded successfully (unverified): {id_info.get("email")}')
             except Exception as decode_error:
-                print(f'❌ JWT decode failed: {type(decode_error).__name__}: {str(decode_error)}')
+                print(f'[ERROR] JWT decode failed: {type(decode_error).__name__}: {str(decode_error)}')
                 traceback.print_exc()
                 request.response.status_code = 400
                 return {'error': f'Token decode failed: {str(decode_error)}'}
@@ -312,7 +326,7 @@ def google_login(request):
             request.response.status_code = 400
             return {'error': 'Email not found in token'}
 
-        print(f'📧 Email from token: {email}, Name: {name}')
+        print(f'[INFO] Email from token: {email}, Name: {name}')
         
         # Check if user exists
         user = session.query(User).filter(User.email == email).first()
@@ -320,19 +334,57 @@ def google_login(request):
         if not user:
             # Auto-create new user with Google name
             print(f'[INFO] Creating new user from Google: {email}')
+            
+            # Get role from request or default to patient
+            # Normalize to uppercase to match frontend constants (PATIENT/DOCTOR)
+            role_raw = data.get('role', 'patient')
+            role = role_raw.upper()
+            
             random_pass = secrets.token_urlsafe(16)
             
             user = User(
                 name=name or email.split('@')[0],  # Use Google name or email prefix
                 email=email,
-                role='patient'  # Default role
+                role=role 
             )
             user.set_password(random_pass)
             
             session.add(user)
+            session.flush() # Flush to get ID
+            
+            # If creating a doctor account via Google, also create Doctor profile
+            if role == 'DOCTOR':
+                from ..models import Doctor
+                doctor = Doctor(
+                    user_id=user.id,
+                    specialization='General Practitioner',  # Default
+                    schedule={} 
+                )
+                session.add(doctor)
+                
             session.commit()
-            print(f'[INFO] New user created: {email}')
+            print(f'[INFO] New user created: {email} with role {role}')
         
+        # Fix legacy lowercase roles
+        if user and user.role and user.role != user.role.upper():
+            print(f'[INFO] Upgrading role to uppercase: {user.role} -> {user.role.upper()}')
+            user.role = user.role.upper()
+            session.commit()
+
+        # Ensure Doctor profile exists if role is DOCTOR (for existing users)
+        if user.role == 'DOCTOR':
+            from ..models import Doctor
+            doctor = session.query(Doctor).filter(Doctor.user_id == user.id).first()
+            if not doctor:
+                print(f'[INFO] Creating missing Doctor profile for user {user.id}')
+                doctor = Doctor(
+                    user_id=user.id,
+                    specialization='General Practitioner',
+                    schedule={}
+                )
+                session.add(doctor)
+                session.commit()
+
         # Login user
         print(f'[INFO] User logged in: {email}')
         app_token = generate_token(request, user.id)

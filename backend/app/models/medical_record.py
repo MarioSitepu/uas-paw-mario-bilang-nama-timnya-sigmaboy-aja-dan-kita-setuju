@@ -42,7 +42,8 @@ class MedicalRecord(Base):
                 data['patient'] = {
                     'id': self.appointment.patient.id,
                     'name': self.appointment.patient.name,
-                    'email': self.appointment.patient.email
+                    'email': self.appointment.patient.email,
+                    'profile_photo_url': self.appointment.patient.profile_photo_url
                 }
         
         if include_appointment and self.appointment:

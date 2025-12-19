@@ -7,6 +7,7 @@ import { useToastContext } from '../../components/ui/Toast';
 export const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [selectedRole, setSelectedRole] = useState<'patient' | 'doctor'>('patient');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -41,7 +42,7 @@ export const Login: React.FC = () => {
   const handleGoogleSuccess = async (credentialResponse: { credential?: string }) => {
     try {
       if (credentialResponse.credential) {
-        await googleLogin(credentialResponse.credential);
+        await googleLogin(credentialResponse.credential, selectedRole);
         addToast('Login successful!', 'success');
         navigate('/app');
       }
@@ -61,7 +62,31 @@ export const Login: React.FC = () => {
               🏥
             </div>
             <h2 className="text-3xl font-bold text-slate-800 mb-2">Welcome Back</h2>
-            <p className="text-slate-600">Sign in to your account</p>
+            <p className="text-slate-600 mb-6">Sign in to your account</p>
+
+            {/* Role Switcher */}
+            <div className="flex bg-slate-100 p-1 rounded-xl mb-6">
+              <button
+                type="button"
+                onClick={() => setSelectedRole('patient')}
+                className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${selectedRole === 'patient'
+                  ? 'bg-white text-slate-800 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700'
+                  }`}
+              >
+                Patient
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedRole('doctor')}
+                className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${selectedRole === 'doctor'
+                  ? 'bg-white text-slate-800 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700'
+                  }`}
+              >
+                Doctor
+              </button>
+            </div>
           </div>
 
           {error && (

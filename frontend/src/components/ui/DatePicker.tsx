@@ -1,6 +1,7 @@
 import React from 'react';
 
 interface DatePickerProps {
+  id?: string;
   value: string;
   onChange: (date: string) => void;
   min?: string;
@@ -11,6 +12,7 @@ interface DatePickerProps {
 }
 
 export const DatePicker: React.FC<DatePickerProps> = ({
+  id,
   value,
   onChange,
   min,
@@ -21,15 +23,18 @@ export const DatePicker: React.FC<DatePickerProps> = ({
 }) => {
   // Set min to today if not provided
   const minDate = min || new Date().toISOString().split('T')[0];
+  const inputId = id || (label ? `date-picker-${label.toLowerCase().replace(/\s+/g, '-')}` : undefined);
 
   return (
     <div className={className}>
       {label && (
-        <label className="block text-sm font-medium text-slate-700 mb-2">
+        <label htmlFor={inputId} className="block text-sm font-medium text-slate-700 mb-2">
           {label} {required && <span className="text-red-500">*</span>}
         </label>
       )}
       <input
+        id={inputId}
+        name={inputId}
         type="date"
         value={value}
         onChange={(e) => onChange(e.target.value)}

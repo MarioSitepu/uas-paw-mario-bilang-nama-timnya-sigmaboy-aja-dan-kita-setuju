@@ -55,7 +55,8 @@ class Appointment(Base):
                     'id': self.patient.id,
                     'name': self.patient.name,
                     'email': self.patient.email,
-                    'role': self.patient.role.lower() if self.patient.role else 'patient'
+                    'role': self.patient.role.lower() if self.patient.role else 'patient',
+                    'profile_photo_url': self.patient.profile_photo_url
                 }
             
             # Include doctor details with user info

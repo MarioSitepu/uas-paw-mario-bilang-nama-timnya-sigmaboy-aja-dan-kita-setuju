@@ -8,12 +8,14 @@ interface AppointmentCardProps {
   appointment: Appointment;
   showActions?: boolean;
   onAction?: (action: string, appointmentId: number) => void;
+  isDoctorView?: boolean;
 }
 
 export const AppointmentCard: React.FC<AppointmentCardProps> = ({
   appointment,
   showActions = false,
   onAction,
+  isDoctorView = false,
 }) => {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -33,10 +35,10 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
       <div className="flex items-start justify-between mb-3">
         <div>
           <h3 className="text-lg font-semibold text-slate-800 mb-1">
-            {appointment.doctor?.name || 'Doctor'}
+            {isDoctorView ? (appointment.patient?.name || 'Unknown Patient') : (appointment.doctor?.name || 'Doctor')}
           </h3>
           <p className="text-sm text-pastel-blue-600 font-medium">
-            {appointment.doctor?.specialization || 'Specialist'}
+            {isDoctorView ? `ID: ${appointment.patientId}` : (appointment.doctor?.specialization || 'Specialist')}
           </p>
         </div>
         <StatusBadge status={appointment.status} />

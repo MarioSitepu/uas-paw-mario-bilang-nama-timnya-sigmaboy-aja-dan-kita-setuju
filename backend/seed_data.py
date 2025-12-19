@@ -8,11 +8,26 @@ from sqlalchemy.orm import sessionmaker
 from app.models import Base, User, Doctor, Appointment, MedicalRecord
 from datetime import date, time, datetime, timedelta
 import json
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Database URL - sesuaikan dengan development.ini (Neon PostgreSQL)
-DATABASE_URL = "postgresql+psycopg://neondb_owner:npg_UTPw63cQrWFd@ep-billowing-resonance-a1xc0z9x-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require"
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-engine = create_engine(DATABASE_URL)
+# Fix for postgresql://
+if DATABASE_URL and DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg://", 1)
+
+# Disable prepared statements for Supabase transaction pooler
+engine = create_engine(
+    DATABASE_URL,
+    connect_args={
+        "prepare_threshold": None
+    }
+)
 Session = sessionmaker(bind=engine)
 session = Session()
 
@@ -33,7 +48,7 @@ def create_users():
     admin = User(
         name="Admin Klinik",
         email="admin@clinic.com",
-        role="admin"
+        role="ADMIN"
     )
     admin.set_password("Admin123!")
     users.append(admin)
@@ -42,7 +57,7 @@ def create_users():
     doc1 = User(
         name="Dr. Budi Santoso",
         email="budi@clinic.com",
-        role="doctor"
+        role="DOCTOR"
     )
     doc1.set_password("Doctor123!")
     users.append(doc1)
@@ -51,7 +66,7 @@ def create_users():
     doc2 = User(
         name="Dr. Siti Rahayu",
         email="siti@clinic.com",
-        role="doctor"
+        role="DOCTOR"
     )
     doc2.set_password("Doctor123!")
     users.append(doc2)
@@ -60,7 +75,7 @@ def create_users():
     doc3 = User(
         name="Dr. Ahmad Wijaya",
         email="ahmad@clinic.com",
-        role="doctor"
+        role="DOCTOR"
     )
     doc3.set_password("Doctor123!")
     users.append(doc3)
@@ -69,7 +84,7 @@ def create_users():
     patient1 = User(
         name="Andi Pratama",
         email="andi@gmail.com",
-        role="patient"
+        role="PATIENT"
     )
     patient1.set_password("Patient123!")
     users.append(patient1)
@@ -78,7 +93,7 @@ def create_users():
     patient2 = User(
         name="Dewi Lestari",
         email="dewi@gmail.com",
-        role="patient"
+        role="PATIENT"
     )
     patient2.set_password("Patient123!")
     users.append(patient2)
@@ -87,7 +102,7 @@ def create_users():
     patient3 = User(
         name="Rizky Firmansyah",
         email="rizky@gmail.com",
-        role="patient"
+        role="PATIENT"
     )
     patient3.set_password("Patient123!")
     users.append(patient3)
@@ -96,7 +111,7 @@ def create_users():
     patient4 = User(
         name="Maya Putri",
         email="maya@gmail.com",
-        role="patient"
+        role="PATIENT"
     )
     patient4.set_password("Patient123!")
     users.append(patient4)
@@ -111,7 +126,7 @@ def create_doctors(users):
     doctors = []
     
     # Cari user dengan role doctor
-    doc_users = [u for u in users if u.role == 'doctor']
+    doc_users = [u for u in users if u.role == 'DOCTOR']
     
     # Dokter 1 - Umum
     doctor1 = Doctor(
@@ -171,81 +186,64 @@ def create_doctors(users):
     return doctors
 
 def create_appointments(users, doctors):
-    """Buat appointment dummy"""
+    """Buat appointment dummy yang banyak"""
     appointments = []
-    patients = [u for u in users if u.role == 'patient']
+    patients = [u for u in users if u.role == 'PATIENT']
     
     today = date.today()
+    import random
     
-    # Appointment completed (kemarin)
-    apt1 = Appointment(
-        patient_id=patients[0].id,
-        doctor_id=doctors[0].id,
-        appointment_date=today - timedelta(days=1),
-        appointment_time=time(9, 0),
-        status="completed",
-        reason="Demam dan batuk"
-    )
-    appointments.append(apt1)
+    start_date = today - timedelta(days=30)
+    end_date = today + timedelta(days=14)
     
-    # Appointment confirmed (hari ini)
-    apt2 = Appointment(
-        patient_id=patients[1].id,
-        doctor_id=doctors[1].id,
-        appointment_date=today,
-        appointment_time=time(10, 0),
-        status="confirmed",
-        reason="Konsultasi kesehatan anak"
-    )
-    appointments.append(apt2)
+    reasons = [
+        "Demam dan batuk", "Pusing kepala", "Sakit perut", "Check up rutin", 
+        "Vaksinasi", "Konsultasi gizi", "Sakit gigi", "Luka ringan", 
+        "Alergi kulit", "Sesak nafas", "Nyeri sendi", "Insomnia",
+        "Gangguan pencernaan", "Mata merah", "Telinga berdenging"
+    ]
     
-    # Appointment pending (besok)
-    apt3 = Appointment(
-        patient_id=patients[2].id,
-        doctor_id=doctors[2].id,
-        appointment_date=today + timedelta(days=1),
-        appointment_time=time(11, 0),
-        status="pending",
-        reason="Kontrol tekanan darah"
-    )
-    appointments.append(apt3)
-    
-    # Appointment pending (lusa)
-    apt4 = Appointment(
-        patient_id=patients[0].id,
-        doctor_id=doctors[1].id,
-        appointment_date=today + timedelta(days=2),
-        appointment_time=time(9, 30),
-        status="pending",
-        reason="Vaksinasi anak"
-    )
-    appointments.append(apt4)
-    
-    # Appointment completed (3 hari lalu)
-    apt5 = Appointment(
-        patient_id=patients[3].id,
-        doctor_id=doctors[0].id,
-        appointment_date=today - timedelta(days=3),
-        appointment_time=time(14, 0),
-        status="completed",
-        reason="Sakit kepala berkepanjangan"
-    )
-    appointments.append(apt5)
-    
-    # Appointment cancelled
-    apt6 = Appointment(
-        patient_id=patients[2].id,
-        doctor_id=doctors[0].id,
-        appointment_date=today - timedelta(days=2),
-        appointment_time=time(15, 0),
-        status="cancelled",
-        reason="Check up rutin"
-    )
-    appointments.append(apt6)
+    current_date = start_date
+    while current_date <= end_date:
+        # Skip Sundays
+        if current_date.weekday() == 6:
+            current_date += timedelta(days=1)
+            continue
+            
+        for doctor in doctors:
+            # 3-6 appointments per doctor per day
+            num_appts = random.randint(3, 6)
+            
+            # Possible hours: 9-16
+            hours = random.sample(range(9, 17), num_appts)
+            hours.sort()
+            
+            for h in hours:
+                appt_date = current_date
+                
+                # Determine status based on date
+                if appt_date < today:
+                    status = random.choice(['completed', 'completed', 'completed', 'cancelled'])
+                elif appt_date == today:
+                    status = random.choice(['confirmed', 'pending'])
+                else:
+                    status = random.choice(['pending', 'pending', 'confirmed'])
+                
+                appt = Appointment(
+                    patient_id=random.choice(patients).id,
+                    doctor_id=doctor.id,
+                    appointment_date=appt_date,
+                    appointment_time=time(h, 0),
+                    status=status,
+                    reason=random.choice(reasons)
+                )
+                appointments.append(appt)
+        
+        current_date += timedelta(days=1)
     
     session.add_all(appointments)
     session.commit()
-    print(f"[OK] {len(appointments)} appointments dibuat")
+    print(f"[OK] {len(appointments)} appointments dibuat (Auto-generated)")
     return appointments
 
 def create_medical_records(appointments):

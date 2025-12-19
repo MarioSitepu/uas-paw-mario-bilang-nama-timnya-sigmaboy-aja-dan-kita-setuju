@@ -30,6 +30,7 @@ def includeme(config):
     config.add_route('api_doctor', '/api/doctors/{id}')
     config.add_route('api_doctor_schedule', '/api/doctors/{id}/schedule')
     config.add_route('api_specializations', '/api/specializations')
+    config.add_route('api_doctor_slots', '/api/doctors/{id}/slots')
     
     # ==================== APPOINTMENTS ROUTES ====================
     config.add_route('api_appointments', '/api/appointments')

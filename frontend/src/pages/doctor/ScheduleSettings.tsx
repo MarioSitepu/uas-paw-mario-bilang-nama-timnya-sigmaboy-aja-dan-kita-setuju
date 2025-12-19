@@ -87,12 +87,14 @@ const TimePickerModal: React.FC<{
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-lg p-6 w-96">
         <h3 className="text-lg font-semibold text-slate-800 mb-4">Select Time</h3>
-        
+
         <div className="flex gap-4 justify-center mb-6">
           <div className="flex-1">
-            <label className="block text-sm font-medium text-slate-600 mb-2">Hours</label>
+            <label htmlFor="tp-hours" className="block text-sm font-medium text-slate-600 mb-2">Hours</label>
             <div className="relative">
               <input
+                id="tp-hours"
+                name="tp-hours"
                 type="text"
                 inputMode="numeric"
                 value={hours}
@@ -111,9 +113,8 @@ const TimePickerModal: React.FC<{
                         setHours(hour);
                         setShowHourDropdown(false);
                       }}
-                      className={`w-full px-3 py-2 text-center hover:bg-pastel-blue-100 transition ${
-                        hours === hour ? 'bg-pastel-blue-200 font-semibold' : ''
-                      }`}
+                      className={`w-full px-3 py-2 text-center hover:bg-pastel-blue-100 transition ${hours === hour ? 'bg-pastel-blue-200 font-semibold' : ''
+                        }`}
                     >
                       {hour}
                     </button>
@@ -122,11 +123,13 @@ const TimePickerModal: React.FC<{
               )}
             </div>
           </div>
-          
+
           <div className="flex-1">
-            <label className="block text-sm font-medium text-slate-600 mb-2">Minutes</label>
+            <label htmlFor="tp-minutes" className="block text-sm font-medium text-slate-600 mb-2">Minutes</label>
             <div className="relative">
               <input
+                id="tp-minutes"
+                name="tp-minutes"
                 type="text"
                 inputMode="numeric"
                 value={minutes}
@@ -145,9 +148,8 @@ const TimePickerModal: React.FC<{
                         setMinutes(minute);
                         setShowMinuteDropdown(false);
                       }}
-                      className={`w-full px-3 py-2 text-center hover:bg-pastel-blue-100 transition ${
-                        minutes === minute ? 'bg-pastel-blue-200 font-semibold' : ''
-                      }`}
+                      className={`w-full px-3 py-2 text-center hover:bg-pastel-blue-100 transition ${minutes === minute ? 'bg-pastel-blue-200 font-semibold' : ''
+                        }`}
                     >
                       {minute}
                     </button>
@@ -281,7 +283,7 @@ export const ScheduleSettings: React.FC = () => {
   const handleSave = async () => {
     try {
       setIsSaving(true);
-      
+
       // Validate schedule before saving
       for (const [day, dayData] of Object.entries(schedule)) {
         // If day is available, start and end times are required
@@ -294,38 +296,38 @@ export const ScheduleSettings: React.FC = () => {
             addToast(`${day.charAt(0).toUpperCase() + day.slice(1)}: End time is required`, 'error');
             return;
           }
-          
+
           // If break start is set, break end must also be set
           const hasBreakStart = dayData.breakStart && dayData.breakStart.trim().length > 0;
           const hasBreakEnd = dayData.breakEnd && dayData.breakEnd.trim().length > 0;
-          
+
           if (hasBreakStart && !hasBreakEnd) {
             addToast(`${day.charAt(0).toUpperCase() + day.slice(1)}: Break end time is required when break start is set`, 'error');
             return;
           }
-          
+
           if (hasBreakEnd && !hasBreakStart) {
             addToast(`${day.charAt(0).toUpperCase() + day.slice(1)}: Break start time is required when break end is set`, 'error');
             return;
           }
-          
+
           // Validate break time is within working hours
           if (hasBreakStart && hasBreakEnd) {
             const startTime = dayData.startTime;
             const endTime = dayData.endTime;
             const breakStart = dayData.breakStart;
             const breakEnd = dayData.breakEnd;
-            
+
             if (breakStart < startTime) {
               addToast(`${day.charAt(0).toUpperCase() + day.slice(1)}: Break start time (${breakStart}) cannot be before working hours start (${startTime})`, 'error');
               return;
             }
-            
+
             if (breakEnd > endTime) {
               addToast(`${day.charAt(0).toUpperCase() + day.slice(1)}: Break end time (${breakEnd}) cannot be after working hours end (${endTime})`, 'error');
               return;
             }
-            
+
             if (breakStart >= breakEnd) {
               addToast(`${day.charAt(0).toUpperCase() + day.slice(1)}: Break start time must be before break end time`, 'error');
               return;
@@ -333,7 +335,7 @@ export const ScheduleSettings: React.FC = () => {
           }
         }
       }
-      
+
       // Clean up schedule - ensure breakStart and breakEnd are truly empty if not set
       const cleanedSchedule = Object.entries(schedule).reduce((acc, [day, dayData]) => {
         acc[day] = {
@@ -404,8 +406,10 @@ export const ScheduleSettings: React.FC = () => {
           return (
             <div key={dayKey} className="pb-6 border-b border-slate-200 last:border-b-0">
               <div className="flex items-center gap-4 mb-4">
-                <label className="flex items-center gap-2 cursor-pointer">
+                <label htmlFor={`check-${dayKey}`} className="flex items-center gap-2 cursor-pointer">
                   <input
+                    id={`check-${dayKey}`}
+                    name={`check-${dayKey}`}
                     type="checkbox"
                     checked={dayData.available}
                     onChange={() => handleDayToggle(dayKey)}
@@ -419,10 +423,11 @@ export const ScheduleSettings: React.FC = () => {
                 <div className="space-y-4 ml-8">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-slate-600 mb-1">
+                      <label htmlFor={`start-${dayKey}`} className="block text-sm font-medium text-slate-600 mb-1">
                         Start Time
                       </label>
                       <button
+                        id={`start-${dayKey}`}
                         onClick={() => openTimePicker(dayKey, 'startTime')}
                         className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pastel-blue-500 cursor-pointer text-left bg-white hover:bg-slate-50 transition"
                       >
@@ -430,10 +435,11 @@ export const ScheduleSettings: React.FC = () => {
                       </button>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-slate-600 mb-1">
+                      <label htmlFor={`end-${dayKey}`} className="block text-sm font-medium text-slate-600 mb-1">
                         End Time
                       </label>
                       <button
+                        id={`end-${dayKey}`}
                         onClick={() => openTimePicker(dayKey, 'endTime')}
                         className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pastel-blue-500 cursor-pointer text-left bg-white hover:bg-slate-50 transition"
                       >
@@ -452,14 +458,15 @@ export const ScheduleSettings: React.FC = () => {
                       </span>
                       Break Time (Optional)
                     </button>
-                    
+
                     {expandedBreakTime === dayKey && (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                         <div>
-                          <label className="block text-sm font-medium text-slate-600 mb-1">
+                          <label htmlFor={`break-start-${dayKey}`} className="block text-sm font-medium text-slate-600 mb-1">
                             Break Start
                           </label>
                           <button
+                            id={`break-start-${dayKey}`}
                             onClick={() => openTimePicker(dayKey, 'breakStart')}
                             className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pastel-blue-500 cursor-pointer text-left bg-white hover:bg-slate-50 transition"
                           >
@@ -467,10 +474,11 @@ export const ScheduleSettings: React.FC = () => {
                           </button>
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-slate-600 mb-1">
+                          <label htmlFor={`break-end-${dayKey}`} className="block text-sm font-medium text-slate-600 mb-1">
                             Break End
                           </label>
                           <button
+                            id={`break-end-${dayKey}`}
                             onClick={() => openTimePicker(dayKey, 'breakEnd')}
                             className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pastel-blue-500 cursor-pointer text-left bg-white hover:bg-slate-50 transition"
                           >
