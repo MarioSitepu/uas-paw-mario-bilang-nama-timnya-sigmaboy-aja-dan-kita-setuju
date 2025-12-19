@@ -138,6 +138,11 @@ def main(global_config, **settings):
     # Priority: DATABASE_URL env var > sqlalchemy.url in config
     database_url = os.environ.get('DATABASE_URL')
     if database_url:
+        # Strip quotes if present (Render sometimes adds quotes)
+        database_url = database_url.strip('"\'')
+        # Log for debugging (first 50 chars only for security)
+        import sys
+        print(f"[MAIN] DATABASE_URL from env: {database_url[:50]}...", file=sys.stderr, flush=True)
         # Use DATABASE_URL from environment if available (Neon connection string)
         # Convert postgresql:// to postgresql+psycopg:// for psycopg3
         if database_url.startswith('postgresql://') and not database_url.startswith('postgresql+psycopg://'):
