@@ -64,7 +64,8 @@ class Appointment(Base):
                     'id': self.doctor.id,
                     'name': self.doctor.user.name if self.doctor.user else 'Unknown',
                     'specialization': self.doctor.specialization,
-                    'photoUrl': self.doctor.photo_url if hasattr(self.doctor, 'photo_url') else None,
+                    'profile_photo_url': self.doctor.user.profile_photo_url if self.doctor.user else None,
+                    'photoUrl': self.doctor.user.profile_photo_url if self.doctor.user else None,
                     'rating': self.doctor.rating if hasattr(self.doctor, 'rating') else 0,
                     'location': self.doctor.location if hasattr(self.doctor, 'location') else '',
                     'clinic': self.doctor.clinic if hasattr(self.doctor, 'clinic') else ''
