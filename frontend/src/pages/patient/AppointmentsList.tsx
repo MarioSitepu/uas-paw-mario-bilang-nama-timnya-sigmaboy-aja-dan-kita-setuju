@@ -43,7 +43,8 @@ export const AppointmentsList: React.FC = () => {
       });
       
       // Transform backend format to frontend format
-      appointments = appointments.map((apt: Appointment) => ({
+      // Note: apt is in backend format (snake_case), so we need to use 'any' type
+      appointments = appointments.map((apt: any) => ({
         id: apt.id,
         doctorId: apt.doctor_id,
         patientId: apt.patient_id,
@@ -68,7 +69,7 @@ export const AppointmentsList: React.FC = () => {
         console.log('🔍 Showing ONLY cancelled appointments');
       }
       
-      const sorted = appointments.sort((a: Appointment, b: Appointment) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      const sorted = appointments.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       console.log('📊 Final appointments to display:', sorted.length);
       sorted.forEach((apt: Appointment) => {
         console.log(`  - ID: ${apt.id}, Status: ${apt.status}, Date: ${apt.date}`);

@@ -11,16 +11,12 @@ const initializeRecords = (): MedicalRecord[] => {
 };
 
 export const recordsService = {
-  async getAll(filters?: { doctorId?: number; patientId?: number }): Promise<MedicalRecord[]> {
+  async getAll(_filters?: { doctorId?: number; patientId?: number }): Promise<MedicalRecord[]> {
     const records = initializeRecords();
-    let filtered = [...records];
-
     // Note: MedicalRecord type uses appointment_id, not doctorId/patientId
     // These filters would need to be implemented differently if needed
-    // For now, we'll just return all records if filters are provided
-    // as the type doesn't support these fields directly
-
-    return filtered;
+    // For now, we'll just return all records
+    return records;
   },
 
   async getById(id: number): Promise<MedicalRecord | null> {
@@ -30,7 +26,7 @@ export const recordsService = {
 
   async getByAppointment(appointmentId: number): Promise<MedicalRecord | null> {
     const records = initializeRecords();
-    return records.find((r) => r.appointmentId === appointmentId) || null;
+    return records.find((r) => r.appointment_id === appointmentId) || null;
   },
 
   async create(data: {
