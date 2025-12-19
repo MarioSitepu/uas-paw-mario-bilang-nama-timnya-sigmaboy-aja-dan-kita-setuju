@@ -19,6 +19,7 @@ export const Profile: React.FC = () => {
   const { addToast } = useToastContext();
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isPhotoUploading, setIsPhotoUploading] = useState(false);
   const [doctorData, setDoctorData] = useState<DoctorProfile | null>(null);
   const [profilePhoto, setProfilePhoto] = useState(user?.profile_photo_url || null);
   const [formData, setFormData] = useState({
@@ -153,10 +154,19 @@ export const Profile: React.FC = () => {
 
         {isEditing ? (
           <form onSubmit={handleSubmit} className="space-y-4">
+            {isPhotoUploading && (
+              <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 rounded-lg">
+                <div className="bg-white p-6 rounded-lg shadow-xl flex flex-col items-center gap-4">
+                  <div className="animate-spin rounded-full h-12 w-12 border-4 border-pastel-blue-200 border-t-pastel-blue-500"></div>
+                  <p className="text-slate-700 font-medium">Uploading photo...</p>
+                </div>
+              </div>
+            )}
             <div className="flex justify-center pb-4 border-b border-slate-200">
               <ProfilePhotoUpload
                 currentPhoto={profilePhoto}
                 size="large"
+                onLoadingChange={setIsPhotoUploading}
                 onSuccess={(photoUrl) => {
                   setProfilePhoto(photoUrl);
                   // Update user in context and localStorage
@@ -166,6 +176,7 @@ export const Profile: React.FC = () => {
                       profile_photo_url: photoUrl
                     });
                   }
+                  // Don't close form - just update the photo
                 }}
               />
             </div>
@@ -266,20 +277,21 @@ export const Profile: React.FC = () => {
             <div className="flex gap-3 pt-4">
               <button
                 type="submit"
-                disabled={isLoading}
+                disabled={isLoading || isPhotoUploading}
                 className="flex-1 px-4 py-2 bg-pastel-blue-500 text-white rounded-lg font-medium hover:bg-pastel-blue-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? 'Saving...' : 'Save Changes'}
               </button>
               <button
                 type="button"
+                disabled={isPhotoUploading}
                 onClick={() => {
                   setIsEditing(false);
                   if (isDoctor) {
                     loadDoctorProfile();
                   }
                 }}
-                className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50 transition"
+                className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>

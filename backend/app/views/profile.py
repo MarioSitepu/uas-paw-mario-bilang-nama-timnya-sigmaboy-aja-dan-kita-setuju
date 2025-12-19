@@ -11,27 +11,24 @@ def get_db_session(request):
     """Get database session from request"""
     return request.registry.dbmaker()
 
-def validate_token(request) -> dict:
-    """Validate token from Authorization header - check database"""
-    from .auth import validate_token as auth_validate_token
-    return auth_validate_token(request)
+def get_current_user(request):
+    """Get current authenticated user from token"""
+    from .auth import get_current_user as auth_get_current_user
+    return auth_get_current_user(request)
 
 @view_config(route_name='update_profile_photo', request_method='POST', renderer='json')
 def update_profile_photo(request):
     """Upload and update user profile photo"""
     session = get_db_session(request)
     try:
-        # Validate token
-        token_data = validate_token(request)
-        if not token_data:
+        # Get current user from token
+        user = get_current_user(request)
+        if not user:
             request.response.status_code = 401
             return {'error': 'Not authenticated'}
         
-        # Get user
-        user = session.query(User).filter(User.id == token_data['user_id']).first()
-        if not user:
-            request.response.status_code = 404
-            return {'error': 'User not found'}
+        # Re-attach user to current session
+        user = session.merge(user)
         
         # Get file from request
         if 'file' not in request.POST:
@@ -99,17 +96,14 @@ def get_profile(request):
     """Get profile of authenticated user with all details"""
     session = get_db_session(request)
     try:
-        # Validate token
-        token_data = validate_token(request)
-        if not token_data:
+        # Get current user from token
+        user = get_current_user(request)
+        if not user:
             request.response.status_code = 401
             return {'error': 'Not authenticated'}
         
-        # Get user
-        user = session.query(User).filter(User.id == token_data['user_id']).first()
-        if not user:
-            request.response.status_code = 404
-            return {'error': 'User not found'}
+        # Re-attach user to current session
+        user = session.merge(user)
         
         profile_data = user.to_dict()
         
@@ -119,6 +113,9 @@ def get_profile(request):
         
         return {'profile': profile_data}
     
+    except Exception as e:
+        request.response.status_code = 500
+        return {'error': f'Failed to get profile: {str(e)}'}
     finally:
         session.close()
 
@@ -128,17 +125,14 @@ def update_profile(request):
     """Update user profile information (name, etc.)"""
     session = get_db_session(request)
     try:
-        # Validate token
-        token_data = validate_token(request)
-        if not token_data:
+        # Get current user from token
+        user = get_current_user(request)
+        if not user:
             request.response.status_code = 401
             return {'error': 'Not authenticated'}
         
-        # Get user
-        user = session.query(User).filter(User.id == token_data['user_id']).first()
-        if not user:
-            request.response.status_code = 404
-            return {'error': 'User not found'}
+        # Re-attach user to current session
+        user = session.merge(user)
         
         # Parse JSON body
         try:

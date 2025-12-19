@@ -6,13 +6,15 @@ interface ProfilePhotoUploadProps {
   className?: string;
   currentPhoto?: string | null;
   size?: 'small' | 'medium' | 'large';
+  onLoadingChange?: (isLoading: boolean) => void;
 }
 
 export const ProfilePhotoUpload: React.FC<ProfilePhotoUploadProps> = ({
   onSuccess,
   className = '',
   currentPhoto = null,
-  size = 'small'
+  size = 'small',
+  onLoadingChange
 }) => {
   const { user, token } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -60,6 +62,7 @@ export const ProfilePhotoUpload: React.FC<ProfilePhotoUploadProps> = ({
 
   const uploadFile = async (file: File) => {
     setLoading(true);
+    if (onLoadingChange) onLoadingChange(true);
     setError(null);
     setSuccess(false);
 
@@ -82,12 +85,15 @@ export const ProfilePhotoUpload: React.FC<ProfilePhotoUploadProps> = ({
       }
 
       const data = await response.json();
-      setSuccess(true);
       setPreview(data.profile_photo_url);
       
+      // Call onSuccess callback first, then show success message
       if (onSuccess) {
         onSuccess(data.profile_photo_url);
       }
+      
+      // Set success state after callback
+      setSuccess(true);
 
       // Clear success message after 3 seconds
       setTimeout(() => setSuccess(false), 3000);
@@ -96,6 +102,7 @@ export const ProfilePhotoUpload: React.FC<ProfilePhotoUploadProps> = ({
       setSuccess(false);
     } finally {
       setLoading(false);
+      if (onLoadingChange) onLoadingChange(false);
       // Reset file input
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
@@ -119,6 +126,7 @@ export const ProfilePhotoUpload: React.FC<ProfilePhotoUploadProps> = ({
 
         {/* Upload Button Overlay */}
         <button
+          type="button"
           onClick={handleClick}
           disabled={loading}
           className={`absolute bottom-0 right-0 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white rounded-full p-2 shadow-lg transition ${
