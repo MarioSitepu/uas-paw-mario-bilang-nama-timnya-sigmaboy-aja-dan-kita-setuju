@@ -3,7 +3,7 @@ services:
     name: backend-api
     env: python
     buildCommand: pip install -r requirements.txt && pip install -e . && alembic upgrade head
-    startCommand: python -m pyramid.scripts.pserve production.ini
+    startCommand: python start_server.py
     healthCheckPath: /health
     envVars:
       - key: DATABASE_URL

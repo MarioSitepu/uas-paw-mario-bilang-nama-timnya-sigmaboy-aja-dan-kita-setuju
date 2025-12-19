@@ -1,1 +1,1 @@
-web: python -m pyramid.scripts.pserve production.ini
+web: python start_server.py
