@@ -65,8 +65,8 @@ def upload_profile_picture(request):
             
             # Delete old profile picture if exists
             user = session.query(User).filter(User.id == token_data['user_id']).first()
-            if user and user.profile_picture:
-                old_filename = user.profile_picture.split('/')[-1]
+            if user and user.profile_photo_url:
+                old_filename = user.profile_photo_url.split('/')[-1]
                 try:
                     supabase.storage.from_(BUCKET_NAME).remove([old_filename])
                 except:
@@ -82,9 +82,9 @@ def upload_profile_picture(request):
             # Get public URL
             public_url = supabase.storage.from_(BUCKET_NAME).get_public_url(filename)
             
-            # Update user profile_picture in database
+            # Update user profile_photo_url in database
             if user:
-                user.profile_picture = public_url
+                user.profile_photo_url = public_url
                 session.commit()
             
             return {
@@ -120,17 +120,17 @@ def delete_profile_picture(request):
             request.response.status_code = 404
             return {'error': 'User not found'}
         
-        if user.profile_picture:
+        if user.profile_photo_url:
             # Delete from Supabase
             try:
                 supabase = get_supabase_client()
-                filename = user.profile_picture.split('/')[-1]
+                filename = user.profile_photo_url.split('/')[-1]
                 supabase.storage.from_(BUCKET_NAME).remove([filename])
             except:
                 pass  # Ignore errors
             
             # Clear from database
-            user.profile_picture = None
+            user.profile_photo_url = None
             session.commit()
         
         return {'message': 'Profile picture deleted successfully'}
