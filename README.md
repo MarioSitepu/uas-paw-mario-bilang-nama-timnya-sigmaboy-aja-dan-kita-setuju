@@ -178,12 +178,12 @@ Frontend akan berjalan di `http://localhost:5173`
 ## 🌐 Link Deployment
 
 ### Frontend
-- **URL:** https://mario-bilang-nama-timnya-sigmaboy-a.vercel.app
+- **URL:** [https://mario-bilang-nama-timnya-sigmaboy-a.vercel.app](https://mario-bilang-nama-timnya-sigmaboy-a.vercel.app/)
 - **Platform:** Vercel
 - **Status:** ✅ Live dan berfungsi
 
 ### Backend
-- **URL:** https://mario-bilang-nama-timnya-sigmaboy-a.onrender.com
+- **URL:** [https://mario-bilang-nama-timnya-sigmaboy-a.onrender.com](https://uas-paw-mario-bilang-nama-timnya.onrender.com)
 - **Platform:** Render
 - **Status:** ✅ Live dan berfungsi
 - **Database:** Supabase PostgreSQL (Connection Pooler)
