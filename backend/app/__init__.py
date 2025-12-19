@@ -149,8 +149,29 @@ def main(global_config, **settings):
             database_url = database_url.replace('postgresql://', 'postgresql+psycopg://', 1)
         
         # Force IPv4 for Supabase connections to avoid IPv6 issues
-        # Add connect_timeout and prefer IPv4
         if 'supabase.co' in database_url:
+            try:
+                # Parse URL to extract hostname
+                from urllib.parse import urlparse, urlunparse
+                parsed = urlparse(database_url)
+                hostname = parsed.hostname
+                
+                if hostname:
+                    # Resolve hostname to IPv4 address
+                    import socket
+                    # Force IPv4 resolution (AF_INET)
+                    addr_info = socket.getaddrinfo(hostname, None, socket.AF_INET, socket.SOCK_STREAM)
+                    if addr_info:
+                        ipv4_address = addr_info[0][4][0]
+                        print(f"[MAIN] Resolved {hostname} to IPv4: {ipv4_address}", file=sys.stderr, flush=True)
+                        # Replace hostname with IPv4 address
+                        netloc = parsed.netloc.replace(hostname, ipv4_address)
+                        parsed = parsed._replace(netloc=netloc)
+                        database_url = urlunparse(parsed)
+                        print(f"[MAIN] Using IPv4 connection string", file=sys.stderr, flush=True)
+            except Exception as e:
+                print(f"[MAIN] Warning: Could not resolve to IPv4: {e}", file=sys.stderr, flush=True)
+            
             # Add connection parameters if not present
             if '?' in database_url:
                 if 'connect_timeout' not in database_url:

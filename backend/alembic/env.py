@@ -40,9 +40,46 @@ def get_url():
     """Get database URL from environment or config"""
     database_url = os.environ.get('DATABASE_URL')
     if database_url:
+        # Strip quotes if present
+        database_url = database_url.strip('"\'')
         # Convert postgresql:// to postgresql+psycopg://
         if database_url.startswith('postgresql://') and not database_url.startswith('postgresql+psycopg://'):
             database_url = database_url.replace('postgresql://', 'postgresql+psycopg://', 1)
+        
+        # Force IPv4 for Supabase connections to avoid IPv6 issues
+        if 'supabase.co' in database_url:
+            try:
+                # Parse URL to extract hostname
+                from urllib.parse import urlparse, urlunparse
+                parsed = urlparse(database_url)
+                hostname = parsed.hostname
+                
+                if hostname:
+                    # Resolve hostname to IPv4 address
+                    import socket
+                    # Force IPv4 resolution (AF_INET)
+                    addr_info = socket.getaddrinfo(hostname, None, socket.AF_INET, socket.SOCK_STREAM)
+                    if addr_info:
+                        ipv4_address = addr_info[0][4][0]
+                        print(f"[ALEMBIC] Resolved {hostname} to IPv4: {ipv4_address}", file=sys.stderr, flush=True)
+                        # Replace hostname with IPv4 address
+                        netloc = parsed.netloc.replace(hostname, ipv4_address)
+                        parsed = parsed._replace(netloc=netloc)
+                        database_url = urlunparse(parsed)
+            except Exception as e:
+                import sys
+                print(f"[ALEMBIC] Warning: Could not resolve to IPv4: {e}", file=sys.stderr, flush=True)
+            
+            # Add connection parameters if not present
+            if '?' in database_url:
+                if 'connect_timeout' not in database_url:
+                    database_url += '&connect_timeout=10'
+            else:
+                database_url += '?connect_timeout=10'
+            # Ensure sslmode is set
+            if 'sslmode' not in database_url:
+                database_url += '&sslmode=require' if '?' in database_url else '?sslmode=require'
+        
         return database_url
     return config.get_main_option("sqlalchemy.url")
 
