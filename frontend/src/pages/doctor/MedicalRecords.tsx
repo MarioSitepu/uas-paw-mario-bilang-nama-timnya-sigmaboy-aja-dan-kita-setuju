@@ -71,6 +71,24 @@ export const MedicalRecords: React.FC = () => {
                   <label className="text-xs font-medium text-slate-600">Notes</label>
                   <p className="text-sm text-slate-600 line-clamp-2">{record.notes}</p>
                 </div>
+                {record.symptoms && (
+                  <div>
+                    <label className="text-xs font-medium text-slate-600">Symptoms</label>
+                    <p className="text-sm text-slate-600 line-clamp-1">{record.symptoms}</p>
+                  </div>
+                )}
+                {record.treatment && (
+                  <div>
+                    <label className="text-xs font-medium text-slate-600">Treatment</label>
+                    <p className="text-sm text-slate-600 line-clamp-1">{record.treatment}</p>
+                  </div>
+                )}
+                {record.prescription && (
+                  <div>
+                    <label className="text-xs font-medium text-slate-600">Prescription</label>
+                    <p className="text-sm text-slate-600 line-clamp-1">{record.prescription}</p>
+                  </div>
+                )}
               </div>
               <Link
                 to={`/app/doctor/appointments/${record.appointment_id}`}

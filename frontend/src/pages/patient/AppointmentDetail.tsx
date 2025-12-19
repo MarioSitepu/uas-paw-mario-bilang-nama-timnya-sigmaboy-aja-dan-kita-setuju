@@ -226,9 +226,9 @@ export const AppointmentDetail: React.FC = () => {
         {appointment.doctor && (
           <div className="flex items-start gap-4 pb-4 border-b border-slate-200">
             <img
-              src={appointment.doctor.photoUrl}
+              src={appointment.doctor.profile_photo_url || appointment.doctor.photoUrl || `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2'%3E%3Cpath d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'/%3E%3Ccircle cx='12' cy='7' r='4'/%3E%3C/svg%3E`}
               alt={appointment.doctor.name}
-              className="w-20 h-20 rounded-full border-2 border-white shadow-md"
+              className="w-20 h-20 rounded-full border-2 border-white shadow-md object-cover"
             />
             <div className="flex-1">
               <h3 className="text-xl font-semibold text-slate-800">{appointment.doctor.name}</h3>

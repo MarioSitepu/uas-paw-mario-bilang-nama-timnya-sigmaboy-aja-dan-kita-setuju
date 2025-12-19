@@ -11,6 +11,7 @@ export interface User {
   email: string;
   role: UserRole;
   photoUrl?: string;
+  profile_photo_url?: string;
   doctor_profile?: {
     id: number;
     specialization: string;

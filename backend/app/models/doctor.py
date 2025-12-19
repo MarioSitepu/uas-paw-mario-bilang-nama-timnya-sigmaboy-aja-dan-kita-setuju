@@ -41,6 +41,7 @@ class Doctor(Base):
         if include_user and self.user:
             data['name'] = self.user.name
             data['email'] = self.user.email
+            data['profile_photo_url'] = self.user.profile_photo_url
         
         return data
     

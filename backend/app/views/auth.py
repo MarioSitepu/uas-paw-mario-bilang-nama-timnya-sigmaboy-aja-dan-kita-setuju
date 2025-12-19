@@ -472,3 +472,74 @@ def get_me(request):
         return {'user': user.to_dict()}
     finally:
         session.close()
+
+@view_config(route_name='upload_profile_photo', request_method='POST', renderer='json')
+def upload_profile_photo(request):
+    """Upload profile photo for authenticated user"""
+    from ..utils import upload_profile_photo as upload_to_cloudinary
+    
+    session = get_db_session(request)
+    try:
+        # Validate token
+        token_data = validate_token(request)
+        if not token_data:
+            request.response.status_code = 401
+            return {'error': 'Not authenticated'}
+        
+        # Get user
+        user = session.query(User).filter(User.id == token_data['user_id']).first()
+        if not user:
+            request.response.status_code = 404
+            return {'error': 'User not found'}
+        
+        # Get file from request
+        if 'file' not in request.POST:
+            request.response.status_code = 400
+            return {'error': 'No file provided'}
+        
+        uploaded_file = request.POST['file']
+        if not uploaded_file.filename:
+            request.response.status_code = 400
+            return {'error': 'Invalid file'}
+        
+        # Validate file type
+        allowed_types = {'image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp'}
+        content_type = uploaded_file.content_type
+        if content_type not in allowed_types:
+            request.response.status_code = 400
+            return {'error': 'Invalid file type. Only JPEG, PNG, GIF, and WebP allowed'}
+        
+        # Check file size (max 5MB)
+        file_content = uploaded_file.file.read()
+        if len(file_content) > 5 * 1024 * 1024:  # 5MB
+            request.response.status_code = 400
+            return {'error': 'File size exceeds 5MB limit'}
+        
+        # Reset file pointer
+        uploaded_file.file.seek(0)
+        
+        # Upload to Cloudinary
+        try:
+            photo_url = upload_to_cloudinary(uploaded_file.file, user.id)
+            
+            # Save URL to database
+            user.profile_photo_url = photo_url
+            session.commit()
+            
+            return {
+                'success': True,
+                'message': 'Profile photo uploaded successfully',
+                'profile_photo_url': photo_url,
+                'user': user.to_dict()
+            }
+        
+        except Exception as e:
+            session.rollback()
+            request.response.status_code = 500
+            return {'error': f'Upload failed: {str(e)}'}
+    
+    except Exception as e:
+        request.response.status_code = 500
+        return {'error': f'Server error: {str(e)}'}
+    finally:
+        session.close()

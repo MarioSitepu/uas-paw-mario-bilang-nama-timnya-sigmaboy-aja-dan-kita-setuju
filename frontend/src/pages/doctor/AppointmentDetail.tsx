@@ -68,9 +68,13 @@ export const DoctorAppointmentDetail: React.FC = () => {
         // Load medical record if exists
         try {
           const recordResponse = await authAPI.get(`/api/appointments/${id}/record`);
-          setMedicalRecord(recordResponse.data);
-        } catch {
+          console.log('📋 Medical record response:', recordResponse.data);
+          if (recordResponse.data.medical_record) {
+            setMedicalRecord(recordResponse.data.medical_record);
+          }
+        } catch (error) {
           // No record yet
+          console.log('No medical record found for this appointment');
         }
       } else {
         console.error('❌ Access check failed:', { 
@@ -147,10 +151,17 @@ export const DoctorAppointmentDetail: React.FC = () => {
       const response = await authAPI.post('/api/medical-records', payload);
       console.log('✅ Medical record created:', response.data);
       
-      setMedicalRecord(response.data.medical_record);
+      if (response.data.medical_record) {
+        setMedicalRecord(response.data.medical_record);
+        console.log('📋 Medical record set:', response.data.medical_record);
+      }
+      
       setShowRecordModal(false);
       addToast('Medical record created successfully and appointment marked as completed', 'success');
       setRecordForm({ diagnosis: '', notes: '', symptoms: '', treatment: '', prescription: '' });
+      
+      // Reload appointment to get updated status
+      await loadAppointment();
       
       // Wait a moment then redirect to dashboard
       await new Promise(resolve => setTimeout(resolve, 800));

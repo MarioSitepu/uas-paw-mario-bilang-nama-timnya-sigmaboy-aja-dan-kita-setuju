@@ -18,8 +18,44 @@ def get_doctors(request):
         
         doctors = query.all()
         
+        # Convert doctors to dict and normalize schedule
+        doctors_data = []
+        for doc in doctors:
+            doc_dict = doc.to_dict(include_user=True)
+            
+            # Normalize schedule keys from numbers to day names if needed
+            if doc_dict['schedule'] and isinstance(doc_dict['schedule'], dict):
+                normalized_schedule = {}
+                days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+                
+                for key, value in doc_dict['schedule'].items():
+                    # If key is a number (0-6), convert to day name
+                    if key.isdigit():
+                        day_index = int(key)
+                        if 0 <= day_index <= 6:
+                            day_name = days[day_index]
+                            normalized_schedule[day_name] = value
+                    else:
+                        # Already a day name, just use it
+                        normalized_schedule[key.lower()] = value
+                
+                # Ensure all days are present
+                for day in days:
+                    if day not in normalized_schedule:
+                        normalized_schedule[day] = {
+                            'available': day not in ['saturday', 'sunday'],
+                            'startTime': '09:00' if day not in ['saturday', 'sunday'] else '',
+                            'endTime': '17:00' if day not in ['saturday', 'sunday'] else '',
+                            'breakStart': '',
+                            'breakEnd': ''
+                        }
+                
+                doc_dict['schedule'] = normalized_schedule
+            
+            doctors_data.append(doc_dict)
+        
         return {
-            'doctors': [doc.to_dict(include_user=True) for doc in doctors],
+            'doctors': doctors_data,
             'total': len(doctors)
         }
     finally:
@@ -37,7 +73,27 @@ def get_doctor(request):
         if not doctor:
             return {'error': 'Dokter tidak ditemukan'}
         
-        return doctor.to_dict(include_user=True)
+        doc_dict = doctor.to_dict(include_user=True)
+        
+        # Normalize schedule keys from numbers to day names if needed
+        if doc_dict.get('schedule') and isinstance(doc_dict['schedule'], dict):
+            normalized_schedule = {}
+            days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+            
+            for key, value in doc_dict['schedule'].items():
+                # If key is a number (0-6), convert to day name
+                if str(key).isdigit():
+                    day_index = int(key)
+                    if 0 <= day_index <= 6:
+                        day_name = days[day_index]
+                        normalized_schedule[day_name] = value
+                else:
+                    # Already a day name, just use it
+                    normalized_schedule[str(key).lower()] = value
+            
+            doc_dict['schedule'] = normalized_schedule
+        
+        return doc_dict
     finally:
         session.close()
 
