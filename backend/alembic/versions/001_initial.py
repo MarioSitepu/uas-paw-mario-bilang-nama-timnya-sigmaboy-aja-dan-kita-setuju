@@ -58,10 +58,13 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint('id'),
         sa.UniqueConstraint('license_number'),
         sa.UniqueConstraint('user_id')
-    )
+        )
+    else:
+        print("Table 'doctors' already exists, skipping creation")
     
     # Create appointments table
-    op.create_table('appointments',
+    if 'appointments' not in existing_tables:
+        op.create_table('appointments',
         sa.Column('id', sa.Integer(), nullable=False),
         sa.Column('patient_id', sa.Integer(), nullable=False),
         sa.Column('doctor_id', sa.Integer(), nullable=False),
