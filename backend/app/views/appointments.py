@@ -87,6 +87,7 @@ def create_appointment(request):
         user_role = current_user.role.lower() if current_user.role else ''
         
         if user_role != 'patient':
+            request.response.status_int = 403
             return {'error': f'Hanya pasien yang dapat membuat appointment (your role: {current_user.role})'}
         
         data = request.json_body
@@ -95,11 +96,13 @@ def create_appointment(request):
         required_fields = ['doctor_id', 'appointment_date', 'appointment_time']
         for field in required_fields:
             if not data.get(field):
+                request.response.status_int = 400
                 return {'error': f'{field} harus diisi'}
         
         # Cek apakah dokter ada
         doctor = session.query(Doctor).filter(Doctor.id == data['doctor_id']).first()
         if not doctor:
+            request.response.status_int = 404
             return {'error': 'Dokter tidak ditemukan'}
         
         # Parse tanggal dan waktu
@@ -107,10 +110,12 @@ def create_appointment(request):
             apt_date = datetime.strptime(data['appointment_date'], '%Y-%m-%d').date()
             apt_time = datetime.strptime(data['appointment_time'], '%H:%M').time()
         except ValueError:
+            request.response.status_int = 400
             return {'error': 'Format tanggal atau waktu tidak valid'}
         
         # Cek apakah tanggal sudah lewat
         if apt_date < date.today():
+            request.response.status_int = 400
             return {'error': 'Tidak dapat membuat appointment untuk tanggal yang sudah lewat'}
         
         # Validasi jadwal dokter - cek apakah waktu termasuk break time
@@ -130,6 +135,7 @@ def create_appointment(request):
         
         # Cek apakah dokter tersedia pada hari itu
         if not day_schedule.get('available', False):
+            request.response.status_int = 400
             return {'error': 'Dokter tidak tersedia pada tanggal yang dipilih'}
         
         # Cek apakah waktu berada dalam jam kerja dokter
@@ -146,6 +152,7 @@ def create_appointment(request):
             apt_minutes = apt_hour * 60 + apt_min
             
             if apt_minutes < start_minutes or apt_minutes >= end_minutes:
+                request.response.status_int = 400
                 return {'error': f'Waktu tidak termasuk jam kerja dokter ({start_time} - {end_time})'}
             
             # Cek apakah waktu berada dalam break time
@@ -160,6 +167,7 @@ def create_appointment(request):
                 break_end_minutes = break_end_hour * 60 + break_end_min
                 
                 if break_start_minutes <= apt_minutes < break_end_minutes:
+                    request.response.status_int = 400
                     return {'error': f'Waktu termasuk dalam break time dokter ({break_start} - {break_end})'}
         
         # Cek konflik jadwal
@@ -171,6 +179,7 @@ def create_appointment(request):
         ).first()
         
         if existing:
+            request.response.status_int = 400
             return {'error': 'Jadwal tersebut sudah terisi, silakan pilih waktu lain'}
         
         # Buat appointment baru
@@ -211,14 +220,17 @@ def get_appointment(request):
         appointment = session.query(Appointment).filter(Appointment.id == appointment_id).first()
         
         if not appointment:
+            request.response.status_int = 404
             return {'error': 'Appointment tidak ditemukan'}
         
         # Cek akses
         if current_user.role == 'patient' and appointment.patient_id != current_user.id:
+            request.response.status_int = 403
             return {'error': 'Anda tidak memiliki akses ke appointment ini'}
         elif current_user.role == 'doctor':
             doctor = session.query(Doctor).filter(Doctor.user_id == current_user.id).first()
             if not doctor or appointment.doctor_id != doctor.id:
+                request.response.status_int = 403
                 return {'error': 'Anda tidak memiliki akses ke appointment ini'}
         
         return {'appointment': appointment.to_dict()}
@@ -240,6 +252,7 @@ def update_appointment(request):
         
         if not appointment:
             print(f"DEBUG PUT: Appointment {appointment_id} not found")
+            request.response.status_int = 404
             return {'error': 'Appointment tidak ditemukan'}
         
         print(f"DEBUG PUT: Found appointment, status={appointment.status}, patient_id={appointment.patient_id}, doctor_id={appointment.doctor_id}")
@@ -260,6 +273,7 @@ def update_appointment(request):
         
         if not (is_patient or is_doctor or is_admin):
             print(f"DEBUG PUT: Access denied")
+            request.response.status_int = 403
             return {'error': 'Anda tidak memiliki akses untuk mengubah appointment ini'}
         
         data = request.json_body
@@ -283,6 +297,7 @@ def update_appointment(request):
                     appointment.appointment_date = datetime.strptime(data['appointment_date'], '%Y-%m-%d').date()
                 except ValueError as e:
                     print(f"DEBUG PUT: Date format error: {str(e)}")
+                    request.response.status_int = 400
                     return {'error': 'Format tanggal tidak valid'}
             
             if 'appointment_time' in data:
@@ -291,6 +306,7 @@ def update_appointment(request):
                     appointment.appointment_time = datetime.strptime(data['appointment_time'], '%H:%M').time()
                 except ValueError as e:
                     print(f"DEBUG PUT: Time format error: {str(e)}")
+                    request.response.status_int = 400
                     return {'error': 'Format waktu tidak valid'}
             
             if 'reason' in data:
@@ -338,6 +354,7 @@ def cancel_appointment(request):
         
         if not appointment:
             print(f"DEBUG DELETE: Appointment {appointment_id} not found")
+            request.response.status_int = 404
             return {'error': 'Appointment tidak ditemukan'}
         
         print(f"DEBUG DELETE: Found appointment, patient_id={appointment.patient_id}, status={appointment.status}")
@@ -358,11 +375,13 @@ def cancel_appointment(request):
         
         if not (is_patient or is_doctor or is_admin):
             print(f"DEBUG DELETE: User does not have access")
+            request.response.status_int = 403
             return {'error': 'Anda tidak memiliki akses untuk membatalkan appointment ini'}
         
         # Can only cancel if status is pending or confirmed (not already cancelled or completed)
         if appointment.status not in ['pending', 'confirmed']:
             print(f"DEBUG DELETE: Appointment cannot be cancelled - current status={appointment.status}")
+            request.response.status_int = 400
             return {'error': f'Appointment dengan status {appointment.status} tidak dapat dibatalkan'}
         
         print(f"DEBUG DELETE: Setting appointment status to cancelled")

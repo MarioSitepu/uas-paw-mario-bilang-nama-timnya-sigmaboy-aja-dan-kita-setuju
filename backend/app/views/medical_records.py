@@ -44,14 +44,17 @@ def create_medical_record(request):
         current_user = require_auth(request)
         
         if current_user.role != 'doctor':
+            request.response.status_int = 403
             return {'error': 'Hanya dokter yang dapat membuat medical record'}
         
         data = request.json_body
         
         # Validasi field yang diperlukan
         if not data.get('appointment_id'):
+            request.response.status_int = 400
             return {'error': 'appointment_id harus diisi'}
         if not data.get('diagnosis'):
+            request.response.status_int = 400
             return {'error': 'diagnosis harus diisi'}
         
         # Cek apakah appointment ada dan milik dokter ini
@@ -60,10 +63,12 @@ def create_medical_record(request):
         ).first()
         
         if not appointment:
+            request.response.status_int = 404
             return {'error': 'Appointment tidak ditemukan'}
         
         doctor = session.query(Doctor).filter(Doctor.user_id == current_user.id).first()
         if not doctor or appointment.doctor_id != doctor.id:
+            request.response.status_int = 403
             return {'error': 'Anda tidak memiliki akses ke appointment ini'}
         
         # Cek apakah sudah ada medical record untuk appointment ini
@@ -72,6 +77,7 @@ def create_medical_record(request):
         ).first()
         
         if existing:
+            request.response.status_int = 400
             return {'error': 'Medical record untuk appointment ini sudah ada'}
         
         # Buat medical record baru
@@ -137,16 +143,19 @@ def update_medical_record(request):
         record_id = int(request.matchdict['id'])
         
         if current_user.role != 'doctor':
+            request.response.status_int = 403
             return {'error': 'Hanya dokter yang dapat mengubah medical record'}
         
         record = session.query(MedicalRecord).filter(MedicalRecord.id == record_id).first()
         
         if not record:
+            request.response.status_int = 404
             return {'error': 'Medical record tidak ditemukan'}
         
         # Cek akses - hanya dokter yang menangani appointment ini
         doctor = session.query(Doctor).filter(Doctor.user_id == current_user.id).first()
         if not doctor or record.appointment.doctor_id != doctor.id:
+            request.response.status_int = 403
             return {'error': 'Anda tidak memiliki akses untuk mengubah medical record ini'}
         
         data = request.json_body
@@ -187,14 +196,17 @@ def get_appointment_medical_record(request):
         appointment = session.query(Appointment).filter(Appointment.id == appointment_id).first()
         
         if not appointment:
+            request.response.status_int = 404
             return {'error': 'Appointment tidak ditemukan'}
         
         # Cek akses
         if current_user.role == 'patient' and appointment.patient_id != current_user.id:
+            request.response.status_int = 403
             return {'error': 'Anda tidak memiliki akses ke appointment ini'}
         elif current_user.role == 'doctor':
             doctor = session.query(Doctor).filter(Doctor.user_id == current_user.id).first()
             if not doctor or appointment.doctor_id != doctor.id:
+                request.response.status_int = 403
                 return {'error': 'Anda tidak memiliki akses ke appointment ini'}
         
         record = session.query(MedicalRecord).filter(
@@ -218,11 +230,13 @@ def get_patient_medical_records(request):
         patient_id = int(request.matchdict['patient_id'])
         
         if current_user.role not in ['doctor', 'admin']:
+            request.response.status_int = 403
             return {'error': 'Hanya dokter atau admin yang dapat mengakses endpoint ini'}
         
         # Cek apakah pasien ada
         patient = session.query(User).filter(User.id == patient_id, User.role == 'patient').first()
         if not patient:
+            request.response.status_int = 404
             return {'error': 'Pasien tidak ditemukan'}
         
         records = session.query(MedicalRecord).join(

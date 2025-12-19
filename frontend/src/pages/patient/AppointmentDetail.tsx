@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
-import { appointmentsService } from '../../services/mock/appointments.service';
+
+
 import type { Appointment, TimeSlot } from '../../types';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { Modal } from '../../components/ui/Modal';
@@ -16,7 +16,7 @@ export const AppointmentDetail: React.FC = () => {
   const [searchParams] = useSearchParams();
   const action = searchParams.get('action');
 
-  const { user } = useAuth();
+
   const [appointment, setAppointment] = useState<Appointment | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -36,8 +36,36 @@ export const AppointmentDetail: React.FC = () => {
     if (!id) return;
     try {
       setIsLoading(true);
-      const apt = await appointmentsService.getById(parseInt(id));
-      if (apt && apt.patientId === user?.id) {
+      const { appointmentsAPI } = await import('../../services/api');
+      const response = await appointmentsAPI.getById(parseInt(id));
+      const raw = response.data.appointment;
+
+      // Map backend snake_case to frontend camelCase
+      const apt: Appointment = {
+        ...raw,
+        id: raw.id,
+        patientId: raw.patient_id,
+        doctorId: raw.doctor_id,
+        date: raw.appointment_date,
+        time: raw.appointment_time,
+        status: raw.status,
+        reason: raw.reason,
+        notes: raw.notes,
+        doctor: raw.doctor ? {
+          ...raw.doctor,
+          id: raw.doctor.id,
+          name: raw.doctor.name || 'Doctor',
+          specialization: raw.doctor.specialization,
+          photoUrl: raw.doctor.profile_photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(raw.doctor.name || 'D')}&background=random`,
+          clinic: raw.doctor.clinic || 'Clinic Name'
+        } : undefined,
+        patient: raw.patient ? {
+          ...raw.patient,
+          photoUrl: raw.patient.profile_photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(raw.patient.name || 'P')}&background=random`
+        } : undefined
+      };
+
+      if (apt) {
         setAppointment(apt);
         if (showRescheduleModal) {
           setRescheduleDate(apt.date);
@@ -53,7 +81,7 @@ export const AppointmentDetail: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [addToast, id, navigate, showRescheduleModal, user?.id]);
+  }, [addToast, id, navigate, showRescheduleModal]);
 
   useEffect(() => {
     if (id) {
@@ -70,14 +98,16 @@ export const AppointmentDetail: React.FC = () => {
   }, [action]);
 
   const loadTimeSlots = useCallback(async () => {
+    // appointment is already mapped to camelCase
     if (!appointment?.doctorId || !rescheduleDate) return;
     try {
-      const slots = await appointmentsService.getAvailableTimeSlots(appointment.doctorId, rescheduleDate);
-      setTimeSlots(slots);
+      const { doctorsAPI } = await import('../../services/api');
+      const response = await doctorsAPI.getSlots(appointment.doctorId, rescheduleDate);
+      setTimeSlots(response.data);
     } catch (error) {
       console.error('Failed to load time slots:', error);
     }
-  }, [appointment?.doctorId, rescheduleDate]);
+  }, [appointment, rescheduleDate]);
 
   useEffect(() => {
     if (showRescheduleModal && appointment?.doctorId && rescheduleDate) {
@@ -89,7 +119,8 @@ export const AppointmentDetail: React.FC = () => {
     if (!appointment) return;
     setIsSubmitting(true);
     try {
-      await appointmentsService.cancel(appointment.id);
+      const { appointmentsAPI } = await import('../../services/api');
+      await appointmentsAPI.cancel(appointment.id);
       addToast('Appointment cancelled successfully', 'success');
       setShowCancelModal(false);
       navigate('/app/patient/appointments');
@@ -107,7 +138,12 @@ export const AppointmentDetail: React.FC = () => {
     }
     setIsSubmitting(true);
     try {
-      await appointmentsService.reschedule(appointment.id, rescheduleDate, rescheduleTime);
+      const { appointmentsAPI } = await import('../../services/api');
+      // Update uses PUT with data partial
+      await appointmentsAPI.update(appointment.id, {
+        appointment_date: rescheduleDate,
+        appointment_time: rescheduleTime
+      });
       addToast('Appointment rescheduled successfully', 'success');
       setShowRescheduleModal(false);
       await loadAppointment();
@@ -254,6 +290,7 @@ export const AppointmentDetail: React.FC = () => {
       >
         <div className="space-y-4">
           <DatePicker
+            id="reschedule-date"
             label="Select New Date"
             value={rescheduleDate}
             onChange={setRescheduleDate}

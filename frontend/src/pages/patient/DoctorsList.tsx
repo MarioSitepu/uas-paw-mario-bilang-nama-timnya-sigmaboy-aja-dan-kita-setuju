@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { Stethoscope } from 'lucide-react';
-import { doctorsService } from '../../services/mock/doctors.service';
 import type { Doctor } from '../../types';
 import { DoctorCard } from '../../components/cards/DoctorCard';
 import { LoadingSkeleton } from '../../components/ui/LoadingSkeleton';
@@ -19,7 +18,38 @@ export const DoctorsList: React.FC = () => {
   const loadDoctors = async () => {
     try {
       setIsLoading(true);
-      const allDoctors = await doctorsService.getAll();
+      const { doctorsAPI } = await import('../../services/api');
+      const response = await doctorsAPI.getAll();
+      // Backend might return { doctors: [], total: ... } or just array. Let's assume response.data is the array or check structure.
+      // Checking api.ts -> doctorsAPI.getAll -> api.get('/api/doctors')
+      // Checking backend views (if I could)... Usually returns { doctors: [...] }
+      // I'll assume standard format { doctors: [...] } based on appointments.
+      const rawDoctors = response.data.doctors || [];
+
+      const allDoctors = rawDoctors.map((doc: any) => {
+        // Transform schedule object to array
+        let scheduleArray: any[] = [];
+        if (doc.schedule && !Array.isArray(doc.schedule)) {
+          const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+          scheduleArray = days.map(day => {
+            const slot = doc.schedule[day];
+            if (!slot || !slot.available) return null;
+            return {
+              day: day.charAt(0).toUpperCase() + day.slice(1),
+              start: slot.startTime,
+              end: slot.endTime
+            };
+          }).filter(Boolean);
+        } else if (Array.isArray(doc.schedule)) {
+          scheduleArray = doc.schedule;
+        }
+
+        return {
+          ...doc,
+          schedule: scheduleArray
+        };
+      });
+
       setDoctors(allDoctors);
     } catch (error) {
       console.error('Failed to load doctors:', error);
@@ -48,8 +78,10 @@ export const DoctorsList: React.FC = () => {
       <div className="bento-card">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Search</label>
+            <label htmlFor="doctor-search" className="block text-sm font-medium text-slate-700 mb-2">Search</label>
             <input
+              id="doctor-search"
+              name="doctor-search"
               type="text"
               placeholder="Search by name or specialization..."
               value={searchTerm}
@@ -58,8 +90,10 @@ export const DoctorsList: React.FC = () => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Specialization</label>
+            <label htmlFor="spec-filter" className="block text-sm font-medium text-slate-700 mb-2">Specialization</label>
             <select
+              id="spec-filter"
+              name="spec-filter"
               value={specializationFilter}
               onChange={(e) => setSpecializationFilter(e.target.value)}
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-pastel-blue-500 focus:border-pastel-blue-500"

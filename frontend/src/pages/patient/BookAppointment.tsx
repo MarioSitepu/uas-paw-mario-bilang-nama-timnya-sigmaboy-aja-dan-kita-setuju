@@ -1,8 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { doctorsService } from '../../services/mock/doctors.service';
-import { appointmentsService } from '../../services/mock/appointments.service';
+
 import type { Doctor, TimeSlot } from '../../types';
 import { DatePicker } from '../../components/ui/DatePicker';
 import { TimeSlotPicker } from '../../components/ui/TimeSlotPicker';
@@ -25,18 +24,35 @@ export const BookAppointment: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { addToast } = useToastContext();
 
-  const getErrorMessage = (err: unknown, fallback: string) => {
-    if (err instanceof Error && err.message) return err.message;
-    return fallback;
-  };
+
 
   const loadDoctors = useCallback(async () => {
     try {
       setIsLoading(true);
-      const allDoctors = await doctorsService.getAll();
+      const { doctorsAPI } = await import('../../services/api');
+      const response = await doctorsAPI.getAll();
+      const rawDoctors = response.data.doctors || [];
+      const allDoctors = rawDoctors.map((doc: any) => {
+        let scheduleArray: any[] = [];
+        if (doc.schedule && !Array.isArray(doc.schedule)) {
+          const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+          scheduleArray = days.map(day => {
+            const slot = doc.schedule[day];
+            if (!slot || !slot.available) return null;
+            return {
+              day: day.charAt(0).toUpperCase() + day.slice(1),
+              start: slot.startTime,
+              end: slot.endTime
+            };
+          }).filter(Boolean);
+        } else if (Array.isArray(doc.schedule)) {
+          scheduleArray = doc.schedule;
+        }
+        return { ...doc, schedule: scheduleArray };
+      });
       setDoctors(allDoctors);
       if (doctorIdParam) {
-        const doctor = allDoctors.find((d) => d.id === parseInt(doctorIdParam));
+        const doctor = allDoctors.find((d: Doctor) => d.id === parseInt(doctorIdParam));
         if (doctor) setSelectedDoctor(doctor);
       }
     } catch (error) {
@@ -49,8 +65,9 @@ export const BookAppointment: React.FC = () => {
   const loadTimeSlots = useCallback(async () => {
     if (!selectedDoctor || !selectedDate) return;
     try {
-      const slots = await appointmentsService.getAvailableTimeSlots(selectedDoctor.id, selectedDate);
-      setTimeSlots(slots);
+      const { doctorsAPI } = await import('../../services/api');
+      const response = await doctorsAPI.getSlots(selectedDoctor.id, selectedDate);
+      setTimeSlots(response.data); // data is array of slots
     } catch (error) {
       console.error('Failed to load time slots:', error);
     }
@@ -61,7 +78,8 @@ export const BookAppointment: React.FC = () => {
   }, [loadDoctors]);
 
   useEffect(() => {
-    if (doctorIdParam) {
+    if (doctorIdParam && doctors.length > 0) {
+      // Need to ensure doctors are loaded before selecting
       const doctor = doctors.find((d) => d.id === parseInt(doctorIdParam));
       if (doctor) {
         setSelectedDoctor(doctor);
@@ -87,17 +105,24 @@ export const BookAppointment: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      await appointmentsService.create({
-        doctorId: selectedDoctor.id,
-        patientId: user.id,
-        date: selectedDate,
-        time: selectedTime,
+      const { appointmentsAPI } = await import('../../services/api');
+      await appointmentsAPI.create({
+        doctor_id: selectedDoctor.id,
+        appointment_date: selectedDate, // Backend expects appointment_date (snake_case) or handles mapping?
+        // Checking appointments.py create_appointment:
+        // data['doctor_id'], data['appointment_date'], data['appointment_time']
+        // So I must rename keys to match backend!
+        appointment_time: selectedTime,
         reason: reason || undefined,
+        // patient_id is from auth token, unnecessary to send
       });
       addToast('Appointment booked successfully!', 'success');
       navigate('/app/patient/appointments');
     } catch (error: unknown) {
-      addToast(getErrorMessage(error, 'Failed to book appointment'), 'error');
+      // Improve error handling
+      console.error(error);
+      const msg = (error as any)?.response?.data?.error || (error as Error).message || 'Failed to book appointment';
+      addToast(msg, 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -121,10 +146,12 @@ export const BookAppointment: React.FC = () => {
       <form onSubmit={handleSubmit} className="bento-card space-y-6">
         {/* Doctor Selection */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">
+          <label htmlFor="doctor-select" className="block text-sm font-medium text-slate-700 mb-2">
             Select Doctor <span className="text-red-500">*</span>
           </label>
           <select
+            id="doctor-select"
+            name="doctor-select"
             required
             value={selectedDoctor?.id || ''}
             onChange={(e) => {
@@ -153,6 +180,7 @@ export const BookAppointment: React.FC = () => {
 
         {/* Date Selection */}
         <DatePicker
+          id="appointment-date"
           label="Select Date"
           value={selectedDate}
           onChange={setSelectedDate}
@@ -172,10 +200,12 @@ export const BookAppointment: React.FC = () => {
 
         {/* Reason */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">
+          <label htmlFor="reason" className="block text-sm font-medium text-slate-700 mb-2">
             Reason (Optional)
           </label>
           <textarea
+            id="reason"
+            name="reason"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             rows={3}

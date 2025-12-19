@@ -1,8 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
-import { appointmentsService } from '../../services/mock/appointments.service';
-import { recordsService } from '../../services/mock/records.service';
+
+
 import type { Appointment, AppointmentStatus, MedicalRecord } from '../../types';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { Modal } from '../../components/ui/Modal';
@@ -12,7 +11,7 @@ import { LoadingSkeleton } from '../../components/ui/LoadingSkeleton';
 export const DoctorAppointmentDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+
   const [appointment, setAppointment] = useState<Appointment | null>(null);
   const [medicalRecord, setMedicalRecord] = useState<MedicalRecord | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -36,27 +35,61 @@ export const DoctorAppointmentDetail: React.FC = () => {
     if (!id) return;
     try {
       setIsLoading(true);
-      const apt = await appointmentsService.getById(parseInt(id));
-      if (apt && apt.doctorId === user?.id) {
-        setAppointment(apt);
-        // Load medical record if exists
-        try {
-          const record = await recordsService.getByAppointment(apt.id);
-          setMedicalRecord(record);
-        } catch {
-          // No record yet
+      const { appointmentsAPI, medicalRecordsAPI } = await import('../../services/api');
+      const response = await appointmentsAPI.getById(parseInt(id));
+      const raw = response.data.appointment;
+
+      const apt: Appointment = {
+        ...raw,
+        id: raw.id,
+        patientId: raw.patient_id,
+        doctorId: raw.doctor_id,
+        date: raw.appointment_date,
+        time: raw.appointment_time,
+        status: raw.status,
+        reason: raw.reason,
+        notes: raw.notes,
+        patient: raw.patient ? {
+          ...raw.patient,
+          id: raw.patient.id,
+          name: raw.patient.name,
+          email: raw.patient.email,
+          role: 'PATIENT',
+          photoUrl: raw.patient.profile_photo_url
+        } : undefined
+      };
+
+      // We rely on backend authorization. If we got the appointment, we can view it.
+      setAppointment(apt);
+
+      // Load medical record if exists
+      try {
+        const recordResponse = await medicalRecordsAPI.getByAppointment(apt.id);
+        const rawRec = recordResponse.data;
+        if (rawRec) {
+          setMedicalRecord({
+            ...rawRec,
+            id: rawRec.id,
+            appointmentId: rawRec.appointment_id,
+            patientId: rawRec.patient_id,
+            doctorId: rawRec.doctor_id,
+            diagnosis: rawRec.diagnosis,
+            notes: rawRec.notes,
+            createdAt: rawRec.created_at || new Date().toISOString()
+          });
         }
-      } else {
-        addToast('Appointment not found', 'error');
-        navigate('/app/doctor/schedule');
+      } catch {
+        // No record or 404
       }
+
     } catch (error) {
       console.error('Failed to load appointment:', error);
       addToast('Failed to load appointment', 'error');
+      navigate('/app/doctor/schedule');
     } finally {
       setIsLoading(false);
     }
-  }, [addToast, id, navigate, user?.id]);
+  }, [addToast, id, navigate]);
 
   useEffect(() => {
     if (id) {
@@ -68,7 +101,8 @@ export const DoctorAppointmentDetail: React.FC = () => {
     if (!appointment) return;
     setIsSubmitting(true);
     try {
-      await appointmentsService.updateStatus(appointment.id, newStatus);
+      const { appointmentsAPI } = await import('../../services/api');
+      await appointmentsAPI.update(appointment.id, { status: newStatus });
       addToast('Status updated successfully', 'success');
       await loadAppointment();
     } catch (error: unknown) {
@@ -86,16 +120,28 @@ export const DoctorAppointmentDetail: React.FC = () => {
     }
     setIsSubmitting(true);
     try {
-      const record = await recordsService.create({
-        appointmentId: appointment.id,
-        doctorId: appointment.doctorId,
-        patientId: appointment.patientId,
+      const { medicalRecordsAPI } = await import('../../services/api');
+      const response = await medicalRecordsAPI.create({
+        appointment_id: appointment.id,
         diagnosis: recordForm.diagnosis,
         notes: recordForm.notes,
         symptoms: recordForm.symptoms || undefined,
         treatment: recordForm.treatment || undefined,
         prescription: recordForm.prescription || undefined,
       });
+
+      const rawRec = response.data;
+      const record: MedicalRecord = {
+        ...rawRec,
+        id: rawRec.id,
+        appointmentId: rawRec.appointment_id,
+        patientId: rawRec.patient_id,
+        doctorId: rawRec.doctor_id,
+        diagnosis: rawRec.diagnosis,
+        notes: rawRec.notes,
+        createdAt: rawRec.created_at || new Date().toISOString()
+      };
+
       setMedicalRecord(record);
       setShowRecordModal(false);
       addToast('Medical record created successfully', 'success');
@@ -145,10 +191,26 @@ export const DoctorAppointmentDetail: React.FC = () => {
         </div>
 
         {/* Patient Info */}
-        <div className="pb-4 border-b border-slate-200">
-          <h3 className="text-lg font-semibold text-slate-800 mb-2">Patient Information</h3>
-          <p className="text-slate-700">{appointment.patient?.name || 'Patient'}</p>
-          <p className="text-sm text-slate-600">{appointment.patient?.email || ''}</p>
+        <div className="pb-6 border-b border-slate-200">
+          <h3 className="text-lg font-semibold text-slate-800 mb-4">Patient Information</h3>
+          <div className="flex items-center gap-4">
+            <img
+              src={appointment.patient?.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(appointment.patient?.name || 'Patient')}&background=random`}
+              alt={appointment.patient?.name}
+              className="w-16 h-16 rounded-full object-cover border-2 border-white shadow-md"
+            />
+            <div>
+              <p className="text-xl font-bold text-slate-800">{appointment.patient?.name || 'Unknown Patient'}</p>
+              <div className="flex flex-col text-sm text-slate-600 mt-1">
+                <span className="flex items-center gap-2">
+                  📧 {appointment.patient?.email}
+                </span>
+                <span className="flex items-center gap-2">
+                  🆔 Patient ID: {appointment.patientId}
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Appointment Details */}
@@ -259,10 +321,12 @@ export const DoctorAppointmentDetail: React.FC = () => {
       >
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label htmlFor="diagnosis" className="block text-sm font-medium text-slate-700 mb-2">
               Diagnosis <span className="text-red-500">*</span>
             </label>
             <input
+              id="diagnosis"
+              name="diagnosis"
               type="text"
               required
               value={recordForm.diagnosis}
@@ -272,10 +336,12 @@ export const DoctorAppointmentDetail: React.FC = () => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label htmlFor="notes" className="block text-sm font-medium text-slate-700 mb-2">
               Notes <span className="text-red-500">*</span>
             </label>
             <textarea
+              id="notes"
+              name="notes"
               required
               rows={4}
               value={recordForm.notes}
@@ -285,8 +351,10 @@ export const DoctorAppointmentDetail: React.FC = () => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Symptoms</label>
+            <label htmlFor="symptoms" className="block text-sm font-medium text-slate-700 mb-2">Symptoms</label>
             <textarea
+              id="symptoms"
+              name="symptoms"
               rows={2}
               value={recordForm.symptoms}
               onChange={(e) => setRecordForm({ ...recordForm, symptoms: e.target.value })}
@@ -295,8 +363,10 @@ export const DoctorAppointmentDetail: React.FC = () => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Treatment</label>
+            <label htmlFor="treatment" className="block text-sm font-medium text-slate-700 mb-2">Treatment</label>
             <textarea
+              id="treatment"
+              name="treatment"
               rows={2}
               value={recordForm.treatment}
               onChange={(e) => setRecordForm({ ...recordForm, treatment: e.target.value })}
@@ -305,8 +375,10 @@ export const DoctorAppointmentDetail: React.FC = () => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Prescription</label>
+            <label htmlFor="prescription" className="block text-sm font-medium text-slate-700 mb-2">Prescription</label>
             <textarea
+              id="prescription"
+              name="prescription"
               rows={2}
               value={recordForm.prescription}
               onChange={(e) => setRecordForm({ ...recordForm, prescription: e.target.value })}

@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Calendar } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { appointmentsService } from '../../services/mock/appointments.service';
+
 import type { Appointment, AppointmentStatus } from '../../types';
 import { AppointmentCard } from '../../components/cards/AppointmentCard';
 import { LoadingSkeleton } from '../../components/ui/LoadingSkeleton';
@@ -18,10 +18,46 @@ export const AppointmentsList: React.FC = () => {
     if (!user?.id) return;
     try {
       setIsLoading(true);
-      const filters: { patientId: number; status?: AppointmentStatus } = { patientId: user.id };
-      if (statusFilter !== 'all') filters.status = statusFilter;
-      const all = await appointmentsService.getAll(filters);
-      setAppointments(all.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+      const { appointmentsAPI } = await import('../../services/api');
+      const filters: { status?: AppointmentStatus } = {};
+
+      // Map 'all' to undefined (no filter) or specific statuses if backend supports 'all'
+      // Backend supports filtering by specific status. If 'all', don't send status param.
+      if (statusFilter !== 'all') {
+        filters.status = statusFilter;
+      }
+
+      const response = await appointmentsAPI.getAll(filters);
+
+      const rawAppointments = response.data.appointments || [];
+      const all: Appointment[] = rawAppointments.map((raw: any) => ({
+        ...raw,
+        id: raw.id,
+        patientId: raw.patient_id,
+        doctorId: raw.doctor_id,
+        date: raw.appointment_date,
+        time: raw.appointment_time,
+        status: raw.status,
+        reason: raw.reason,
+        notes: raw.notes,
+        doctor: raw.doctor ? {
+          ...raw.doctor,
+          id: raw.doctor.id,
+          name: raw.doctor.name || 'Doctor',
+          specialization: raw.doctor.specialization,
+          photoUrl: raw.doctor.profile_photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(raw.doctor.name || 'D')}&background=random`,
+          clinic: raw.doctor.clinic || 'Clinic'
+        } : undefined,
+        patient: raw.patient ? {
+          ...raw.patient,
+          photoUrl: raw.patient.profile_photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(raw.patient.name || 'P')}&background=random`
+        } : undefined
+      }));
+
+      setAppointments(all.sort((a, b) => {
+        if (a.date === b.date) return b.time.localeCompare(a.time);
+        return b.date.localeCompare(a.date);
+      }));
     } catch (error) {
       console.error('Failed to load appointments:', error);
     } finally {
@@ -65,11 +101,10 @@ export const AppointmentsList: React.FC = () => {
             <button
               key={status}
               onClick={() => setStatusFilter(status)}
-              className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                statusFilter === status
-                  ? 'bg-pastel-blue-500 text-white'
-                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-              }`}
+              className={`px-4 py-2 rounded-lg font-medium transition-all ${statusFilter === status
+                ? 'bg-pastel-blue-500 text-white'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
             >
               {status.charAt(0).toUpperCase() + status.slice(1)}
             </button>

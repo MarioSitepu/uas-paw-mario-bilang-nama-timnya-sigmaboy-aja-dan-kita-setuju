@@ -55,15 +55,15 @@ class User(Base):
             'id': self.id,
             'name': self.name,
             'email': self.email,
-            'role': self.role.lower() if self.role else 'patient',  # Normalize to lowercase
+            'role': self.role.upper() if self.role else 'PATIENT',  # Normalize to uppercase for frontend
             'profile_photo_url': self.profile_photo_url,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
         
         # Include doctor profile if exists
-        normalized_role = (self.role.lower() if self.role else 'patient')
-        if normalized_role == 'doctor' and self.doctor_profile:
+        normalized_role = (self.role.upper() if self.role else 'PATIENT')
+        if normalized_role == 'DOCTOR' and self.doctor_profile:
             data['doctor_profile'] = self.doctor_profile.to_dict()
         
         return data

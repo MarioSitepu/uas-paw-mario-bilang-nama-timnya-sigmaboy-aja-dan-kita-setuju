@@ -10,4 +10,12 @@ export default defineConfig({
       },
     }),
   ],
+  server: {
+    headers: {
+      // Required for Google OAuth popup to work properly
+      'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
+      'Cross-Origin-Embedder-Policy': 'unsafe-none',
+    },
+  },
 })
+

@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Calendar } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { appointmentsService } from '../../services/mock/appointments.service';
+
 import type { Appointment, AppointmentStatus } from '../../types';
 import { AppointmentCard } from '../../components/cards/AppointmentCard';
 import { LoadingSkeleton } from '../../components/ui/LoadingSkeleton';
@@ -29,7 +29,31 @@ export const Schedule: React.FC = () => {
     if (!user?.id) return;
     try {
       setIsLoading(true);
-      const all = await appointmentsService.getAll({ doctorId: user.id });
+      const { appointmentsAPI } = await import('../../services/api');
+      const response = await appointmentsAPI.getAll(); // Backend filters by pending/confirmed usually or returns all for doctor?
+      // Check appointments.py: get_appointments filters by user role.
+
+      const rawAppointments = response.data.appointments || [];
+      const all: Appointment[] = rawAppointments.map((raw: any) => ({
+        ...raw,
+        id: raw.id,
+        patientId: raw.patient_id,
+        doctorId: raw.doctor_id,
+        date: raw.appointment_date,
+        time: raw.appointment_time,
+        status: raw.status,
+        reason: raw.reason,
+        notes: raw.notes,
+        patient: raw.patient ? {
+          ...raw.patient,
+          id: raw.patient.id,
+          name: raw.patient.name,
+          email: raw.patient.email,
+          role: 'PATIENT',
+          photoUrl: raw.patient.profile_photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(raw.patient.name || 'P')}&background=random`
+        } : undefined
+      }));
+
       setAppointments(all.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time)));
     } catch (error) {
       console.error('Failed to load appointments:', error);
@@ -44,9 +68,13 @@ export const Schedule: React.FC = () => {
 
   const handleStatusUpdate = async (appointmentId: number, newStatus: AppointmentStatus) => {
     try {
-      const updated = await appointmentsService.updateStatus(appointmentId, newStatus);
+      const { appointmentsAPI } = await import('../../services/api');
+      // Update uses PUT
+      const response = await appointmentsAPI.update(appointmentId, { status: newStatus });
+      const updatedRaw = response.data.appointment;
+
       setAppointments((prev) =>
-        prev.map((apt) => (apt.id === appointmentId ? { ...apt, status: updated.status } : apt)),
+        prev.map((apt) => (apt.id === appointmentId ? { ...apt, status: updatedRaw.status } : apt)),
       );
     } catch (error) {
       console.error('Failed to update status:', error);
@@ -173,8 +201,10 @@ export const Schedule: React.FC = () => {
             </div>
 
             <div className="sm:w-64">
-              <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
+              <label htmlFor="status-filter" className="block text-sm font-medium text-slate-700 mb-1">Status</label>
               <select
+                id="status-filter"
+                name="status-filter"
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as AppointmentStatus | 'all')}
                 className="w-full px-4 py-2 border border-slate-300/80 rounded-xl focus:ring-2 focus:ring-pastel-blue-500 focus:border-pastel-blue-500 bg-white/90 shadow-sm"
@@ -192,91 +222,91 @@ export const Schedule: React.FC = () => {
         <div className="mt-4">
           <div className="p-2 rounded-2xl bg-white/50 border border-white/40 shadow-sm">
             <div className="grid grid-cols-7 gap-2">
-            {dayNames.map((name) => (
-              <div
-                key={name}
-                className="bg-white/80 border border-slate-200/70 px-2 py-2 text-xs font-semibold text-slate-600 text-center rounded-xl"
-              >
-                {name}
-              </div>
-            ))}
+              {dayNames.map((name) => (
+                <div
+                  key={name}
+                  className="bg-white/80 border border-slate-200/70 px-2 py-2 text-xs font-semibold text-slate-600 text-center rounded-xl"
+                >
+                  {name}
+                </div>
+              ))}
             </div>
           </div>
 
           <div className="p-2 rounded-2xl bg-white/40 border border-white/40 shadow-sm mt-3">
             <div className="grid grid-cols-7 gap-2">
-            {calendarDays.map((day) => {
-              const iso = toISODate(day);
-              const inMonth =
-                day.getMonth() === currentMonth.getMonth() && day.getFullYear() === currentMonth.getFullYear();
-              const isSelected = iso === selectedDate;
-              const isToday = iso === toISODate(new Date());
-              const dayAppointments = appointmentsByDate.get(iso) ?? [];
-              const maxVisible = 3;
-              const visible = dayAppointments.slice(0, maxVisible);
-              const hiddenCount = Math.max(0, dayAppointments.length - maxVisible);
+              {calendarDays.map((day) => {
+                const iso = toISODate(day);
+                const inMonth =
+                  day.getMonth() === currentMonth.getMonth() && day.getFullYear() === currentMonth.getFullYear();
+                const isSelected = iso === selectedDate;
+                const isToday = iso === toISODate(new Date());
+                const dayAppointments = appointmentsByDate.get(iso) ?? [];
+                const maxVisible = 3;
+                const visible = dayAppointments.slice(0, maxVisible);
+                const hiddenCount = Math.max(0, dayAppointments.length - maxVisible);
 
-              return (
-                <button
-                  key={iso}
-                  type="button"
-                  onClick={() => handleDayClick(day)}
-                  className={[
-                    'text-left p-3 min-h-28 relative transition-colors rounded-2xl border backdrop-blur-xl shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-pastel-blue-400',
-                    inMonth
-                      ? 'bg-white/75 border-slate-200/70 hover:bg-white'
-                      : 'bg-slate-50/70 text-slate-400 border-slate-200/40 hover:bg-slate-100/70',
-                    isSelected ? 'ring-2 ring-pastel-blue-500 shadow-md bg-white z-[1]' : 'ring-0',
-                  ].join(' ')}
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <span
-                      className={[
-                        'inline-flex w-8 h-8 items-center justify-center rounded-full text-sm font-semibold tracking-tight',
-                        isToday
-                          ? 'bg-pastel-blue-50 text-pastel-blue-800 border border-pastel-blue-100/70'
-                          : inMonth
-                            ? 'text-slate-800'
-                            : 'text-slate-400',
-                      ].join(' ')}
-                    >
-                      {day.getDate()}
-                    </span>
-                    <span className="text-[11px] font-medium text-slate-500">
-                      {dayAppointments.length > 0 ? dayAppointments.length : ''}
-                    </span>
-                  </div>
+                return (
+                  <button
+                    key={iso}
+                    type="button"
+                    onClick={() => handleDayClick(day)}
+                    className={[
+                      'text-left p-3 min-h-28 relative transition-colors rounded-2xl border backdrop-blur-xl shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-pastel-blue-400',
+                      inMonth
+                        ? 'bg-white/75 border-slate-200/70 hover:bg-white'
+                        : 'bg-slate-50/70 text-slate-400 border-slate-200/40 hover:bg-slate-100/70',
+                      isSelected ? 'ring-2 ring-pastel-blue-500 shadow-md bg-white z-[1]' : 'ring-0',
+                    ].join(' ')}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <span
+                        className={[
+                          'inline-flex w-8 h-8 items-center justify-center rounded-full text-sm font-semibold tracking-tight',
+                          isToday
+                            ? 'bg-pastel-blue-50 text-pastel-blue-800 border border-pastel-blue-100/70'
+                            : inMonth
+                              ? 'text-slate-800'
+                              : 'text-slate-400',
+                        ].join(' ')}
+                      >
+                        {day.getDate()}
+                      </span>
+                      <span className="text-[11px] font-medium text-slate-500">
+                        {dayAppointments.length > 0 ? dayAppointments.length : ''}
+                      </span>
+                    </div>
 
-                  <div className="space-y-1">
-                    {visible.length === 0 && inMonth && isSelected ? (
-                      <p className="text-xs text-slate-400">No schedule</p>
-                    ) : (
-                      visible.map((apt) => (
-                        <Link
-                          key={apt.id}
-                          to={`/app/doctor/appointments/${apt.id}`}
-                          onClick={(e) => e.stopPropagation()}
-                          className={[
-                            'block text-xs leading-4 px-2 py-1.5 rounded-xl truncate shadow-sm',
-                            statusChipClasses[apt.status],
-                          ].join(' ')}
-                          title={`${apt.time} · ${apt.patient?.name ?? `Patient #${apt.patientId}`}`}
-                        >
-                          <span className="font-medium">{apt.time}</span>
-                          <span className="mx-1">·</span>
-                          <span className="truncate">{apt.patient?.name ?? `Patient #${apt.patientId}`}</span>
-                        </Link>
-                      ))
-                    )}
-                    {hiddenCount > 0 && (
-                      <div className="inline-flex text-xs text-slate-600 font-medium px-2 py-1 rounded-xl bg-white/70 border border-slate-200/70">
-                        +{hiddenCount} more
-                      </div>
-                    )}
-                  </div>
-                </button>
-              );
-            })}
+                    <div className="space-y-1">
+                      {visible.length === 0 && inMonth && isSelected ? (
+                        <p className="text-xs text-slate-400">No schedule</p>
+                      ) : (
+                        visible.map((apt) => (
+                          <Link
+                            key={apt.id}
+                            to={`/app/doctor/appointments/${apt.id}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className={[
+                              'block text-xs leading-4 px-2 py-1.5 rounded-xl truncate shadow-sm',
+                              statusChipClasses[apt.status],
+                            ].join(' ')}
+                            title={`${apt.time} · ${apt.patient?.name ?? `Patient #${apt.patientId}`}`}
+                          >
+                            <span className="font-medium">{apt.time}</span>
+                            <span className="mx-1">·</span>
+                            <span className="truncate">{apt.patient?.name ?? `Patient #${apt.patientId}`}</span>
+                          </Link>
+                        ))
+                      )}
+                      {hiddenCount > 0 && (
+                        <div className="inline-flex text-xs text-slate-600 font-medium px-2 py-1 rounded-xl bg-white/70 border border-slate-200/70">
+                          +{hiddenCount} more
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -299,7 +329,7 @@ export const Schedule: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {selectedAppointments.map((appointment) => (
             <div key={appointment.id} className="bento-card">
-              <AppointmentCard appointment={appointment} showActions={false} />
+              <AppointmentCard appointment={appointment} showActions={false} isDoctorView={true} />
               <div className="mt-4 pt-4 border-t border-slate-200 space-y-2">
                 {appointment.status === 'pending' && (
                   <button

@@ -1,7 +1,8 @@
 from pyramid.view import view_config
 from pyramid.httpexceptions import HTTPNotFound, HTTPForbidden
-from ..models import Doctor, User
+from ..models import Doctor, User, Appointment
 from .auth import get_db_session, require_auth, require_role, get_current_user
+from datetime import datetime, time, timedelta
 
 
 @view_config(route_name='api_doctors', request_method='GET', renderer='json')
@@ -71,6 +72,7 @@ def get_doctor(request):
         doctor = session.query(Doctor).filter(Doctor.id == doctor_id).first()
         
         if not doctor:
+            request.response.status_int = 404
             return {'error': 'Dokter tidak ditemukan'}
         
         doc_dict = doctor.to_dict(include_user=True)
@@ -111,10 +113,12 @@ def update_doctor(request):
         
         doctor = session.query(Doctor).filter(Doctor.id == doctor_id).first()
         if not doctor:
+            request.response.status_int = 404
             return {'error': 'Dokter tidak ditemukan'}
         
         # Cek akses: hanya dokter yang bersangkutan atau admin
         if current_user.role.lower() != 'admin' and doctor.user_id != current_user.id:
+            request.response.status_int = 403
             return {'error': 'Anda tidak memiliki akses untuk mengubah profil ini'}
         
         data = request.json_body
@@ -204,10 +208,12 @@ def update_doctor_schedule(request):
         
         doctor = session.query(Doctor).filter(Doctor.id == doctor_id).first()
         if not doctor:
+            request.response.status_int = 404
             return {'error': 'Dokter tidak ditemukan'}
         
         # Cek akses
-        if current_user.role != 'admin' and doctor.user_id != current_user.id:
+        if current_user.role.lower() != 'admin' and doctor.user_id != current_user.id:
+            request.response.status_int = 403
             return {'error': 'Anda tidak memiliki akses untuk mengubah jadwal ini'}
         
         data = request.json_body
@@ -248,5 +254,112 @@ def get_specializations(request):
         specializations = [doc.specialization for doc in doctors if doc.specialization]
         
         return {'specializations': sorted(set(specializations))}
+    finally:
+        session.close()
+
+@view_config(route_name='api_doctor_slots', request_method='GET', renderer='json')
+def get_doctor_slots(request):
+    """Mendapatkan slot waktu yang tersedia untuk dokter pada tanggal tertentu"""
+    session = get_db_session(request)
+    try:
+        doctor_id = int(request.matchdict['id'])
+        date_str = request.params.get('date')
+        
+        if not date_str:
+            return {'error': 'Date parameter is required'}
+            
+        try:
+            target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+            return {'error': 'Invalid date format (YYYY-MM-DD)'}
+            
+        doctor = session.query(Doctor).filter(Doctor.id == doctor_id).first()
+        if not doctor:
+            request.response.status_int = 404
+            return {'error': 'Doctor not found'}
+            
+        # Get doctor's schedule for the day
+        days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+        day_name = days[target_date.weekday()]
+        
+        schedule = doctor.schedule or {}
+        # Handle key number vs string logic again just in case
+        day_schedule = schedule.get(day_name)
+        if not day_schedule and str(target_date.weekday()) in schedule:
+             day_schedule = schedule.get(str(target_date.weekday()))
+             
+        if not day_schedule:
+             # Try default if not found
+             day_schedule = {
+                'available': day_name not in ['saturday', 'sunday'],
+                'startTime': '09:00',
+                'endTime': '17:00'
+             }
+
+        if not day_schedule.get('available'):
+            return [] # No slots if not available
+            
+        start_time_str = day_schedule.get('startTime')
+        end_time_str = day_schedule.get('endTime')
+        break_start_str = day_schedule.get('breakStart')
+        break_end_str = day_schedule.get('breakEnd')
+        
+        if not start_time_str or not end_time_str:
+            return []
+            
+        # Helper to parse time
+        def parse_time(t_str):
+            h, m = map(int, t_str.split(':'))
+            return time(h, m)
+            
+        try:
+            start_time = parse_time(start_time_str)
+            end_time = parse_time(end_time_str)
+            
+            break_start = parse_time(break_start_str) if break_start_str else None
+            break_end = parse_time(break_end_str) if break_end_str else None
+        except ValueError:
+             return [] # Invalid time format in schedule
+        
+        # Get existing appointments
+        appointments = session.query(Appointment).filter(
+            Appointment.doctor_id == doctor_id,
+            Appointment.appointment_date == target_date,
+            Appointment.status.in_(['pending', 'confirmed'])
+        ).all()
+        
+        taken_times = {apt.appointment_time for apt in appointments}
+        
+        # Generate slots
+        slots = []
+        current_time = datetime.combine(target_date, start_time)
+        end_datetime = datetime.combine(target_date, end_time)
+        
+        # Slot duration 60 mins
+        slot_duration = 60
+        
+        while current_time < end_datetime:
+            slot_time = current_time.time()
+            
+            # Check if in break
+            in_break = False
+            if break_start and break_end:
+                if break_start <= slot_time < break_end:
+                    in_break = True
+            
+            # Check if taken
+            is_taken = slot_time in taken_times
+            
+            # Only add valid slots
+            if not in_break:
+                slots.append({
+                    'time': slot_time.strftime('%H:%M'),
+                    'available': not is_taken
+                })
+            
+            current_time += timedelta(minutes=slot_duration)
+            
+        return slots
+        
     finally:
         session.close()

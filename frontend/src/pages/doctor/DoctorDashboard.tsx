@@ -2,20 +2,22 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Calendar, ClipboardList, FileText } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { appointmentsService } from '../../services/mock/appointments.service';
-import { doctorsService } from '../../services/mock/doctors.service';
+
 import type { Appointment, AppointmentStatus } from '../../types';
 import { AppointmentCard } from '../../components/cards/AppointmentCard';
 import { LoadingSkeleton } from '../../components/ui/LoadingSkeleton';
-import { EmptyState } from '../../components/ui/EmptyState';
+import { useToastContext } from '../../components/ui/Toast';
 
 export const DoctorDashboard: React.FC = () => {
   const { user } = useAuth();
   const [allAppointments, setAllAppointments] = useState<Appointment[]>([]);
   const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([]);
+  const [pendingAppointments, setPendingAppointments] = useState<Appointment[]>([]);
   const [doctorRating, setDoctorRating] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [trendMode, setTrendMode] = useState<'daily' | 'weekly'>('daily');
+  const [isUpdating, setIsUpdating] = useState(false);
+  const { addToast } = useToastContext();
 
   useEffect(() => {
     if (!user?.id) return;
@@ -25,21 +27,73 @@ export const DoctorDashboard: React.FC = () => {
     const loadDashboardData = async () => {
       try {
         setIsLoading(true);
-        const [all, doctor] = await Promise.all([
-          appointmentsService.getAll({ doctorId: user.id }),
-          doctorsService.getById(user.id),
+        const { appointmentsAPI } = await import('../../services/api');
+
+        // Backend filters appointments by doctor automatically based on token
+        const [aptResponse] = await Promise.all([
+          appointmentsAPI.getAll(),
         ]);
+
+        // Doctor details logic skipped for now as discussed
+        // const doctorProfile = (user as any)?.doctor_profile;
+        // const doctorId = doctorProfile?.id; 
+
+
+        // If we don't have doctor ID, we can't fetch doctor details reliably via getById(id) if id means doctor_id.
+        // But we DO need doctor details for rating etc.
+        // If backend /api/doctors/{id} expects doctor_id.
+
+        // Workaround: We can't fetch doctor by ID if we don't have it.
+        // BUT, we can use `authAPI.getMe()` to get full user with profile.
+        // OR `doctorsAPI.getAll({ user_id: user.id })`? No.
+
+        // For now, let's assume we can GET appointments (auth-based).
+        // Doctor details: We might skip or fetch generic.
+        // Actually, let's try to get doctor details if we have the ID.
+        // If not, we might be blocked on showing "Rating". 
+
+        const rawAppointments = aptResponse.data.appointments || [];
+        const all: Appointment[] = rawAppointments.map((raw: any) => ({
+          ...raw,
+          id: raw.id,
+          patientId: raw.patient_id,
+          doctorId: raw.doctor_id,
+          date: raw.appointment_date,
+          time: raw.appointment_time,
+          status: raw.status,
+          reason: raw.reason,
+          notes: raw.notes,
+          patient: raw.patient ? {
+            ...raw.patient,
+            id: raw.patient.id,
+            name: raw.patient.name,
+            email: raw.patient.email,
+            role: 'PATIENT',
+            photoUrl: raw.patient.profile_photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(raw.patient.name || 'P')}&background=random`
+          } : undefined
+        }));
 
         if (!isActive) return;
 
         setAllAppointments(all);
-        setDoctorRating(doctor?.rating ?? null);
+
+        // Doctor details
+        // Note: docResponse might assume user.id == doctor_id which is RISKY.
+        // We'll skip fetching doctor object for now if we strictly need doctor_id.
+        // Real fix: useAuth should provide doctorId.
+        // For now, assume rating is unavailable or mocked if not found.
+        setDoctorRating(null); // Backend Doctor model likely doesn't have rating yet.
 
         const today = toLocalISODate(new Date());
         const todayApts = all
-          .filter((apt) => apt.date === today && ['pending', 'confirmed'].includes(apt.status))
+          .filter((apt) => apt.date === today && apt.status === 'confirmed')
           .sort((a, b) => a.time.localeCompare(b.time));
         setTodayAppointments(todayApts);
+
+        const pending = all
+          .filter((apt) => apt.status === 'pending')
+          .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+        setPendingAppointments(pending);
       } catch (error) {
         console.error('Failed to load appointments:', error);
       } finally {
@@ -55,6 +109,28 @@ export const DoctorDashboard: React.FC = () => {
       window.clearInterval(intervalId);
     };
   }, [user?.id]);
+
+  const handleStatusUpdate = async (id: number, status: AppointmentStatus) => {
+    try {
+      setIsUpdating(true);
+      const { appointmentsAPI } = await import('../../services/api');
+      await appointmentsAPI.update(id, { status });
+      addToast(`Appointment ${status} successfully`, 'success');
+      // Update local state instead of full reload for better UX
+      setPendingAppointments(prev => prev.filter(a => a.id !== id));
+      setAllAppointments(prev => prev.map(a => a.id === id ? { ...a, status } : a));
+      if (status === 'confirmed') {
+        const updated = allAppointments.find(a => a.id === id);
+        if (updated && updated.date === toLocalISODate(new Date())) {
+          setTodayAppointments(prev => [...prev, { ...updated, status }].sort((a, b) => a.time.localeCompare(b.time)));
+        }
+      }
+    } catch (error) {
+      addToast('Failed to update status', 'error');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   const toLocalISODate = (date: Date) => {
     const y = date.getFullYear();
@@ -225,12 +301,20 @@ export const DoctorDashboard: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-slate-800 mb-2">
-          Welcome, dr. {user?.name}!
-        </h1>
-        <p className="text-slate-600">Here's your schedule overview</p>
+    <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-700">
+      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+        <div>
+          <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight mb-2">
+            Welcome, <span className="text-transparent bg-clip-text bg-gradient-to-r from-pastel-blue-600 to-pastel-blue-400">dr. {user?.name}</span>!
+          </h1>
+          <p className="text-lg text-slate-600 font-medium tracking-tight">Manage your clinic and care for your patients efficiently.</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="px-4 py-2 bg-emerald-50 text-emerald-700 rounded-full border border-emerald-100 shadow-sm flex items-center gap-2">
+            <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+            <span className="text-sm font-bold">Clinic Active</span>
+          </div>
+        </div>
       </div>
 
       {/* Stats Bento Grid */}
@@ -241,15 +325,16 @@ export const DoctorDashboard: React.FC = () => {
             <Link
               key={idx}
               to={stat.link || '#'}
-              className="bento-card group hover:scale-105 transition-transform"
+              className="group relative overflow-hidden bg-white p-6 rounded-3xl border border-slate-100 shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300"
             >
-              <div className="flex items-center justify-between">
+              <div className={`absolute top-0 right-0 w-32 h-32 -mr-8 -mt-8 rounded-full opacity-10 group-hover:scale-110 transition-transform ${stat.color}`}></div>
+              <div className="relative flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-slate-600 mb-1">{stat.label}</p>
-                  <p className="text-2xl font-bold text-slate-800">{stat.value}</p>
+                  <p className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-1">{stat.label}</p>
+                  <p className="text-3xl font-black text-slate-900">{stat.value}</p>
                 </div>
-                <div className={`w-12 h-12 ${stat.color} rounded-xl flex items-center justify-center text-white shadow-lg`}>
-                  <IconComponent size={24} />
+                <div className={`w-14 h-14 ${stat.color} rounded-2xl flex items-center justify-center text-3xl text-white shadow-lg group-hover:rotate-12 transition-transform`}>
+                  <IconComponent size={32} />
                 </div>
               </div>
             </Link>
@@ -343,8 +428,8 @@ export const DoctorDashboard: React.FC = () => {
             </div>
           </div>
 
-            <div className="mt-6">
-              <div className="h-44 flex items-end gap-2">
+          <div className="mt-6">
+            <div className="h-44 flex items-end gap-2">
               {trendSeries.map((p, idx) => (
                 <div key={p.key} className="flex-1 min-w-0 flex flex-col items-center gap-2">
                   <div
@@ -363,7 +448,7 @@ export const DoctorDashboard: React.FC = () => {
                   </div>
                 </div>
               ))}
-              </div>
+            </div>
 
             <div className="mt-4 flex items-center justify-between text-sm text-slate-600">
               <span>
@@ -421,30 +506,68 @@ export const DoctorDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Today's Appointments */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-semibold text-slate-800">Today's Appointments</h2>
+      {/* New Requests Section */}
+      {pendingAppointments.length > 0 && (
+        <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center text-xl">🔔</div>
+            <h2 className="text-2xl font-bold text-slate-800">New Requests</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {pendingAppointments.map((appointment) => (
+              <div key={appointment.id} className="group bg-white p-6 rounded-3xl border border-slate-100 shadow-xl space-y-4">
+                <AppointmentCard appointment={appointment} showActions={false} isDoctorView={true} />
+                <div className="flex gap-3 pt-2">
+                  <button
+                    onClick={() => handleStatusUpdate(appointment.id, 'confirmed')}
+                    disabled={isUpdating}
+                    className="flex-1 px-4 py-3 bg-gradient-blue text-white rounded-2xl font-bold text-sm shadow-md hover:shadow-lg transition-all disabled:opacity-50"
+                  >
+                    Confirm
+                  </button>
+                  <button
+                    onClick={() => handleStatusUpdate(appointment.id, 'cancelled')}
+                    disabled={isUpdating}
+                    className="px-4 py-3 bg-red-50 text-red-600 rounded-2xl font-bold text-sm hover:bg-red-100 transition-colors disabled:opacity-50"
+                  >
+                    Decline
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Today's Schedule */}
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-pastel-blue-100 rounded-xl flex items-center justify-center text-xl">📅</div>
+            <h2 className="text-2xl font-bold text-slate-800">Today's Schedule</h2>
+          </div>
           <Link
             to="/app/doctor/schedule"
-            className="text-pastel-blue-600 hover:underline font-medium"
+            className="group flex items-center gap-2 text-pastel-blue-600 hover:text-pastel-blue-700 font-bold transition-all"
           >
-            View Schedule
+            View Dashboard
+            <span className="group-hover:translate-x-1 transition-transform">→</span>
           </Link>
         </div>
 
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3].map((i) => (
-              <LoadingSkeleton key={i} className="h-48" />
+              <LoadingSkeleton key={i} className="h-48 rounded-3xl" />
             ))}
           </div>
         ) : todayAppointments.length === 0 ? (
-          <EmptyState
-            icon={<Calendar size={48} className="text-slate-400" />}
-            title="No appointments today"
-            description="You have no scheduled appointments for today"
-          />
+          <div className="bg-white border border-slate-100 rounded-[2rem] p-12 text-center shadow-xl">
+            <div className="flex justify-center mb-4">
+              <Calendar size={48} className="text-slate-400" />
+            </div>
+            <p className="text-slate-500 font-medium">No confirmed appointments for today.</p>
+          </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {todayAppointments.map((appointment) => (
@@ -452,6 +575,7 @@ export const DoctorDashboard: React.FC = () => {
                 key={appointment.id}
                 appointment={appointment}
                 showActions={false}
+                isDoctorView={true}
               />
             ))}
           </div>

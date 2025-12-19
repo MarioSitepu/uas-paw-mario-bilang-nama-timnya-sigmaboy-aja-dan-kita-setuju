@@ -46,21 +46,21 @@ export const authAPI = {
   login: (data: { email: string; password: string }) =>
     api.post('/api/auth/login', data),
 
-  googleLogin: (token: string) => api.post('/api/auth/google', { token }),
+  googleLogin: (token: string, role?: string) => api.post('/api/auth/google', { token, role }),
 
   logout: () => api.post('/api/auth/logout'),
 
   getMe: () => api.get('/api/auth/me'),
-  
+
   // Generic get method for other API endpoints
   get: (url: string) => api.get(url),
-  
+
   // Generic post method for other API endpoints
   post: (url: string, data?: any) => api.post(url, data),
-  
+
   // Generic put method for other API endpoints
   put: (url: string, data?: any) => api.put(url, data),
-  
+
   // Generic delete method for other API endpoints
   delete: (url: string) => api.delete(url),
 };
@@ -75,8 +75,8 @@ export const doctorsAPI = {
   update: (id: number, data: unknown) => api.put(`/api/doctors/${id}`, data),
 
   getSchedule: (id: number) => api.get(`/api/doctors/${id}/schedule`),
-
-  updateSchedule: (id: number, schedule: unknown) =>
+  getSlots: (id: number, date: string) => api.get(`/api/doctors/${id}/slots`, { params: { date } }),
+  updateSchedule: (id: number, schedule: any) =>
     api.put(`/api/doctors/${id}/schedule`, { schedule }),
 
   getSpecializations: () => api.get('/api/specializations'),
