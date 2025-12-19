@@ -55,11 +55,11 @@ def cors_tween_factory(handler, registry):
                 except Exception as resp_error:
                     # If creating response fails, create a minimal response
                     print(f"[CORS TWEEN] Failed to create error response: {resp_error}", file=sys.stderr, flush=True)
-                response = Response(
+                    response = Response(
                         body=f'{{"error": "Internal server error", "type": "{type(e).__name__}"}}'.encode('utf-8'),
-                    status=500,
-                    content_type='application/json'
-                )
+                        status=500,
+                        content_type='application/json'
+                    )
         
         # Ensure response object exists and has headers
         if response is None:
@@ -96,11 +96,11 @@ def cors_tween_factory(handler, registry):
                 response.headers['Access-Control-Allow-Credentials'] = 'true'
             else:
                 # Fallback to * for development (but no credentials)
-        response.headers['Access-Control-Allow-Origin'] = '*'
+                response.headers['Access-Control-Allow-Origin'] = '*'
             
-        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS, HEAD, PATCH'
+            response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS, HEAD, PATCH'
             response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With, Accept'
-        response.headers['Access-Control-Max-Age'] = '86400'
+            response.headers['Access-Control-Max-Age'] = '86400'
         except Exception as cors_error:
             # If adding headers fails, log but don't crash
             import sys
@@ -207,9 +207,9 @@ def main(global_config, **settings):
     settings['sqlalchemy.max_overflow'] = '10'
     settings['sqlalchemy.pool_recycle'] = '3600'
     try:
-    engine = engine_from_config(settings, 'sqlalchemy.')
-    DBSession = sessionmaker(bind=engine)
-    config.registry.dbmaker = DBSession
+        engine = engine_from_config(settings, 'sqlalchemy.')
+        DBSession = sessionmaker(bind=engine)
+        config.registry.dbmaker = DBSession
     except Exception as db_error:
         import sys
         print(f"[MAIN] Database connection error: {db_error}", file=sys.stderr, flush=True)
