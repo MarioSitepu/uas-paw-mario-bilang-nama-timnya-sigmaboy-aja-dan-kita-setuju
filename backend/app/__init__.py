@@ -146,7 +146,7 @@ def main(global_config, **settings):
     elif 'sqlalchemy.url' in settings:
         # Check if it's a placeholder, if so, warn user
         url = settings.get('sqlalchemy.url', '')
-        if 'user:password@host/database' in url:
+        if 'placeholder' in url or 'user:password@host/database' in url:
             import warnings
             warnings.warn(
                 "Please set DATABASE_URL environment variable or update sqlalchemy.url in development.ini "
@@ -155,6 +155,19 @@ def main(global_config, **settings):
         # Convert postgresql:// to postgresql+psycopg:// for psycopg3
         elif url.startswith('postgresql://') and not url.startswith('postgresql+psycopg://'):
             settings['sqlalchemy.url'] = url.replace('postgresql://', 'postgresql+psycopg://', 1)
+    
+    # Session secret - read from environment variable
+    session_secret = os.environ.get('SESSION_SECRET')
+    if session_secret:
+        settings['session.secret'] = session_secret
+    elif 'session.secret' in settings:
+        # Check if it's a placeholder
+        secret = settings.get('session.secret', '')
+        if 'placeholder' in secret:
+            import warnings
+            warnings.warn(
+                "Please set SESSION_SECRET environment variable for production"
+            )
     
     # Add pool_pre_ping to handle disconnected connections (SSL timeout)
     settings['sqlalchemy.pool_pre_ping'] = 'true'
