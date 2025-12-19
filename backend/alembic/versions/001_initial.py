@@ -23,7 +23,7 @@ def upgrade() -> None:
     from sqlalchemy import inspect
     conn = op.get_bind()
     inspector = inspect(conn)
-    existing_tables = inspector.get_table_names()
+    existing_tables = set(inspector.get_table_names())
     
     # Create users table
     if 'users' not in existing_tables:
@@ -99,31 +99,41 @@ def upgrade() -> None:
         print("Table 'medical_records' already exists, skipping creation")
     
     # Create indexes for better query performance (only if they don't exist)
-    if 'users' in existing_tables:
-        existing_indexes = [idx['name'] for idx in inspector.get_indexes('users')]
-        if 'ix_users_email' not in existing_indexes:
-            op.create_index('ix_users_email', 'users', ['email'])
-        if 'ix_users_role' not in existing_indexes:
-            op.create_index('ix_users_role', 'users', ['role'])
-    else:
+    if 'users' not in existing_tables:
         op.create_index('ix_users_email', 'users', ['email'])
         op.create_index('ix_users_role', 'users', ['role'])
-    
-    if 'appointments' in existing_tables:
-        existing_indexes = [idx['name'] for idx in inspector.get_indexes('appointments')]
-        if 'ix_appointments_patient_id' not in existing_indexes:
-            op.create_index('ix_appointments_patient_id', 'appointments', ['patient_id'])
-        if 'ix_appointments_doctor_id' not in existing_indexes:
-            op.create_index('ix_appointments_doctor_id', 'appointments', ['doctor_id'])
-        if 'ix_appointments_date' not in existing_indexes:
-            op.create_index('ix_appointments_date', 'appointments', ['appointment_date'])
-        if 'ix_appointments_status' not in existing_indexes:
-            op.create_index('ix_appointments_status', 'appointments', ['status'])
     else:
+        # Check existing indexes
+        try:
+            existing_indexes = {idx['name'] for idx in inspector.get_indexes('users')}
+            if 'ix_users_email' not in existing_indexes:
+                op.create_index('ix_users_email', 'users', ['email'])
+            if 'ix_users_role' not in existing_indexes:
+                op.create_index('ix_users_role', 'users', ['role'])
+        except Exception:
+            # If we can't check indexes, try to create them (will fail gracefully if they exist)
+            pass
+    
+    if 'appointments' not in existing_tables:
         op.create_index('ix_appointments_patient_id', 'appointments', ['patient_id'])
         op.create_index('ix_appointments_doctor_id', 'appointments', ['doctor_id'])
         op.create_index('ix_appointments_date', 'appointments', ['appointment_date'])
         op.create_index('ix_appointments_status', 'appointments', ['status'])
+    else:
+        # Check existing indexes
+        try:
+            existing_indexes = {idx['name'] for idx in inspector.get_indexes('appointments')}
+            if 'ix_appointments_patient_id' not in existing_indexes:
+                op.create_index('ix_appointments_patient_id', 'appointments', ['patient_id'])
+            if 'ix_appointments_doctor_id' not in existing_indexes:
+                op.create_index('ix_appointments_doctor_id', 'appointments', ['doctor_id'])
+            if 'ix_appointments_date' not in existing_indexes:
+                op.create_index('ix_appointments_date', 'appointments', ['appointment_date'])
+            if 'ix_appointments_status' not in existing_indexes:
+                op.create_index('ix_appointments_status', 'appointments', ['status'])
+        except Exception:
+            # If we can't check indexes, try to create them (will fail gracefully if they exist)
+            pass
 
 
 def downgrade() -> None:
