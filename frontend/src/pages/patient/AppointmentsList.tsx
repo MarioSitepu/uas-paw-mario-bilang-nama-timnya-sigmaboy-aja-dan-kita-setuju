@@ -43,7 +43,7 @@ export const AppointmentsList: React.FC = () => {
       });
       
       // Transform backend format to frontend format
-      appointments = appointments.map((apt: any) => ({
+      appointments = appointments.map((apt: Appointment) => ({
         id: apt.id,
         doctorId: apt.doctor_id,
         patientId: apt.patient_id,
@@ -92,11 +92,6 @@ export const AppointmentsList: React.FC = () => {
     }
   };
 
-  // Function to be called after successful appointment action (reschedule/cancel)
-  const handleAppointmentUpdated = async () => {
-    // Reload appointments after a successful action
-    await loadAppointments();
-  };
 
   return (
     <div className="space-y-6">

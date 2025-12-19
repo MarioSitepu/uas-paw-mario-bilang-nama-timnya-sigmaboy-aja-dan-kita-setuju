@@ -22,7 +22,6 @@ export const BookAppointment: React.FC = () => {
   const [reason, setReason] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [doctorSchedule, setDoctorSchedule] = useState<any>(null);
   const [availableDates, setAvailableDates] = useState<string[]>([]);
   const { addToast } = useToastContext();
 
@@ -147,8 +146,6 @@ export const BookAppointment: React.FC = () => {
       
       console.log('🔍 Full schedule response:', scheduleResponse.data);
       console.log('📋 Doctor schedule data:', doctorScheduleData);
-      
-      setDoctorSchedule(doctorScheduleData);
 
       // Get day of week from selected date
       const date = new Date(selectedDate);

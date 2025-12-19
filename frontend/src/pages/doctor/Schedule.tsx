@@ -83,16 +83,6 @@ export const Schedule: React.FC = () => {
     filteredAppointments = filteredAppointments.filter(apt => apt.date === selectedDate);
   }
 
-  const handleStatusUpdate = async (appointmentId: number, newStatus: AppointmentStatus) => {
-    try {
-      await authAPI.put(`/api/appointments/${appointmentId}`, {
-        status: newStatus,
-      });
-      loadAppointments();
-    } catch (error: any) {
-      console.error('Failed to update status:', error);
-    }
-  };
 
   return (
     <div className="space-y-6">

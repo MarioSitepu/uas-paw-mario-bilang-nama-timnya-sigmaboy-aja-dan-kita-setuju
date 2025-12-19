@@ -24,6 +24,7 @@ export interface Doctor {
   name: string;
   specialization: string;
   photoUrl: string;
+  profile_photo_url?: string;
   rating: number;
   location: string;
   clinic: string;

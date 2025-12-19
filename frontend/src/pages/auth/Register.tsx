@@ -38,7 +38,7 @@ export const Register: React.FC = () => {
     }
 
     // Validate doctor fields if registering as doctor
-    if (formData.role === UserRole.DOCTOR) {
+    if (formData.role === 'doctor') {
       if (!formData.specialization.trim()) {
         setError('Specialization is required for doctors');
         return;
@@ -56,7 +56,7 @@ export const Register: React.FC = () => {
       };
 
       // Include doctor fields if registering as doctor
-      if (formData.role === UserRole.DOCTOR) {
+      if (formData.role === 'doctor') {
         registerData.specialization = formData.specialization;
         if (formData.license_number) registerData.license_number = formData.license_number;
         if (formData.phone) registerData.phone = formData.phone;
@@ -143,7 +143,7 @@ export const Register: React.FC = () => {
             </div>
 
             {/* Professional Information - Only for Doctors */}
-            {formData.role === UserRole.DOCTOR && (
+            {formData.role === 'doctor' && (
               <div className="pt-4 border-t border-slate-200">
                 <h3 className="text-sm font-semibold text-slate-700 mb-4">Professional Information</h3>
                 
