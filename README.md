@@ -6,11 +6,11 @@ Sistem booking appointment klinik dengan manajemen jadwal dokter dan patient rec
 
 | Nama | NIM | Pembagian Tugas |
 |------|-----|-----------------|
-| [Nama Anggota 1] | [NIM] | Team Leader, Integration, Deployment, Documentation |
-| [Nama Anggota 2] | [NIM] | Frontend Developer - Components, Routing, State Management |
-| [Nama Anggota 3] | [NIM] | Frontend Developer - UI/UX, Forms, Validation |
-| [Nama Anggota 4] | [NIM] | Backend Developer - API Endpoints, Business Logic |
-| [Nama Anggota 5] | [NIM] | Backend Developer - Authentication, Security, Database |
+| Mario Fransiskus Sitepu | 123140023 | Team Leader, Integration, Deployment, Documentation |
+| Michael Matthew | 123140101 | Frontend Developer - Components, Routing, State Management |
+| Anselmus Herpin Hasugian | 123140020 | Frontend Developer - UI/UX, Forms, Validation |
+| Febrian Valetino Nugroho | 123140034 | Backend Developer - API Endpoints, Business Logic |
+| Adi Septriansyah | 123140021 | Backend Developer - Authentication, Security, Database |
 
 **Catatan:** Silakan isi nama dan NIM anggota tim sebelum submit.
 
