@@ -62,14 +62,14 @@ export const AppointmentsList: React.FC = () => {
       // ALWAYS filter out cancelled appointments UNLESS user specifically filters for cancelled
       if (statusFilter !== 'cancelled') {
         const beforeFilter = appointments.length;
-        appointments = appointments.filter(apt => apt.status !== 'cancelled');
+        appointments = appointments.filter((apt: Appointment) => apt.status !== 'cancelled');
         const afterFilter = appointments.length;
         console.log(`🔍 Filtering cancelled: ${beforeFilter} → ${afterFilter} (removed ${beforeFilter - afterFilter})`);
       } else {
         console.log('🔍 Showing ONLY cancelled appointments');
       }
       
-      const sorted = appointments.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      const sorted = appointments.sort((a: Appointment, b: Appointment) => new Date(b.date).getTime() - new Date(a.date).getTime());
       console.log('📊 Final appointments to display:', sorted.length);
       sorted.forEach((apt: Appointment) => {
         console.log(`  - ID: ${apt.id}, Status: ${apt.status}, Date: ${apt.date}`);
