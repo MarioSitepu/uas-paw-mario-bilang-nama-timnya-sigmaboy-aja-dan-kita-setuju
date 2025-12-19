@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { UserRole } from '../types';
 
 export const Header: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
+  const { user, isAuthenticated } = useAuth();
+  const shouldShowSignIn = !(isAuthenticated && user?.role === UserRole.DOCTOR);
 
   const isActive = (path: string) => {
     return location.pathname === path ? 'text-blue-600 font-bold' : 'text-gray-700';
@@ -48,12 +52,14 @@ export const Header: React.FC = () => {
 
           {/* Desktop CTA Buttons */}
           <div className="hidden md:flex items-center gap-3">
-            <Link
-              to="/auth/login"
-              className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors"
-            >
-              Sign In
-            </Link>
+            {shouldShowSignIn && (
+              <Link
+                to="/auth/login"
+                className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors"
+              >
+                Sign In
+              </Link>
+            )}
             <Link
               to="/patient/book-appointment"
               className="px-5 py-2 bg-blue-600 text-white rounded-lg font-medium text-sm hover:bg-blue-700 transition-colors"
@@ -85,12 +91,14 @@ export const Header: React.FC = () => {
               </a>
             ))}
             <div className="flex flex-col gap-2 pt-4 border-t">
-              <Link
-                to="/auth/login"
-                className="px-4 py-2 text-center text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors rounded-lg"
-              >
-                Sign In
-              </Link>
+              {shouldShowSignIn && (
+                <Link
+                  to="/auth/login"
+                  className="px-4 py-2 text-center text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors rounded-lg"
+                >
+                  Sign In
+                </Link>
+              )}
               <Link
                 to="/patient/book-appointment"
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium text-sm hover:bg-blue-700 transition-colors text-center"

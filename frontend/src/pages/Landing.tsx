@@ -6,7 +6,6 @@ import { TestimonialsSection } from '../components/sections/TestimonialsSection'
 import { InsightsSection } from '../components/sections/InsightsSection';
 import { CTASection } from '../components/sections/CTASection';
 import { Footer } from '../components/sections/Footer';
-import { PublicLayout } from '../components/layout/PublicLayout';
 
 export const Landing: React.FC = () => {
   return (

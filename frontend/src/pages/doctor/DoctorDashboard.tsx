@@ -61,7 +61,7 @@ export const DoctorDashboard: React.FC = () => {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-slate-800 mb-2">
-          Welcome, Dr. {user?.name}!
+          Welcome, dr. {user?.name}!
         </h1>
         <p className="text-slate-600">Here's your schedule overview</p>
       </div>
