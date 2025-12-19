@@ -14,12 +14,12 @@ export const CompleteGoogleProfile: React.FC = () => {
   const { addToast } = useToastContext();
   const navigate = useNavigate();
 
-  // Redirect if no pending profile setup
+  // Redirect if methods not available or no pending profile setup
   React.useEffect(() => {
-    if (!googleProfileSetup) {
+    if (!completeGoogleProfile || !googleProfileSetup) {
       navigate('/auth/login', { replace: true });
     }
-  }, [googleProfileSetup, navigate]);
+  }, [completeGoogleProfile, googleProfileSetup, navigate]);
 
   // Pre-fill with Google name
   React.useEffect(() => {
@@ -38,7 +38,11 @@ export const CompleteGoogleProfile: React.FC = () => {
         throw new Error('Name is required');
       }
 
-      await completeGoogleProfile(name, role);
+      if (completeGoogleProfile) {
+        await completeGoogleProfile(name, role);
+      } else {
+        throw new Error('Google profile completion not available');
+      }
       addToast('Profile created successfully!', 'success');
       navigate('/app');
     } catch (err: any) {

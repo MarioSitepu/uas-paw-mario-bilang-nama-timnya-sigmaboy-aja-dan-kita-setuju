@@ -11,12 +11,18 @@ const initializeRecords = (): MedicalRecord[] => {
 };
 
 export const recordsService = {
-  async getAll(_filters?: { doctorId?: number; patientId?: number }): Promise<MedicalRecord[]> {
+  async getAll(filters?: { doctorId?: number; patientId?: number }): Promise<MedicalRecord[]> {
     const records = initializeRecords();
-    // Note: MedicalRecord type uses appointment_id, not doctorId/patientId
-    // These filters would need to be implemented differently if needed
-    // For now, we'll just return all records
-    return records;
+    let filtered = [...records];
+
+    if (filters?.doctorId) {
+      filtered = filtered.filter((r) => r.doctorId === filters.doctorId);
+    }
+    if (filters?.patientId) {
+      filtered = filtered.filter((r) => r.patientId === filters.patientId);
+    }
+
+    return filtered;
   },
 
   async getById(id: number): Promise<MedicalRecord | null> {
@@ -26,11 +32,13 @@ export const recordsService = {
 
   async getByAppointment(appointmentId: number): Promise<MedicalRecord | null> {
     const records = initializeRecords();
-    return records.find((r) => r.appointment_id === appointmentId) || null;
+    return records.find((r) => r.appointmentId === appointmentId) || null;
   },
 
   async create(data: {
-    appointment_id: number;
+    appointmentId: number;
+    doctorId: number;
+    patientId: number;
     diagnosis: string;
     notes: string;
     symptoms?: string;
@@ -39,7 +47,7 @@ export const recordsService = {
   }): Promise<MedicalRecord> {
     // Check if appointment is completed
     const { appointmentsService } = await import('./appointments.service');
-    const appointment = await appointmentsService.getById(data.appointment_id);
+    const appointment = await appointmentsService.getById(data.appointmentId);
     
     if (!appointment) {
       throw new Error('Appointment not found');
@@ -50,7 +58,7 @@ export const recordsService = {
     }
 
     // Check if record already exists
-    const existing = await this.getByAppointment(data.appointment_id);
+    const existing = await this.getByAppointment(data.appointmentId);
     if (existing) {
       throw new Error('Medical record already exists for this appointment');
     }
@@ -58,13 +66,15 @@ export const recordsService = {
     const records = initializeRecords();
     const newRecord: MedicalRecord = {
       id: records.length > 0 ? Math.max(...records.map((r) => r.id)) + 1 : 1,
-      appointment_id: data.appointment_id,
+      appointmentId: data.appointmentId,
+      doctorId: data.doctorId,
+      patientId: data.patientId,
       diagnosis: data.diagnosis,
       notes: data.notes,
       symptoms: data.symptoms,
       treatment: data.treatment,
       prescription: data.prescription,
-      created_at: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
     };
 
     records.push(newRecord);
@@ -73,7 +83,7 @@ export const recordsService = {
     return newRecord;
   },
 
-  async update(id: number, data: Partial<Omit<MedicalRecord, 'id' | 'appointment_id' | 'created_at'>>): Promise<MedicalRecord> {
+  async update(id: number, data: Partial<Omit<MedicalRecord, 'id' | 'appointmentId' | 'doctorId' | 'patientId' | 'createdAt'>>): Promise<MedicalRecord> {
     const records = initializeRecords();
     const index = records.findIndex((r) => r.id === id);
     

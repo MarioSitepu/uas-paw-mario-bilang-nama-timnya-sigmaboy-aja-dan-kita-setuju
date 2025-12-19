@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { authAPI } from '../../services/api';
+import { appointmentsService } from '../../services/mock/appointments.service';
 import type { Appointment } from '../../types';
 import { AppointmentCard } from '../../components/cards/AppointmentCard';
 import { LoadingSkeleton } from '../../components/ui/LoadingSkeleton';
@@ -12,35 +12,14 @@ export const PatientDashboard: React.FC = () => {
   const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    if (user?.id) {
-      loadAppointments();
-    }
-  }, [user]);
-
-  const loadAppointments = async () => {
+  const loadAppointments = useCallback(async () => {
+    if (!user?.id) return;
     try {
       setIsLoading(true);
-      const response = await authAPI.get('/api/appointments');
-      let all = response.data.appointments || [];
-      
-      // Transform backend format to frontend format
-      all = all.map((apt: any) => ({
-        id: apt.id,
-        doctorId: apt.doctor_id,
-        patientId: apt.patient_id,
-        date: apt.appointment_date,
-        time: apt.appointment_time,
-        status: apt.status,
-        reason: apt.reason,
-        createdAt: apt.created_at || new Date().toISOString(),
-        doctor: apt.doctor,
-        patient: apt.patient,
-      }));
-      
+      const all = await appointmentsService.getAll({ patientId: user.id });
       const upcoming = all
-        .filter((apt: Appointment) => ['pending', 'confirmed'].includes(apt.status))
-        .sort((a: Appointment, b: Appointment) => new Date(a.date).getTime() - new Date(b.date).getTime())
+        .filter((apt) => ['pending', 'confirmed'].includes(apt.status))
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
         .slice(0, 3);
       setUpcomingAppointments(upcoming);
     } catch (error) {
@@ -48,7 +27,11 @@ export const PatientDashboard: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user?.id]);
+
+  useEffect(() => {
+    void loadAppointments();
+  }, [loadAppointments]);
 
   const stats = [
     {
@@ -142,7 +125,6 @@ export const PatientDashboard: React.FC = () => {
               <AppointmentCard
                 key={appointment.id}
                 appointment={appointment}
-                userRole="patient"
                 showActions={false}
               />
             ))}

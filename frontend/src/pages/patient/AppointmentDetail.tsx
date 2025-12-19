@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { authAPI } from '../../services/api';
+import { appointmentsService } from '../../services/mock/appointments.service';
 import type { Appointment, TimeSlot } from '../../types';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { Modal } from '../../components/ui/Modal';
@@ -27,52 +27,21 @@ export const AppointmentDetail: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { addToast } = useToastContext();
 
-  useEffect(() => {
-    if (id) {
-      loadAppointment();
-    }
-  }, [id]);
+  const getErrorMessage = (err: unknown, fallback: string) => {
+    if (err instanceof Error && err.message) return err.message;
+    return fallback;
+  };
 
-  useEffect(() => {
-    if (action === 'cancel') {
-      setShowCancelModal(true);
-    } else if (action === 'reschedule') {
-      setShowRescheduleModal(true);
-    }
-  }, [action]);
-
-  useEffect(() => {
-    if (showRescheduleModal && appointment?.doctorId && rescheduleDate) {
-      loadTimeSlots();
-    }
-  }, [showRescheduleModal, appointment, rescheduleDate]);
-
-  const loadAppointment = async () => {
+  const loadAppointment = useCallback(async () => {
     if (!id) return;
     try {
       setIsLoading(true);
-      const response = await authAPI.get(`/api/appointments/${id}`);
-      const apt = response.data.appointment;
-      
-      // Transform backend format to frontend format
-      const appointment: Appointment = {
-        id: apt.id,
-        doctorId: apt.doctor_id,
-        patientId: apt.patient_id,
-        date: apt.appointment_date,
-        time: apt.appointment_time,
-        status: apt.status,
-        reason: apt.reason,
-        createdAt: apt.created_at || new Date().toISOString(),
-        doctor: apt.doctor,
-        patient: apt.patient,
-      };
-
-      if (appointment && appointment.patientId === user?.id) {
-        setAppointment(appointment);
+      const apt = await appointmentsService.getById(parseInt(id));
+      if (apt && apt.patientId === user?.id) {
+        setAppointment(apt);
         if (showRescheduleModal) {
-          setRescheduleDate(appointment.date);
-          setRescheduleTime(appointment.time);
+          setRescheduleDate(apt.date);
+          setRescheduleTime(apt.time);
         }
       } else {
         addToast('Appointment not found', 'error');
@@ -84,57 +53,48 @@ export const AppointmentDetail: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [addToast, id, navigate, showRescheduleModal, user?.id]);
 
-  const loadTimeSlots = async () => {
+  useEffect(() => {
+    if (id) {
+      void loadAppointment();
+    }
+  }, [id, loadAppointment]);
+
+  useEffect(() => {
+    if (action === 'cancel') {
+      setShowCancelModal(true);
+    } else if (action === 'reschedule') {
+      setShowRescheduleModal(true);
+    }
+  }, [action]);
+
+  const loadTimeSlots = useCallback(async () => {
     if (!appointment?.doctorId || !rescheduleDate) return;
     try {
-      // For now, generate time slots (9:00 to 17:00 in 30-minute intervals)
-      const slots: TimeSlot[] = [];
-      for (let hour = 9; hour < 17; hour++) {
-        for (let minute = 0; minute < 60; minute += 30) {
-          const time = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
-          slots.push({ time, available: true });
-        }
-      }
+      const slots = await appointmentsService.getAvailableTimeSlots(appointment.doctorId, rescheduleDate);
       setTimeSlots(slots);
     } catch (error) {
       console.error('Failed to load time slots:', error);
     }
-  };
+  }, [appointment?.doctorId, rescheduleDate]);
+
+  useEffect(() => {
+    if (showRescheduleModal && appointment?.doctorId && rescheduleDate) {
+      void loadTimeSlots();
+    }
+  }, [appointment?.doctorId, rescheduleDate, showRescheduleModal, loadTimeSlots]);
 
   const handleCancel = async () => {
-    if (!appointment) {
-      console.log('❌ No appointment to cancel');
-      return;
-    }
-    console.log('=== CANCEL APPOINTMENT START ===');
-    console.log('🗑️ Cancelling appointment ID:', appointment.id);
+    if (!appointment) return;
     setIsSubmitting(true);
     try {
-      const url = `/api/appointments/${appointment.id}`;
-      console.log('📤 Sending DELETE request to:', url);
-      const response = await authAPI.delete(url);
-      console.log('✅ Delete request successful!');
-      console.log('✅ Response status:', response.status);
-      console.log('✅ Response data:', response.data);
-      
+      await appointmentsService.cancel(appointment.id);
       addToast('Appointment cancelled successfully', 'success');
       setShowCancelModal(false);
-      
-      // Wait a moment for the toast to show, then redirect
-      console.log('⏳ Waiting 800ms before redirect...');
-      await new Promise(resolve => setTimeout(resolve, 800));
-      console.log('🔄 NOW redirecting to /app/patient/appointments');
       navigate('/app/patient/appointments');
-      console.log('=== CANCEL APPOINTMENT COMPLETE ===');
-    } catch (error: any) {
-      console.error('=== CANCEL APPOINTMENT ERROR ===');
-      console.error('❌ Full error object:', error);
-      console.error('❌ Error message:', error.message);
-      console.error('❌ Error status:', error.response?.status);
-      console.error('❌ Error data:', error.response?.data);
-      addToast(error.response?.data?.error || 'Failed to cancel appointment', 'error');
+    } catch (error: unknown) {
+      addToast(getErrorMessage(error, 'Failed to cancel appointment'), 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -142,44 +102,17 @@ export const AppointmentDetail: React.FC = () => {
 
   const handleReschedule = async () => {
     if (!appointment || !rescheduleDate || !rescheduleTime) {
-      console.log('❌ Missing required fields:', { appointment: !!appointment, rescheduleDate, rescheduleTime });
       addToast('Please select date and time', 'error');
       return;
     }
-    console.log('=== RESCHEDULE APPOINTMENT START ===');
-    console.log('📅 Rescheduling appointment ID:', appointment.id);
-    console.log('📅 New date:', rescheduleDate);
-    console.log('⏰ New time:', rescheduleTime);
     setIsSubmitting(true);
     try {
-      const url = `/api/appointments/${appointment.id}`;
-      const payload = {
-        appointment_date: rescheduleDate,
-        appointment_time: rescheduleTime,
-      };
-      console.log('📤 Sending PUT request to:', url);
-      console.log('📤 Payload:', payload);
-      
-      const response = await authAPI.put(url, payload);
-      console.log('✅ Reschedule successful!');
-      console.log('✅ Response:', response.data);
-      
+      await appointmentsService.reschedule(appointment.id, rescheduleDate, rescheduleTime);
       addToast('Appointment rescheduled successfully', 'success');
       setShowRescheduleModal(false);
-      
-      // Wait a moment for the toast to show, then redirect
-      console.log('⏳ Waiting 800ms before redirect...');
-      await new Promise(resolve => setTimeout(resolve, 800));
-      console.log('🔄 NOW redirecting to /app/patient/appointments');
-      navigate('/app/patient/appointments');
-      console.log('=== RESCHEDULE APPOINTMENT COMPLETE ===');
-    } catch (error: any) {
-      console.error('=== RESCHEDULE APPOINTMENT ERROR ===');
-      console.error('❌ Full error object:', error);
-      console.error('❌ Error message:', error.message);
-      console.error('❌ Error status:', error.response?.status);
-      console.error('❌ Error data:', error.response?.data);
-      addToast(error.response?.data?.error || 'Failed to reschedule appointment', 'error');
+      await loadAppointment();
+    } catch (error: unknown) {
+      addToast(getErrorMessage(error, 'Failed to reschedule appointment'), 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -226,9 +159,9 @@ export const AppointmentDetail: React.FC = () => {
         {appointment.doctor && (
           <div className="flex items-start gap-4 pb-4 border-b border-slate-200">
             <img
-              src={appointment.doctor.profile_photo_url || appointment.doctor.photoUrl || `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2'%3E%3Cpath d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'/%3E%3Ccircle cx='12' cy='7' r='4'/%3E%3C/svg%3E`}
+              src={appointment.doctor.photoUrl}
               alt={appointment.doctor.name}
-              className="w-20 h-20 rounded-full border-2 border-white shadow-md object-cover"
+              className="w-20 h-20 rounded-full border-2 border-white shadow-md"
             />
             <div className="flex-1">
               <h3 className="text-xl font-semibold text-slate-800">{appointment.doctor.name}</h3>

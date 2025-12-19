@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
@@ -11,6 +11,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [topBarVisible, setTopBarVisible] = useState(true);
+  const lastScrollYRef = useRef(0);
 
   const handleLogout = () => {
     logout();
@@ -18,6 +20,42 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   };
 
   const isActive = (path: string) => location.pathname === path;
+
+  useEffect(() => {
+    lastScrollYRef.current = window.scrollY;
+
+    let rafId = 0;
+    const onScroll = () => {
+      if (rafId) return;
+      rafId = window.requestAnimationFrame(() => {
+        const currentY = window.scrollY;
+        const delta = currentY - lastScrollYRef.current;
+
+        if (currentY < 16) {
+          setTopBarVisible(true);
+        } else if (delta > 8) {
+          setTopBarVisible(false);
+        } else if (delta < -8) {
+          setTopBarVisible(true);
+        }
+
+        lastScrollYRef.current = currentY;
+        rafId = 0;
+      });
+    };
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      if (rafId) window.cancelAnimationFrame(rafId);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (sidebarOpen) {
+      Promise.resolve().then(() => setTopBarVisible(true));
+    }
+  }, [sidebarOpen]);
 
   const patientMenu = [
     { path: '/app/patient/dashboard', label: 'Dashboard', icon: '📊' },
@@ -33,7 +71,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     { path: '/app/profile', label: 'Profile', icon: '👤' },
   ];
 
-  const menu = user?.role === 'patient' ? patientMenu : doctorMenu;
+  const menu = user?.role === 'PATIENT' ? patientMenu : doctorMenu;
 
   return (
     <div className="min-h-screen bg-gradient-pastel">
@@ -88,9 +126,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           <div className="pt-4 border-t border-white/30">
             <div className="flex items-center gap-3 mb-4 px-4">
               <img
-                src={user?.profile_photo_url || `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2'%3E%3Cpath d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'/%3E%3Ccircle cx='12' cy='7' r='4'/%3E%3C/svg%3E`}
+                src={user?.photoUrl || `https://i.pravatar.cc/150?img=${user?.id || 1}`}
                 alt={user?.name}
-                className="w-10 h-10 rounded-full border-2 border-white object-cover"
+                className="w-10 h-10 rounded-full border-2 border-white"
               />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-slate-800 truncate">{user?.name}</p>
@@ -111,7 +149,13 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       {/* Main Content */}
       <div className="lg:pl-64">
         {/* Top Bar */}
-        <header className="sticky top-0 z-30 glass-strong border-b border-white/30">
+        <header
+          className={[
+            'fixed top-0 left-0 right-0 lg:left-64 z-40 glass-strong border-b border-white/30',
+            'transition-transform duration-300 ease-out will-change-transform',
+            topBarVisible ? 'translate-y-0' : '-translate-y-full',
+          ].join(' ')}
+        >
           <div className="flex items-center justify-between px-6 py-4">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -131,7 +175,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         </header>
 
         {/* Page Content */}
-        <main className="p-6">{children}</main>
+        <main className="p-6 pt-[88px]">{children}</main>
       </div>
     </div>
   );

@@ -24,10 +24,7 @@ export const RequireRole: React.FC<RequireRoleProps> = ({ children, allowedRoles
     return <Navigate to="/auth/login" replace />;
   }
 
-  // Normalize user role to lowercase for comparison
-  const userRole = user?.role?.toLowerCase();
-  if (user && !allowedRoles.includes(userRole as UserRole)) {
-    console.warn(`❌ Access denied - User role '${userRole}' not in allowed roles:`, allowedRoles);
+  if (user && !allowedRoles.includes(user.role)) {
     return <Navigate to="/app/unauthorized" replace />;
   }
 

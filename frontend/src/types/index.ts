@@ -1,6 +1,6 @@
 export const UserRole = {
-  PATIENT: 'patient',
-  DOCTOR: 'doctor',
+  PATIENT: 'PATIENT',
+  DOCTOR: 'DOCTOR',
 } as const;
 
 export type UserRole = typeof UserRole[keyof typeof UserRole];
@@ -24,7 +24,6 @@ export interface Doctor {
   name: string;
   specialization: string;
   photoUrl: string;
-  profile_photo_url?: string;
   rating: number;
   location: string;
   clinic: string;
@@ -55,18 +54,15 @@ export interface Appointment {
 
 export interface MedicalRecord {
   id: number;
-  appointment_id: number;
+  appointmentId: number;
+  doctorId: number;
+  patientId: number;
   diagnosis: string;
   notes: string;
   symptoms?: string;
   treatment?: string;
   prescription?: string;
-  created_at?: string;
-  patient?: {
-    id: number;
-    name: string;
-    email: string;
-  };
+  createdAt: string;
 }
 
 export interface TimeSlot {
