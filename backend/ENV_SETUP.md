@@ -291,3 +291,4 @@ CORS_ORIGINS=https://your-frontend.onrender.com
 3. ✅ Test health endpoint
 4. ✅ Test API endpoints
 5. ✅ Update frontend dengan backend URL production
+
