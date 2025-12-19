@@ -96,11 +96,11 @@ def cors_tween_factory(handler, registry):
                 response.headers['Access-Control-Allow-Credentials'] = 'true'
             else:
                 # Fallback to * for development (but no credentials)
-        response.headers['Access-Control-Allow-Origin'] = '*'
+                response.headers['Access-Control-Allow-Origin'] = '*'
             
-        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS, HEAD, PATCH'
+            response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS, HEAD, PATCH'
             response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With, Accept'
-        response.headers['Access-Control-Max-Age'] = '86400'
+            response.headers['Access-Control-Max-Age'] = '86400'
         except Exception as cors_error:
             # If adding headers fails, log but don't crash
             import sys
