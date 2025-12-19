@@ -147,6 +147,20 @@ def main(global_config, **settings):
         # Convert postgresql:// to postgresql+psycopg:// for psycopg3
         if database_url.startswith('postgresql://') and not database_url.startswith('postgresql+psycopg://'):
             database_url = database_url.replace('postgresql://', 'postgresql+psycopg://', 1)
+        
+        # Force IPv4 for Supabase connections to avoid IPv6 issues
+        # Add connect_timeout and prefer IPv4
+        if 'supabase.co' in database_url:
+            # Add connection parameters if not present
+            if '?' in database_url:
+                if 'connect_timeout' not in database_url:
+                    database_url += '&connect_timeout=10'
+            else:
+                database_url += '?connect_timeout=10'
+            # Ensure sslmode is set
+            if 'sslmode' not in database_url:
+                database_url += '&sslmode=require' if '?' in database_url else '?sslmode=require'
+        
         settings['sqlalchemy.url'] = database_url
     elif 'sqlalchemy.url' in settings:
         # Check if it's a placeholder, if so, warn user
@@ -176,6 +190,10 @@ def main(global_config, **settings):
     
     # Add pool_pre_ping to handle disconnected connections (SSL timeout)
     settings['sqlalchemy.pool_pre_ping'] = 'true'
+    # Add connection pool settings for better reliability
+    settings['sqlalchemy.pool_size'] = '5'
+    settings['sqlalchemy.max_overflow'] = '10'
+    settings['sqlalchemy.pool_recycle'] = '3600'
     try:
         engine = engine_from_config(settings, 'sqlalchemy.')
         DBSession = sessionmaker(bind=engine)
