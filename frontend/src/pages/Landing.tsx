@@ -1,10 +1,11 @@
 import React from 'react';
 import { HeroSection } from '../components/sections/HeroSection';
 import { AboutSection } from '../components/sections/AboutSection';
-import { ValuesSection } from '../components/sections/ValuesSection';
+import { WhatWeOfferSection } from '../components/sections/WhatWeOfferSection';
+import { TotalCareModelSection } from '../components/sections/TotalCareModelSection';
 import { TestimonialsSection } from '../components/sections/TestimonialsSection';
 import { InsightsSection } from '../components/sections/InsightsSection';
-import { CTASection } from '../components/sections/CTASection';
+import { EmailSubscriptionSection } from '../components/sections/EmailSubscriptionSection';
 import { Footer } from '../components/sections/Footer';
 
 export const Landing: React.FC = () => {
@@ -14,19 +15,30 @@ export const Landing: React.FC = () => {
       <HeroSection />
 
       {/* About Section */}
-      <AboutSection />
+      <section id="about">
+        <AboutSection />
+      </section>
 
-      {/* Values Section */}
-      <ValuesSection />
+      {/* What We Offer Section */}
+      <section id="services">
+        <WhatWeOfferSection />
+      </section>
+
+      {/* Total Care Model Section */}
+      <TotalCareModelSection />
 
       {/* Testimonials Section */}
-      <TestimonialsSection />
+      <section id="testimonials">
+        <TestimonialsSection />
+      </section>
 
-      {/* Insights Section */}
-      <InsightsSection />
+      {/* Insights/News Section */}
+      <section id="news">
+        <InsightsSection />
+      </section>
 
-      {/* CTA Section */}
-      <CTASection />
+      {/* Email Subscription Section */}
+      <EmailSubscriptionSection />
 
       {/* Footer */}
       <Footer />

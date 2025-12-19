@@ -1,7 +1,8 @@
 export { HeroSection } from './HeroSection';
 export { AboutSection } from './AboutSection';
-export { ValuesSection } from './ValuesSection';
+export { WhatWeOfferSection } from './WhatWeOfferSection';
+export { TotalCareModelSection } from './TotalCareModelSection';
 export { TestimonialsSection } from './TestimonialsSection';
 export { InsightsSection } from './InsightsSection';
-export { CTASection } from './CTASection';
+export { EmailSubscriptionSection } from './EmailSubscriptionSection';
 export { Footer } from './Footer';

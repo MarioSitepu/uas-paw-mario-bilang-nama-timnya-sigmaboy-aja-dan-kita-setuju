@@ -1,4 +1,5 @@
 import React from 'react';
+import { Calendar, Clock, MessageSquare } from 'lucide-react';
 import type { Appointment } from '../../types';
 import { StatusBadge } from '../ui/StatusBadge';
 import { Link } from 'react-router-dom';
@@ -43,16 +44,16 @@ export const AppointmentCard: React.FC<AppointmentCardProps> = ({
 
       <div className="space-y-2 mb-4 text-sm text-slate-600">
         <div className="flex items-center gap-2">
-          <span>📅</span>
+          <Calendar size={16} className="text-slate-400 flex-shrink-0" />
           <span>{formatDate(appointment.date)}</span>
         </div>
         <div className="flex items-center gap-2">
-          <span>🕐</span>
+          <Clock size={16} className="text-slate-400 flex-shrink-0" />
           <span>{appointment.time}</span>
         </div>
         {appointment.reason && (
           <div className="flex items-start gap-2">
-            <span>💬</span>
+            <MessageSquare size={16} className="text-slate-400 flex-shrink-0 mt-0.5" />
             <span className="flex-1">{appointment.reason}</span>
           </div>
         )}

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { ClipboardList } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { recordsService } from '../../services/mock/records.service';
 import type { MedicalRecord } from '../../types';
@@ -43,7 +44,7 @@ export const MedicalRecords: React.FC = () => {
         </div>
       ) : records.length === 0 ? (
         <EmptyState
-          icon="📋"
+          icon={<ClipboardList size={48} className="text-slate-400" />}
           title="No medical records"
           description="Medical records will appear here after you complete appointments"
         />

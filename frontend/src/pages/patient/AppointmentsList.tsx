@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Calendar } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { appointmentsService } from '../../services/mock/appointments.service';
 import type { Appointment, AppointmentStatus } from '../../types';
@@ -85,7 +86,7 @@ export const AppointmentsList: React.FC = () => {
         </div>
       ) : appointments.length === 0 ? (
         <EmptyState
-          icon="📅"
+          icon={<Calendar size={48} className="text-slate-400" />}
           title="No appointments found"
           description={statusFilter === 'all' ? 'Book your first appointment to get started' : `No ${statusFilter} appointments`}
           action={

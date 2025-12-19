@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Calendar, Plus, Stethoscope } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { appointmentsService } from '../../services/mock/appointments.service';
 import type { Appointment } from '../../types';
@@ -37,21 +38,21 @@ export const PatientDashboard: React.FC = () => {
     {
       label: 'Upcoming Appointments',
       value: upcomingAppointments.length,
-      icon: '📅',
+      icon: Calendar,
       color: 'bg-blue-500',
       link: '/app/patient/appointments',
     },
     {
       label: 'Find Doctors',
       value: 'Browse',
-      icon: '👨‍⚕️',
+      icon: Stethoscope,
       color: 'bg-green-500',
       link: '/app/patient/doctors',
     },
     {
       label: 'Book New',
       value: 'Appointment',
-      icon: '➕',
+      icon: Plus,
       color: 'bg-purple-500',
       link: '/app/patient/appointments/new',
     },
@@ -68,23 +69,26 @@ export const PatientDashboard: React.FC = () => {
 
       {/* Stats Bento Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {stats.map((stat, idx) => (
-          <Link
-            key={idx}
-            to={stat.link}
-            className="bento-card group hover:scale-105 transition-transform"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-600 mb-1">{stat.label}</p>
-                <p className="text-2xl font-bold text-slate-800">{stat.value}</p>
+        {stats.map((stat, idx) => {
+          const IconComponent = stat.icon;
+          return (
+            <Link
+              key={idx}
+              to={stat.link}
+              className="bento-card group hover:scale-105 transition-transform"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-slate-600 mb-1">{stat.label}</p>
+                  <p className="text-2xl font-bold text-slate-800">{stat.value}</p>
+                </div>
+                <div className={`w-12 h-12 ${stat.color} rounded-xl flex items-center justify-center text-white shadow-lg`}>
+                  <IconComponent size={24} />
+                </div>
               </div>
-              <div className={`w-12 h-12 ${stat.color} rounded-xl flex items-center justify-center text-2xl text-white`}>
-                {stat.icon}
-              </div>
-            </div>
-          </Link>
-        ))}
+            </Link>
+          );
+        })}
       </div>
 
       {/* Upcoming Appointments */}
@@ -107,7 +111,7 @@ export const PatientDashboard: React.FC = () => {
           </div>
         ) : upcomingAppointments.length === 0 ? (
           <EmptyState
-            icon="📅"
+            icon={<Calendar size={48} className="text-slate-400" />}
             title="No upcoming appointments"
             description="Book your first appointment to get started"
             action={

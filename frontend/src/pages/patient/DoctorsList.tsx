@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Stethoscope } from 'lucide-react';
 import { doctorsService } from '../../services/mock/doctors.service';
 import type { Doctor } from '../../types';
 import { DoctorCard } from '../../components/cards/DoctorCard';
@@ -83,7 +84,7 @@ export const DoctorsList: React.FC = () => {
         </div>
       ) : filteredDoctors.length === 0 ? (
         <EmptyState
-          icon="👨‍⚕️"
+          icon={<Stethoscope size={48} className="text-slate-400" />}
           title="No doctors found"
           description="Try adjusting your search or filters"
         />

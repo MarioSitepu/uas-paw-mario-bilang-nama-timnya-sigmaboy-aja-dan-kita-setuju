@@ -1,6 +1,5 @@
 import React from 'react';
 import { Header } from '../Header';
-import { Footer } from '../sections/Footer';
 
 interface PublicLayoutProps {
   children: React.ReactNode;
@@ -13,7 +12,7 @@ export const PublicLayout: React.FC<PublicLayoutProps> = ({ children }) => {
       <main className="flex-grow">
         {children}
       </main>
-      <Footer />
+      {/* Footer is included in Landing page */}
     </div>
   );
 };
