@@ -1,5 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import heroImage from '../assets/images/hero-medical-team.png';
+import medicalProfessionalImage from '../assets/images/medical-professional.png';
 
 export const Landing: React.FC = () => {
   const features = [
@@ -37,26 +39,35 @@ export const Landing: React.FC = () => {
       {/* Hero Section */}
       <section className="relative overflow-hidden">
         <div className="container mx-auto px-4 py-20 lg:py-32">
-          <div className="text-center max-w-4xl mx-auto">
-            <h1 className="text-5xl lg:text-7xl font-bold text-slate-800 mb-6">
-              Your Health, <span className="text-pastel-blue-600">Our Priority</span>
-            </h1>
-            <p className="text-xl text-slate-600 mb-8">
-              Book appointments with trusted doctors. Manage your health records. All in one place.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link
-                to="/auth/register"
-                className="px-8 py-4 bg-gradient-blue text-white rounded-xl font-semibold text-lg hover:shadow-lg transition-all transform hover:scale-105"
-              >
-                Get Started
-              </Link>
-              <Link
-                to="/auth/login"
-                className="px-8 py-4 bg-white text-pastel-blue-700 rounded-xl font-semibold text-lg hover:shadow-lg transition-all border-2 border-pastel-blue-200"
-              >
-                Sign In
-              </Link>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div className="text-center lg:text-left">
+              <h1 className="text-5xl lg:text-7xl font-bold text-slate-800 mb-6">
+                Your Health, <span className="text-pastel-blue-600">Our Priority</span>
+              </h1>
+              <p className="text-xl text-slate-600 mb-8">
+                Book appointments with trusted doctors. Manage your health records. All in one place.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+                <Link
+                  to="/auth/register"
+                  className="px-8 py-4 bg-gradient-blue text-white rounded-xl font-semibold text-lg hover:shadow-lg transition-all transform hover:scale-105"
+                >
+                  Get Started
+                </Link>
+                <Link
+                  to="/auth/login"
+                  className="px-8 py-4 bg-white text-pastel-blue-700 rounded-xl font-semibold text-lg hover:shadow-lg transition-all border-2 border-pastel-blue-200"
+                >
+                  Sign In
+                </Link>
+              </div>
+            </div>
+            <div className="hidden lg:block">
+              <img
+                src={heroImage}
+                alt="Medical professionals"
+                className="w-full h-auto rounded-2xl shadow-2xl object-cover"
+              />
             </div>
           </div>
         </div>
@@ -78,18 +89,29 @@ export const Landing: React.FC = () => {
 
       {/* Features Bento Grid */}
       <section className="py-20 container mx-auto px-4">
-        <h2 className="text-4xl font-bold text-center text-slate-800 mb-12">Why Choose Us?</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {features.map((feature, idx) => (
-            <div
-              key={idx}
-              className="bento-card group hover:scale-105 transition-transform"
-            >
-              <div className="text-5xl mb-4">{feature.icon}</div>
-              <h3 className="text-xl font-semibold text-slate-800 mb-2">{feature.title}</h3>
-              <p className="text-slate-600">{feature.description}</p>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-16">
+          <div>
+            <img
+              src={medicalProfessionalImage}
+              alt="Medical professional working"
+              className="w-full h-auto rounded-2xl shadow-xl object-cover"
+            />
+          </div>
+          <div>
+            <h2 className="text-4xl font-bold text-slate-800 mb-6">Why Choose Us?</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {features.map((feature, idx) => (
+                <div
+                  key={idx}
+                  className="bento-card group hover:scale-105 transition-transform"
+                >
+                  <div className="text-5xl mb-4">{feature.icon}</div>
+                  <h3 className="text-xl font-semibold text-slate-800 mb-2">{feature.title}</h3>
+                  <p className="text-slate-600">{feature.description}</p>
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
         </div>
       </section>
 
