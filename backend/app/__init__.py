@@ -207,9 +207,9 @@ def main(global_config, **settings):
     settings['sqlalchemy.max_overflow'] = '10'
     settings['sqlalchemy.pool_recycle'] = '3600'
     try:
-    engine = engine_from_config(settings, 'sqlalchemy.')
-    DBSession = sessionmaker(bind=engine)
-    config.registry.dbmaker = DBSession
+        engine = engine_from_config(settings, 'sqlalchemy.')
+        DBSession = sessionmaker(bind=engine)
+        config.registry.dbmaker = DBSession
     except Exception as db_error:
         import sys
         print(f"[MAIN] Database connection error: {db_error}", file=sys.stderr, flush=True)
