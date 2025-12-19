@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { recordsService } from '../../services/mock/records.service';
+import { authAPI } from '../../services/api';
 import type { MedicalRecord } from '../../types';
 import { LoadingSkeleton } from '../../components/ui/LoadingSkeleton';
 import { EmptyState } from '../../components/ui/EmptyState';
@@ -20,8 +20,10 @@ export const MedicalRecords: React.FC = () => {
   const loadRecords = async () => {
     try {
       setIsLoading(true);
-      const all = await recordsService.getAll({ doctorId: user!.id });
-      setRecords(all.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+      const response = await authAPI.get('/api/medical-records');
+      const all = response.data.medical_records || [];
+      console.log('📋 Loaded medical records:', all);
+      setRecords(all.sort((a: MedicalRecord, b: MedicalRecord) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()));
     } catch (error) {
       console.error('Failed to load records:', error);
     } finally {
@@ -53,9 +55,11 @@ export const MedicalRecords: React.FC = () => {
           {records.map((record) => (
             <div key={record.id} className="bento-card">
               <div className="flex items-start justify-between mb-3">
-                <h3 className="text-lg font-semibold text-slate-800">Record #{record.id}</h3>
-                <span className="text-xs text-slate-500">
-                  {new Date(record.createdAt).toLocaleDateString('id-ID')}
+                <h3 className="text-lg font-semibold text-slate-800">
+                  {record.patient?.name || 'Patient'} Record #{record.id}
+                </h3>
+                <span className="text-xs text-slate-500 whitespace-nowrap">
+                  {new Date(record.created_at || new Date()).toLocaleDateString('id-ID')}
                 </span>
               </div>
               <div className="space-y-2 mb-4">
@@ -67,9 +71,27 @@ export const MedicalRecords: React.FC = () => {
                   <label className="text-xs font-medium text-slate-600">Notes</label>
                   <p className="text-sm text-slate-600 line-clamp-2">{record.notes}</p>
                 </div>
+                {record.symptoms && (
+                  <div>
+                    <label className="text-xs font-medium text-slate-600">Symptoms</label>
+                    <p className="text-sm text-slate-600 line-clamp-1">{record.symptoms}</p>
+                  </div>
+                )}
+                {record.treatment && (
+                  <div>
+                    <label className="text-xs font-medium text-slate-600">Treatment</label>
+                    <p className="text-sm text-slate-600 line-clamp-1">{record.treatment}</p>
+                  </div>
+                )}
+                {record.prescription && (
+                  <div>
+                    <label className="text-xs font-medium text-slate-600">Prescription</label>
+                    <p className="text-sm text-slate-600 line-clamp-1">{record.prescription}</p>
+                  </div>
+                )}
               </div>
               <Link
-                to={`/app/doctor/appointments/${record.appointmentId}`}
+                to={`/app/doctor/appointments/${record.appointment_id}`}
                 className="block w-full text-center px-4 py-2 bg-pastel-blue-50 text-pastel-blue-700 rounded-lg font-medium hover:bg-pastel-blue-100 transition-colors"
               >
                 View Details

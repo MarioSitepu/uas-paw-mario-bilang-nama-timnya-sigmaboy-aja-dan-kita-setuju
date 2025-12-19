@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
 import { useAuth } from '../../context/AuthContext';
@@ -9,10 +9,20 @@ export const Login: React.FC = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [shouldNavigate, setShouldNavigate] = useState(false);
 
-  const { login, googleLogin } = useAuth();
+  const { login, googleLogin, isAuthenticated } = useAuth();
   const { addToast } = useToastContext();
   const navigate = useNavigate();
+
+  // Auto-navigate when authenticated
+  useEffect(() => {
+    if (shouldNavigate && isAuthenticated) {
+      console.log('🎯 isAuthenticated=true, navigating to /app');
+      navigate('/app', { replace: true });
+      setShouldNavigate(false);
+    }
+  }, [shouldNavigate, isAuthenticated, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,10 +30,13 @@ export const Login: React.FC = () => {
     setIsSubmitting(true);
 
     try {
+      console.log('📝 Email/Password login attempt...');
       await login(email, password);
+      console.log('✅ Login successful, setting flag to navigate');
       addToast('Login successful!', 'success');
-      navigate('/app');
+      setShouldNavigate(true);
     } catch (err: any) {
+      console.error('❌ Login error:', err);
       setError(err.message || 'Failed to login');
       addToast(err.message || 'Failed to login', 'error');
     } finally {
@@ -35,11 +48,23 @@ export const Login: React.FC = () => {
   const handleGoogleSuccess = async (credentialResponse: any) => {
     try {
       if (credentialResponse.credential) {
-        await googleLogin(credentialResponse.credential);
-        addToast('Login successful!', 'success');
-        navigate('/app');
+        console.log('🔐 Google credential received, calling googleLogin...');
+        const result = await googleLogin(credentialResponse.credential);
+        console.log('✅ googleLogin result:', result);
+        
+        // result.isNewUser tells us what to do
+        if (result.isNewUser) {
+          console.log('👤 New user detected, navigating to profile setup');
+          addToast('Please complete your profile', 'info');
+          navigate('/auth/complete-profile', { replace: true });
+        } else {
+          console.log('✓ Existing user, setting flag to navigate to app');
+          addToast('Login successful!', 'success');
+          setShouldNavigate(true);
+        }
       }
     } catch (err: any) {
+      console.error('❌ Google login error:', err);
       setError(err.message || 'Failed to login with Google');
       addToast(err.message || 'Failed to login with Google', 'error');
     }

@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Base URL for API - change this to your backend URL
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:6543';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:6543';
 
 // Create axios instance
 const api = axios.create({
@@ -16,6 +16,9 @@ api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+    console.log(`📡 Request to ${config.url} with token: ${token.substring(0, 20)}...`);
+  } else {
+    console.warn(`⚠️ Request to ${config.url} WITHOUT token!`);
   }
   return config;
 });
@@ -48,9 +51,27 @@ export const authAPI = {
 
   googleLogin: (token: string) => api.post('/api/auth/google', { token }),
 
+  googleLoginComplete: (data: {
+    token: string;
+    name: string;
+    role: string;
+  }) => api.post('/api/auth/google/complete', data),
+
   logout: () => api.post('/api/auth/logout'),
 
   getMe: () => api.get('/api/auth/me'),
+  
+  // Generic get method for other API endpoints
+  get: (url: string) => api.get(url),
+  
+  // Generic post method for other API endpoints
+  post: (url: string, data?: any) => api.post(url, data),
+  
+  // Generic put method for other API endpoints
+  put: (url: string, data?: any) => api.put(url, data),
+  
+  // Generic delete method for other API endpoints
+  delete: (url: string) => api.delete(url),
 };
 
 // ==================== DOCTORS API ====================

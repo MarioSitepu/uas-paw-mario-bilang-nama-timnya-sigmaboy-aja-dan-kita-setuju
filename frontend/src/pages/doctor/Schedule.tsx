@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { appointmentsService } from '../../services/mock/appointments.service';
-import type { Appointment, AppointmentStatus } from '../../types';
+import { authAPI } from '../../services/api';
+import type { Appointment } from '../../types';
 import { AppointmentCard } from '../../components/cards/AppointmentCard';
 import { LoadingSkeleton } from '../../components/ui/LoadingSkeleton';
 import { EmptyState } from '../../components/ui/EmptyState';
@@ -11,25 +11,54 @@ export const Schedule: React.FC = () => {
   const { user } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [dateFilter, setDateFilter] = useState(new Date().toISOString().split('T')[0]);
-  const [statusFilter, setStatusFilter] = useState<AppointmentStatus | 'all'>('all');
+  const [statusFilters, setStatusFilters] = useState({
+    pending: true,
+    confirmed: true,
+    completed: false,
+  });
+  const [dateFilter, setDateFilter] = useState<string>('all');
+  const [selectedDate, setSelectedDate] = useState<string>('');
 
   useEffect(() => {
     if (user?.id) {
       loadAppointments();
     }
-  }, [user, dateFilter, statusFilter]);
+  }, [user]);
 
   const loadAppointments = async () => {
     try {
       setIsLoading(true);
-      const filters: any = { doctorId: user!.id };
-      if (statusFilter !== 'all') {
-        filters.status = statusFilter;
-      }
-      const all = await appointmentsService.getAll(filters);
-      const filtered = all.filter((apt) => apt.date === dateFilter);
-      setAppointments(filtered.sort((a, b) => a.time.localeCompare(b.time)));
+      const response = await authAPI.get('/api/appointments');
+      let all = response.data.appointments || [];
+      
+      console.log('📅 Doctor Schedule - Raw appointments from API:', all);
+      
+      // Transform backend format to frontend format
+      all = all.map((apt: any) => ({
+        id: apt.id,
+        doctorId: apt.doctor_id,
+        patientId: apt.patient_id,
+        date: apt.appointment_date,
+        time: apt.appointment_time,
+        status: apt.status,
+        reason: apt.reason,
+        createdAt: apt.created_at || new Date().toISOString(),
+        doctor: apt.doctor,
+        patient: apt.patient,
+      }));
+      
+      console.log('📅 Doctor Schedule - Transformed appointments:', all);
+      
+      // Filter out cancelled appointments
+      let filtered = all.filter((apt: Appointment) => apt.status !== 'cancelled');
+      
+      // Sort by date and time (newest first)
+      const sorted = filtered.sort((a: Appointment, b: Appointment) => {
+        const dateCompare = b.date.localeCompare(a.date);
+        return dateCompare !== 0 ? dateCompare : b.time.localeCompare(a.time);
+      });
+      
+      setAppointments(sorted);
     } catch (error) {
       console.error('Failed to load appointments:', error);
     } finally {
@@ -37,47 +66,102 @@ export const Schedule: React.FC = () => {
     }
   };
 
-  const handleStatusUpdate = async (appointmentId: number, newStatus: AppointmentStatus) => {
-    try {
-      await appointmentsService.updateStatus(appointmentId, newStatus);
-      loadAppointments();
-    } catch (error: any) {
-      console.error('Failed to update status:', error);
-    }
+  const toggleStatusFilter = (status: 'pending' | 'confirmed' | 'completed') => {
+    setStatusFilters(prev => ({
+      ...prev,
+      [status]: !prev[status]
+    }));
   };
+
+  // Filter appointments based on selected statuses and date
+  let filteredAppointments = appointments.filter(apt => 
+    statusFilters[apt.status as keyof typeof statusFilters]
+  );
+
+  // Apply date filter
+  if (dateFilter === 'specific' && selectedDate) {
+    filteredAppointments = filteredAppointments.filter(apt => apt.date === selectedDate);
+  }
+
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-slate-800 mb-2">My Schedule</h1>
-        <p className="text-slate-600">Manage your appointments</p>
+        <p className="text-slate-600">View all your appointments</p>
       </div>
 
-      {/* Filters */}
+      {/* Status Filter Checkboxes */}
       <div className="bento-card">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Date</label>
-            <input
-              type="date"
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-pastel-blue-500 focus:border-pastel-blue-500"
-            />
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-3">Filter by Status</label>
+          <div className="flex flex-wrap gap-6">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={statusFilters.pending}
+                onChange={() => toggleStatusFilter('pending')}
+                className="w-4 h-4 rounded border-slate-300 text-pastel-blue-500 focus:ring-pastel-blue-500"
+              />
+              <span className="text-sm font-medium text-slate-700">Pending</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={statusFilters.confirmed}
+                onChange={() => toggleStatusFilter('confirmed')}
+                className="w-4 h-4 rounded border-slate-300 text-pastel-blue-500 focus:ring-pastel-blue-500"
+              />
+              <span className="text-sm font-medium text-slate-700">Confirmed</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={statusFilters.completed}
+                onChange={() => toggleStatusFilter('completed')}
+                className="w-4 h-4 rounded border-slate-300 text-pastel-blue-500 focus:ring-pastel-blue-500"
+              />
+              <span className="text-sm font-medium text-slate-700">Completed</span>
+            </label>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Status</label>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as AppointmentStatus | 'all')}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-pastel-blue-500 focus:border-pastel-blue-500"
-            >
-              <option value="all">All Status</option>
-              <option value="pending">Pending</option>
-              <option value="confirmed">Confirmed</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
+        </div>
+      </div>
+
+      {/* Date Filter */}
+      <div className="bento-card">
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-3">Filter by Date</label>
+          <div className="space-y-3">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="dateFilter"
+                value="all"
+                checked={dateFilter === 'all'}
+                onChange={() => setDateFilter('all')}
+                className="w-4 h-4 border-slate-300 text-pastel-blue-500 focus:ring-pastel-blue-500"
+              />
+              <span className="text-sm font-medium text-slate-700">All Dates</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="dateFilter"
+                value="specific"
+                checked={dateFilter === 'specific'}
+                onChange={() => setDateFilter('specific')}
+                className="w-4 h-4 border-slate-300 text-pastel-blue-500 focus:ring-pastel-blue-500"
+              />
+              <span className="text-sm font-medium text-slate-700">Select Specific Date</span>
+            </label>
+            {dateFilter === 'specific' && (
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-pastel-blue-500 focus:border-pastel-blue-500 ml-6"
+              />
+            )}
           </div>
         </div>
       </div>
@@ -89,52 +173,26 @@ export const Schedule: React.FC = () => {
             <LoadingSkeleton key={i} className="h-64" />
           ))}
         </div>
-      ) : appointments.length === 0 ? (
+      ) : filteredAppointments.length === 0 ? (
         <EmptyState
           icon="📅"
           title="No appointments found"
-          description={`No appointments for ${new Date(dateFilter).toLocaleDateString('id-ID')}`}
+          description="No appointments match the selected filters"
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {appointments.map((appointment) => (
-            <div key={appointment.id} className="bento-card">
-              <AppointmentCard appointment={appointment} showActions={false} />
-              <div className="mt-4 pt-4 border-t border-slate-200 space-y-2">
-                {appointment.status === 'pending' && (
-                  <button
-                    onClick={() => handleStatusUpdate(appointment.id, 'confirmed')}
-                    className="w-full px-4 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors"
-                  >
-                    Confirm
-                  </button>
-                )}
-                {appointment.status === 'confirmed' && (
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleStatusUpdate(appointment.id, 'completed')}
-                      className="flex-1 px-4 py-2 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 transition-colors"
-                    >
-                      Complete
-                    </button>
-                    <Link
-                      to={`/app/doctor/appointments/${appointment.id}`}
-                      className="flex-1 px-4 py-2 bg-pastel-blue-50 text-pastel-blue-700 rounded-lg font-medium hover:bg-pastel-blue-100 transition-colors text-center"
-                    >
-                      View
-                    </Link>
-                  </div>
-                )}
-                {appointment.status === 'completed' && (
-                  <Link
-                    to={`/app/doctor/appointments/${appointment.id}`}
-                    className="w-full block px-4 py-2 bg-pastel-blue-500 text-white rounded-lg font-medium hover:bg-pastel-blue-600 transition-colors text-center"
-                  >
-                    View Details
-                  </Link>
-                )}
-              </div>
-            </div>
+          {filteredAppointments.map((appointment) => (
+            <Link
+              key={appointment.id}
+              to={`/app/doctor/appointments/${appointment.id}`}
+              className="no-underline"
+            >
+              <AppointmentCard
+                appointment={appointment}
+                userRole="doctor"
+                showActions={false}
+              />
+            </Link>
           ))}
         </div>
       )}
