@@ -9,16 +9,19 @@ port = os.environ.get('PORT', '10000')
 # Build listen address
 listen = f'*:{port}'
 
-print(f"[START_SERVER] Starting server on port {port}", file=sys.stderr, flush=True)
+print(f"[START_SERVER] Starting server on port {port} (from PORT env var)", file=sys.stderr, flush=True)
 
 # Import and run pserve with listen argument
-from pyramid.scripts.pserve import main as pserve_main
+# Use subprocess to properly pass arguments
+import subprocess
 
-# Override sys.argv to pass listen argument
-original_argv = sys.argv[:]
-sys.argv = ['pserve', 'production.ini', f'--listen={listen}']
+# Change to backend directory if needed
+script_dir = os.path.dirname(os.path.abspath(__file__))
+os.chdir(script_dir)
 
-try:
-    pserve_main()
-finally:
-    sys.argv = original_argv
+# Run pserve with listen argument
+result = subprocess.run(
+    [sys.executable, '-m', 'pyramid.scripts.pserve', 'production.ini', f'--listen={listen}'],
+    cwd=script_dir
+)
+sys.exit(result.returncode)
