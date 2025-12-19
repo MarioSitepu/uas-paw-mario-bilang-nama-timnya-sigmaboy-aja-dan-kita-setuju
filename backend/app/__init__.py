@@ -148,29 +148,20 @@ def main(global_config, **settings):
         if database_url.startswith('postgresql://') and not database_url.startswith('postgresql+psycopg://'):
             database_url = database_url.replace('postgresql://', 'postgresql+psycopg://', 1)
         
-        # Force IPv4 for Supabase connections to avoid IPv6 issues
+        # Supabase connection handling
+        # NOTE: Supabase free tier only supports IPv6 for direct connections
+        # Render is IPv4-only, so MUST use Connection Pooler (port 6543) or Transaction Pooler
         if 'supabase.co' in database_url:
-            try:
-                # Parse URL to extract hostname
-                from urllib.parse import urlparse, urlunparse
-                parsed = urlparse(database_url)
-                hostname = parsed.hostname
-                
-                if hostname:
-                    # Resolve hostname to IPv4 address
-                    import socket
-                    # Force IPv4 resolution (AF_INET)
-                    addr_info = socket.getaddrinfo(hostname, None, socket.AF_INET, socket.SOCK_STREAM)
-                    if addr_info:
-                        ipv4_address = addr_info[0][4][0]
-                        print(f"[MAIN] Resolved {hostname} to IPv4: {ipv4_address}", file=sys.stderr, flush=True)
-                        # Replace hostname with IPv4 address
-                        netloc = parsed.netloc.replace(hostname, ipv4_address)
-                        parsed = parsed._replace(netloc=netloc)
-                        database_url = urlunparse(parsed)
-                        print(f"[MAIN] Using IPv4 connection string", file=sys.stderr, flush=True)
-            except Exception as e:
-                print(f"[MAIN] Warning: Could not resolve to IPv4: {e}", file=sys.stderr, flush=True)
+            # Check if using direct connection (port 5432) - this won't work on IPv4-only networks
+            from urllib.parse import urlparse
+            parsed = urlparse(database_url)
+            port = parsed.port or 5432
+            
+            if port == 5432:
+                import sys
+                print(f"[MAIN] WARNING: Direct connection (port 5432) detected. Supabase free tier only supports IPv6 for direct connections.", file=sys.stderr, flush=True)
+                print(f"[MAIN] Render is IPv4-only. Please use Connection Pooler (port 6543) instead.", file=sys.stderr, flush=True)
+                print(f"[MAIN] Get Connection Pooler URL from Supabase Dashboard → Settings → Database → Connection Pooling", file=sys.stderr, flush=True)
             
             # Add connection parameters if not present
             if '?' in database_url:
