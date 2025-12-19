@@ -34,17 +34,29 @@
 
 ---
 
-## Issue 2: CORS Headers (Sudah Fixed)
+## Issue 2: CORS Headers (✅ FIXED - Updated)
 
 **Perbaikan yang sudah dilakukan:**
-- ✅ Updated backend CORS tween
+- ✅ Updated backend CORS tween dengan origin-specific handling
 - ✅ Handle OPTIONS preflight request dengan benar
-- ✅ Add Content-Type header support
+- ✅ Add Content-Type, Authorization, Accept headers support
+- ✅ Server sekarang listen di `127.0.0.1:6543` (match dengan frontend)
+- ✅ Support untuk `localhost:5173` dan `127.0.0.1:5173`
+
+**PENTING: Restart Backend Server!**
+Setelah perubahan ini, **WAJIB restart backend server** agar perubahan berlaku:
+```bash
+# Stop server yang sedang running (Ctrl+C)
+# Kemudian start lagi:
+cd backend
+python -m pyramid.scripts.pserve development.ini
+```
 
 **Testing:**
 1. Cek browser DevTools **Network tab**
 2. Lihat response dari `/api/auth/login`
-3. Seharusnya ada header: `Access-Control-Allow-Origin: *`
+3. Seharusnya ada header: `Access-Control-Allow-Origin: http://localhost:5173` atau `http://127.0.0.1:5173`
+4. Tidak ada error "CORS policy" di console
 
 ---
 

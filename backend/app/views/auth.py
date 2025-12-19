@@ -12,7 +12,14 @@ from google.auth.transport import requests as google_requests
 
 def get_db_session(request):
     """Get database session from request"""
-    return request.registry.dbmaker()
+    try:
+        return request.registry.dbmaker()
+    except Exception as e:
+        import sys
+        import traceback
+        print(f"[get_db_session] Error creating session: {type(e).__name__}: {e}", file=sys.stderr, flush=True)
+        traceback.print_exc(file=sys.stderr)
+        raise
 
 def generate_token(request, user_id: int) -> str:
     """Generate authentication token - stored in database"""
@@ -165,28 +172,64 @@ def register(request):
 @view_config(route_name='auth_login', request_method='POST', renderer='json')
 def login(request):
     """Login user"""
-    session = get_db_session(request)
+    session = None
     try:
-        data = request.json_body
+        session = get_db_session(request)
         
-        email = data.get('email')
-        password = data.get('password')
+        # Safely get JSON body - catch ALL possible exceptions
+        data = None
+        try:
+            # Try to get body first, then parse as JSON
+            body = request.body
+            if not body:
+                request.response.status_code = 400
+                return {'error': 'Request body is required'}
+            
+            # Parse JSON manually to avoid Pyramid's json_body issues
+            import json
+            try:
+                data = json.loads(body.decode('utf-8'))
+            except (UnicodeDecodeError, json.JSONDecodeError) as e:
+                request.response.status_code = 400
+                return {'error': f'Invalid JSON: {str(e)}'}
+            
+            if not isinstance(data, dict):
+                request.response.status_code = 400
+                return {'error': 'Request body must be JSON object'}
+        except AttributeError as e:
+            request.response.status_code = 400
+            return {'error': f'Request parsing error: {str(e)}'}
+        except Exception as e:
+            # Catch any other exception when accessing request body
+            import traceback
+            import sys
+            print(f"[LOGIN] Error accessing request body: {type(e).__name__}: {e}", file=sys.stderr, flush=True)
+            traceback.print_exc(file=sys.stderr)
+            request.response.status_code = 400
+            return {'error': f'Error parsing request: {str(e)}'}
+        
+        if not data:
+            request.response.status_code = 400
+            return {'error': 'Request body is required'}
+        
+        email = data.get('email') if isinstance(data, dict) else None
+        password = data.get('password') if isinstance(data, dict) else None
         
         if not email or not password:
+            request.response.status_code = 400
             return {'error': 'Email and password are required'}
         
         user = session.query(User).filter(User.email == email).first()
         
         # Debug
         import sys
-        print(f"DEBUG: email={email}, user found={user is not None}", flush=True)
-        sys.stdout.flush()
+        print(f"DEBUG: email={email}, user found={user is not None}", flush=True, file=sys.stderr)
         if user:
             result = user.check_password(password)
-            print(f"DEBUG: check_password result={result}", flush=True)
-            sys.stdout.flush()
+            print(f"DEBUG: check_password result={result}", flush=True, file=sys.stderr)
         
         if not user or not user.check_password(password):
+            request.response.status_code = 401
             return {'error': 'Invalid email or password'}
         
         # Generate token
@@ -197,8 +240,19 @@ def login(request):
             'token': token,
             'user': user.to_dict()
         }
+    except Exception as e:
+        import traceback
+        import sys
+        print(f"[LOGIN] UNHANDLED EXCEPTION: {type(e).__name__}: {e}", file=sys.stderr, flush=True)
+        traceback.print_exc(file=sys.stderr)
+        request.response.status_code = 500
+        return {'error': f'Login error: {str(e)}', 'type': type(e).__name__}
     finally:
-        session.close()
+        if session:
+            try:
+                session.close()
+            except:
+                pass
 
 
 @view_config(route_name='auth_google', request_method='POST', renderer='json')

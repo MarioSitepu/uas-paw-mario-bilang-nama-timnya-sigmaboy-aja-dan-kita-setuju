@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  backend:
+    build: .
+    ports:
+      - "${PORT:-6543}:${PORT:-6543}"
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - SESSION_SECRET=${SESSION_SECRET}
+      - PORT=${PORT:-6543}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:5173}
+    volumes:
+      - ./alembic:/app/alembic
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:6543/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

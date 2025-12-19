@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: backend-api
+    env: python
+    buildCommand: pip install -r requirements.txt && pip install -e . && alembic upgrade head
+    startCommand: python -m pyramid.scripts.pserve production.ini
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false  # Set this in Render dashboard
+      - key: SESSION_SECRET
+        generateValue: true  # Render will generate this automatically
+      - key: PORT
+        value: 10000  # Render uses port 10000 by default
+      - key: CORS_ORIGINS
+        sync: false  # Set this in Render dashboard with your frontend domain(s)
+      - key: PYTHON_VERSION
+        value: 3.11.0

@@ -1,0 +1,1 @@
+web: python -m pyramid.scripts.pserve production.ini
