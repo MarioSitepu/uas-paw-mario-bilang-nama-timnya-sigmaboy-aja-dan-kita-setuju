@@ -19,8 +19,15 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    # Check if tables already exist (for existing databases)
+    from sqlalchemy import inspect
+    conn = op.get_bind()
+    inspector = inspect(conn)
+    existing_tables = inspector.get_table_names()
+    
     # Create users table
-    op.create_table('users',
+    if 'users' not in existing_tables:
+        op.create_table('users',
         sa.Column('id', sa.Integer(), nullable=False),
         sa.Column('name', sa.String(length=100), nullable=False),
         sa.Column('email', sa.String(length=100), nullable=False),
@@ -31,10 +38,13 @@ def upgrade() -> None:
         sa.Column('updated_at', sa.DateTime(), nullable=True),
         sa.PrimaryKeyConstraint('id'),
         sa.UniqueConstraint('email')
-    )
+        )
+    else:
+        print("Table 'users' already exists, skipping creation")
     
     # Create doctors table
-    op.create_table('doctors',
+    if 'doctors' not in existing_tables:
+        op.create_table('doctors',
         sa.Column('id', sa.Integer(), nullable=False),
         sa.Column('user_id', sa.Integer(), nullable=False),
         sa.Column('specialization', sa.String(length=100), nullable=False),
@@ -65,10 +75,13 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(['doctor_id'], ['doctors.id'], ondelete='CASCADE'),
         sa.ForeignKeyConstraint(['patient_id'], ['users.id'], ondelete='CASCADE'),
         sa.PrimaryKeyConstraint('id')
-    )
+        )
+    else:
+        print("Table 'appointments' already exists, skipping creation")
     
     # Create medical_records table
-    op.create_table('medical_records',
+    if 'medical_records' not in existing_tables:
+        op.create_table('medical_records',
         sa.Column('id', sa.Integer(), nullable=False),
         sa.Column('appointment_id', sa.Integer(), nullable=False),
         sa.Column('diagnosis', sa.Text(), nullable=False),
@@ -81,15 +94,36 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(['appointment_id'], ['appointments.id'], ondelete='CASCADE'),
         sa.PrimaryKeyConstraint('id'),
         sa.UniqueConstraint('appointment_id')
-    )
+        )
+    else:
+        print("Table 'medical_records' already exists, skipping creation")
     
-    # Create indexes for better query performance
-    op.create_index('ix_users_email', 'users', ['email'])
-    op.create_index('ix_users_role', 'users', ['role'])
-    op.create_index('ix_appointments_patient_id', 'appointments', ['patient_id'])
-    op.create_index('ix_appointments_doctor_id', 'appointments', ['doctor_id'])
-    op.create_index('ix_appointments_date', 'appointments', ['appointment_date'])
-    op.create_index('ix_appointments_status', 'appointments', ['status'])
+    # Create indexes for better query performance (only if they don't exist)
+    if 'users' in existing_tables:
+        existing_indexes = [idx['name'] for idx in inspector.get_indexes('users')]
+        if 'ix_users_email' not in existing_indexes:
+            op.create_index('ix_users_email', 'users', ['email'])
+        if 'ix_users_role' not in existing_indexes:
+            op.create_index('ix_users_role', 'users', ['role'])
+    else:
+        op.create_index('ix_users_email', 'users', ['email'])
+        op.create_index('ix_users_role', 'users', ['role'])
+    
+    if 'appointments' in existing_tables:
+        existing_indexes = [idx['name'] for idx in inspector.get_indexes('appointments')]
+        if 'ix_appointments_patient_id' not in existing_indexes:
+            op.create_index('ix_appointments_patient_id', 'appointments', ['patient_id'])
+        if 'ix_appointments_doctor_id' not in existing_indexes:
+            op.create_index('ix_appointments_doctor_id', 'appointments', ['doctor_id'])
+        if 'ix_appointments_date' not in existing_indexes:
+            op.create_index('ix_appointments_date', 'appointments', ['appointment_date'])
+        if 'ix_appointments_status' not in existing_indexes:
+            op.create_index('ix_appointments_status', 'appointments', ['status'])
+    else:
+        op.create_index('ix_appointments_patient_id', 'appointments', ['patient_id'])
+        op.create_index('ix_appointments_doctor_id', 'appointments', ['doctor_id'])
+        op.create_index('ix_appointments_date', 'appointments', ['appointment_date'])
+        op.create_index('ix_appointments_status', 'appointments', ['status'])
 
 
 def downgrade() -> None:
