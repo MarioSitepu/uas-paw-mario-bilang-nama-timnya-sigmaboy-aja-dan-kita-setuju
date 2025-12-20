@@ -49,6 +49,10 @@ def cors_tween_factory(handler, registry):
             allowed_origins = [origin.strip() for origin in cors_origins_env.split(',')]
         else:
             allowed_origins = DEFAULT_ALLOWED_ORIGINS
+            
+        # Add flexibility for different vercel project names
+        if origin and ('.vercel.app' in origin) and ('mario-bilang-nama-timnya' in origin):
+            allowed_origins.append(origin)
         
         # Handle preflight OPTIONS requests immediately
         if request.method == 'OPTIONS':
@@ -409,6 +413,10 @@ def main(global_config, **settings):
                 allowed_origins = [origin.strip() for origin in cors_origins_env.split(',')]
             else:
                 allowed_origins = DEFAULT_ALLOWED_ORIGINS
+
+            # Add flexibility for different vercel project names
+            if origin and ('.vercel.app' in origin) and ('mario-bilang-nama-timnya' in origin):
+                allowed_origins.append(origin)
             
             # Check if CORS headers already exist
             has_cors = any(h[0].lower() == 'access-control-allow-origin' for h in response_headers)
@@ -484,6 +492,10 @@ def main(global_config, **settings):
                     allowed_origins = [origin.strip() for origin in cors_origins_env.split(',')]
                 else:
                     allowed_origins = DEFAULT_ALLOWED_ORIGINS
+
+                # Add flexibility for different vercel project names
+                if origin and ('.vercel.app' in origin) and ('mario-bilang-nama-timnya' in origin):
+                    allowed_origins.append(origin)
                 if origin and origin in allowed_origins:
                     headers.append(('Access-Control-Allow-Origin', origin))
                     headers.append(('Access-Control-Allow-Credentials', 'true'))
