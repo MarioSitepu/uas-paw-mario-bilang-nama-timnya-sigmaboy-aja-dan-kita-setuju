@@ -10,16 +10,36 @@ import traceback
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 
-def get_db_session(request):
-    """Get database session from request"""
-    try:
-        return request.registry.dbmaker()
-    except Exception as e:
-        import sys
-        import traceback
-        print(f"[get_db_session] Error creating session: {type(e).__name__}: {e}", file=sys.stderr, flush=True)
-        traceback.print_exc(file=sys.stderr)
-        raise
+def get_db_session(request, retries=3):
+    """Get database session from request with retry logic"""
+    import time
+    import sys
+    
+    for attempt in range(retries):
+        try:
+            return request.registry.dbmaker()
+        except Exception as e:
+            error_type = type(e).__name__
+            error_msg = str(e)
+            
+            # Check if it's a connection error that might be retryable
+            is_retryable = (
+                'ConnectionTimeout' in error_type or
+                'OperationalError' in error_type or
+                'connection timeout' in error_msg.lower() or
+                'connection refused' in error_msg.lower()
+            )
+            
+            if attempt < retries - 1 and is_retryable:
+                wait_time = (attempt + 1) * 2  # Exponential backoff: 2s, 4s, 6s
+                print(f"[get_db_session] Attempt {attempt + 1}/{retries} failed: {error_type}. Retrying in {wait_time}s...", file=sys.stderr, flush=True)
+                time.sleep(wait_time)
+                continue
+            else:
+                print(f"[get_db_session] Error creating session after {attempt + 1} attempts: {error_type}: {error_msg}", file=sys.stderr, flush=True)
+                import traceback
+                traceback.print_exc(file=sys.stderr)
+                raise
 
 def generate_token(request, user_id: int, session=None) -> str:
     """Generate authentication token - stored in database"""
@@ -408,48 +428,43 @@ def google_login(request):
 
         print(f'[INFO] Email from token: {email}, Name: {name}')
         
+        # Get role from request (required for new users, optional for existing)
+        role_raw = data.get('role', 'patient')
+        requested_role = role_raw.upper() if role_raw else 'PATIENT'
+        
         # Check if user exists
         user = session.query(User).filter(User.email == email).first()
         
         if not user:
-            # Auto-create new user with Google name
-            print(f'[INFO] Creating new user from Google: {email}')
-            
-            # Get role from request or default to patient
-            # Normalize to uppercase to match frontend constants (PATIENT/DOCTOR)
-            role_raw = data.get('role', 'patient')
-            role = role_raw.upper()
-            
-            random_pass = secrets.token_urlsafe(16)
-            
-            user = User(
-                name=name or email.split('@')[0],  # Use Google name or email prefix
-                email=email,
-                role=role 
-            )
-            user.set_password(random_pass)
-            
-            session.add(user)
-            session.flush() # Flush to get ID
-            
-            # If creating a doctor account via Google, also create Doctor profile
-            if role == 'DOCTOR':
-                from ..models import Doctor
-                doctor = Doctor(
-                    user_id=user.id,
-                    specialization='General Practitioner',  # Default
-                    schedule={} 
-                )
-                session.add(doctor)
-                
-            session.commit()
-            print(f'[INFO] New user created: {email} with role {role}')
+            # New user - return info for profile completion (don't create yet)
+            print(f'[INFO] New user detected from Google: {email}, requested role: {requested_role}')
+            return {
+                'is_new_user': True,
+                'email': email,
+                'google_name': name or email.split('@')[0],
+                'token': token,  # Return Google token for verification in complete step
+                'requested_role': requested_role  # Pass role to complete step
+            }
         
         # Fix legacy lowercase roles
         if user and user.role and user.role != user.role.upper():
             print(f'[INFO] Upgrading role to uppercase: {user.role} -> {user.role.upper()}')
             user.role = user.role.upper()
             session.commit()
+        
+        # Check for role mismatch - user exists but trying to login with different role
+        user_role_upper = user.role.upper() if user.role else 'PATIENT'
+        if requested_role and requested_role != user_role_upper:
+            # User exists with different role
+            if user_role_upper == 'PATIENT':
+                request.response.status_code = 403
+                return {'error': 'Anda sudah terdaftar sebagai pasien. Silakan login sebagai pasien atau gunakan akun Google yang berbeda.'}
+            elif user_role_upper == 'DOCTOR':
+                request.response.status_code = 403
+                return {'error': 'Anda sudah terdaftar sebagai dokter. Silakan login sebagai dokter atau gunakan akun Google yang berbeda.'}
+            else:
+                request.response.status_code = 403
+                return {'error': f'Anda sudah terdaftar dengan role {user_role_upper}. Silakan login dengan role yang sesuai.'}
 
         # Ensure Doctor profile exists if role is DOCTOR (for existing users)
         if user.role == 'DOCTOR':
@@ -465,12 +480,13 @@ def google_login(request):
                 session.add(doctor)
                 session.commit()
 
-        # Login user
-        print(f'[INFO] User logged in: {email}')
+        # Login user (existing user, role matches)
+        print(f'[INFO] User logged in: {email} with role {user.role}')
         app_token = generate_token(request, user.id, session=session)
         
         return {
             'message': 'Login successful',
+            'is_new_user': False,
             'token': app_token,
             'user': user.to_dict()
         }
@@ -524,24 +540,29 @@ def google_login_complete(request):
                     'user': existing_user.to_dict()
                 }
             
+            # Normalize role to uppercase
+            role_upper = role.upper() if role else 'PATIENT'
+            
             # Create new user with provided profile info
             random_pass = secrets.token_urlsafe(16)
             
             user = User(
                 name=name,
                 email=email,
-                role=role
+                role=role_upper
             )
             user.set_password(random_pass)
             
             session.add(user)
             session.flush()
             
-            # If role is doctor, create doctor profile
-            if role == 'doctor':
+            # If role is doctor, create doctor profile with empty schedule
+            if role_upper == 'DOCTOR':
+                from ..models import Doctor
                 doctor = Doctor(
                     user_id=user.id,
-                    specialization='General Practitioner'  # Default, can be updated later
+                    specialization='General Practitioner',  # Default, can be updated later
+                    schedule={}  # Empty schedule, user will set it up later
                 )
                 session.add(doctor)
             

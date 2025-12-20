@@ -11,7 +11,7 @@ interface AuthContextType {
     needsProfileSetup: boolean;
     googleProfileSetup: { email: string; googleName: string; googleToken: string } | null;
     login: (email: string, password: string) => Promise<void>;
-    googleLogin: (credential: string) => Promise<{ isNewUser: boolean }>;
+    googleLogin: (credential: string, role?: UserRole) => Promise<{ isNewUser: boolean }>;
     completeGoogleProfile: (name: string, role: UserRole) => Promise<void>;
     register: (data: RegisterData) => Promise<void>;
     logout: () => void;
@@ -35,7 +35,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [googleProfileSetup, setGoogleProfileSetup] = useState<{ 
         email: string; 
         googleName: string; 
-        googleToken: string 
+        googleToken: string;
+        selectedRole?: UserRole;
     } | null>(null);
 
     useEffect(() => {
@@ -100,10 +101,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setGoogleProfileSetup(null);
     };
 
-    const googleLogin = async (credential: string): Promise<{ isNewUser: boolean }> => {
+    const googleLogin = async (credential: string, role?: UserRole): Promise<{ isNewUser: boolean }> => {
         // First step: verify token with Google
-        console.log('📡 Sending Google token to backend...');
-        const response = await authAPI.googleLogin(credential);
+        console.log('📡 Sending Google token to backend with role:', role);
+        const response = await authAPI.googleLogin(credential, role);
         const data = response.data;
         
         console.log('📦 Backend response:', data);
@@ -121,7 +122,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setGoogleProfileSetup({
                 email: data.email,
                 googleName: data.google_name || data.email.split('@')[0],
-                googleToken: data.token
+                googleToken: data.token,
+                selectedRole: role // Store the role selected in Login page
             });
             return { isNewUser: true };
         } else {

@@ -21,12 +21,15 @@ export const CompleteGoogleProfile: React.FC = () => {
     }
   }, [googleProfileSetup, navigate]);
 
-  // Pre-fill with Google name
+  // Pre-fill with Google name and role
   React.useEffect(() => {
     if (googleProfileSetup?.googleName && !name) {
       setName(googleProfileSetup.googleName);
     }
-  }, [googleProfileSetup?.googleName, name]);
+    if (googleProfileSetup?.selectedRole) {
+      setRole(googleProfileSetup.selectedRole);
+    }
+  }, [googleProfileSetup?.googleName, googleProfileSetup?.selectedRole, name]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,7 +103,7 @@ export const CompleteGoogleProfile: React.FC = () => {
               />
             </div>
 
-            {/* Role Selection */}
+            {/* Role Selection - Pre-filled from Login page selection */}
             <div>
               <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1">
                 I am a
@@ -109,11 +112,17 @@ export const CompleteGoogleProfile: React.FC = () => {
                 id="role"
                 value={role}
                 onChange={(e) => setRole(e.target.value as UserRole)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={!!googleProfileSetup?.selectedRole}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
               >
                 <option value={UserRole.PATIENT}>Patient</option>
                 <option value={UserRole.DOCTOR}>Doctor</option>
               </select>
+              {googleProfileSetup?.selectedRole && (
+                <p className="mt-1 text-xs text-gray-500">
+                  Role sudah dipilih saat login: {role === UserRole.DOCTOR ? 'Dokter' : 'Pasien'}
+                </p>
+              )}
             </div>
 
             {/* Submit Button */}

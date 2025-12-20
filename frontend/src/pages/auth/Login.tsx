@@ -63,8 +63,14 @@ export const Login: React.FC = () => {
   const handleGoogleSuccess = async (credentialResponse: any) => {
     try {
       if (credentialResponse.credential) {
-        console.log('🔐 Google credential received, calling googleLogin...');
-        const result = await googleLogin(credentialResponse.credential);
+        if (!selectedRole) {
+          setError('Please select your role first (Patient or Doctor)');
+          addToast('Please select your role first', 'error');
+          return;
+        }
+        
+        console.log('🔐 Google credential received, calling googleLogin with role:', selectedRole);
+        const result = await googleLogin(credentialResponse.credential, selectedRole);
         console.log('✅ googleLogin result:', result);
         
         // result.isNewUser tells us what to do

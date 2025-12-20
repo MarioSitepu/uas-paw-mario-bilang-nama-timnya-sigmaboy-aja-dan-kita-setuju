@@ -49,7 +49,7 @@ export const authAPI = {
   login: (data: { email: string; password: string }) =>
     api.post('/api/auth/login', data),
 
-  googleLogin: (token: string) => api.post('/api/auth/google', { token }),
+  googleLogin: (token: string, role?: string) => api.post('/api/auth/google', { token, role }),
 
   googleLoginComplete: (data: {
     token: string;

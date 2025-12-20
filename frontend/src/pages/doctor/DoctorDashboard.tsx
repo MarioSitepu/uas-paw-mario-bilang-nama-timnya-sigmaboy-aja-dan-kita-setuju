@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, ClipboardList, FileText } from 'lucide-react';
+import { Calendar, ClipboardList, FileText, Clock } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 import type { Appointment, AppointmentStatus } from '../../types';
@@ -290,6 +290,13 @@ export const DoctorDashboard: React.FC = () => {
       icon: ClipboardList,
       color: 'bg-green-500',
       link: '/app/doctor/schedule',
+    },
+    {
+      label: 'My Availability',
+      value: 'Settings',
+      icon: Clock,
+      color: 'bg-orange-500',
+      link: '/app/doctor/schedule-settings',
     },
     {
       label: 'Medical Records',

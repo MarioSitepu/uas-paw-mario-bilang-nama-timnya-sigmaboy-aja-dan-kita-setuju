@@ -4,7 +4,7 @@ from pyramid.config import Configurator
 from pyramid.response import Response
 from pyramid import tweens
 import pyramid.tweens
-from sqlalchemy import engine_from_config
+from sqlalchemy import engine_from_config, text
 from sqlalchemy.orm import sessionmaker
 
 # Load environment variables from .env file
@@ -178,14 +178,24 @@ def main(global_config, **settings):
                 print(f"[MAIN] Get Connection Pooler URL from Supabase Dashboard → Settings → Database → Connection Pooling", file=sys.stderr, flush=True)
             
             # Add connection parameters if not present
+            # Increase timeout for Supabase connections (30 seconds)
             if '?' in database_url:
                 if 'connect_timeout' not in database_url:
-                    database_url += '&connect_timeout=10'
+                    database_url += '&connect_timeout=30'
+                elif 'connect_timeout=10' in database_url:
+                    database_url = database_url.replace('connect_timeout=10', 'connect_timeout=30')
             else:
-                database_url += '?connect_timeout=10'
+                database_url += '?connect_timeout=30'
             # Ensure sslmode is set
             if 'sslmode' not in database_url:
                 database_url += '&sslmode=require' if '?' in database_url else '?sslmode=require'
+            # Add keepalive settings to prevent connection drops
+            if 'keepalives_idle' not in database_url:
+                database_url += '&keepalives_idle=600' if '?' in database_url else '?keepalives_idle=600'
+            if 'keepalives_interval' not in database_url:
+                database_url += '&keepalives_interval=30'
+            if 'keepalives_count' not in database_url:
+                database_url += '&keepalives_count=3'
         
         settings['sqlalchemy.url'] = database_url
     elif 'sqlalchemy.url' in settings:
@@ -217,11 +227,37 @@ def main(global_config, **settings):
     # Add pool_pre_ping to handle disconnected connections (SSL timeout)
     settings['sqlalchemy.pool_pre_ping'] = 'true'
     # Add connection pool settings for better reliability
-    settings['sqlalchemy.pool_size'] = '5'
-    settings['sqlalchemy.max_overflow'] = '10'
-    settings['sqlalchemy.pool_recycle'] = '3600'
+    # Reduce pool size for Supabase to avoid connection limits
+    settings['sqlalchemy.pool_size'] = '3'
+    settings['sqlalchemy.max_overflow'] = '5'
+    settings['sqlalchemy.pool_recycle'] = '1800'  # Recycle connections every 30 minutes
+    settings['sqlalchemy.pool_timeout'] = '30'  # Wait up to 30 seconds for connection from pool
+    # Add echo for debugging (can be disabled in production)
+    if os.environ.get('SQLALCHEMY_ECHO', '').lower() == 'true':
+        settings['sqlalchemy.echo'] = 'true'
     try:
-        engine = engine_from_config(settings, 'sqlalchemy.')
+        # Create engine with additional connection arguments for Supabase
+        engine_args = {}
+        if 'supabase.co' in settings.get('sqlalchemy.url', ''):
+            # Additional engine arguments for Supabase
+            engine_args['connect_args'] = {
+                'connect_timeout': 30,
+                'options': '-c statement_timeout=30000'  # 30 second statement timeout
+            }
+        
+        engine = engine_from_config(settings, 'sqlalchemy.', **engine_args)
+        
+        # Test connection before proceeding
+        try:
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            import sys
+            print("[MAIN] Database connection test successful", file=sys.stderr, flush=True)
+        except Exception as test_error:
+            import sys
+            print(f"[MAIN] Database connection test failed: {test_error}", file=sys.stderr, flush=True)
+            # Continue anyway - connection might work later with retry logic
+        
         DBSession = sessionmaker(bind=engine)
         config.registry.dbmaker = DBSession
     except Exception as db_error:
