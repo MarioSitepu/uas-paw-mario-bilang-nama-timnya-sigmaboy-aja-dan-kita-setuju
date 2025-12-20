@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { authAPI } from '../../services/api';
-import type { Appointment, AppointmentStatus } from '../../types';
+import type { Appointment } from '../../types';
 import { AppointmentCard } from '../../components/cards/AppointmentCard';
 import { LoadingSkeleton } from '../../components/ui/LoadingSkeleton';
 import { EmptyState } from '../../components/ui/EmptyState';
