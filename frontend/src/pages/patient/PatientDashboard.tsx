@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, Plus, Stethoscope, FileText, Bell } from 'lucide-react';
+import { Calendar, Plus, Stethoscope, FileText, Bell, MessageSquare } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { notificationsAPI } from '../../services/api';
 
@@ -265,11 +265,19 @@ export const PatientDashboard: React.FC = () => {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {upcomingAppointments.map((appointment) => (
-                  <AppointmentCard
-                    key={appointment.id}
-                    appointment={appointment}
-                    showActions={false}
-                  />
+                  <div key={appointment.id} className="relative group">
+                    <AppointmentCard
+                      appointment={appointment}
+                      showActions={false}
+                    />
+                    <Link
+                      to={`/app/chat?partnerId=${appointment.doctorId}`}
+                      className="absolute top-4 right-4 p-2 bg-white/90 backdrop-blur rounded-xl text-blue-600 shadow-sm opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all hover:bg-blue-50 z-10 border border-blue-100"
+                      title="Chat Dokter"
+                    >
+                      <MessageSquare size={18} />
+                    </Link>
+                  </div>
                 ))}
               </div>
             )}

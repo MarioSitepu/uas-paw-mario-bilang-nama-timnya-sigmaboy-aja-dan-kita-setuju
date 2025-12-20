@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Send, Search, Phone, Video, MoreVertical, ArrowLeft, Image as ImageIcon, Paperclip, MessageSquare } from 'lucide-react';
 import { chatAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -23,6 +24,7 @@ interface Message {
 
 const ChatPage: React.FC = () => {
     const { user } = useAuth();
+    const [searchParams] = useSearchParams();
     const [conversations, setConversations] = useState<User[]>([]);
     const [selectedPartner, setSelectedPartner] = useState<User | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
@@ -47,6 +49,18 @@ const ChatPage: React.FC = () => {
             return () => clearInterval(interval);
         }
     }, [selectedPartner]);
+
+    // Auto-select partner from URL
+    useEffect(() => {
+        const partnerId = searchParams.get('partnerId');
+        if (partnerId && conversations.length > 0) {
+            const partner = conversations.find(c => c.id === parseInt(partnerId));
+            if (partner) {
+                setSelectedPartner(partner);
+                // Clear param to avoid re-triggering or permalink issues (optional, but keep it simple for now)
+            }
+        }
+    }, [conversations, searchParams]);
 
     // Scroll to bottom
     useEffect(() => {

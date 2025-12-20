@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, ClipboardList, FileText, Clock, Bell } from 'lucide-react';
+import { Calendar, ClipboardList, FileText, Clock, Bell, MessageSquare } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { notificationsAPI } from '../../services/api';
 
@@ -620,6 +620,13 @@ export const DoctorDashboard: React.FC = () => {
                       >
                         Tolak
                       </button>
+                      <Link
+                        to={`/app/chat?partnerId=${appointment.patientId}`}
+                        className="px-4 py-3 bg-blue-50 text-blue-600 rounded-2xl font-bold text-sm hover:bg-blue-100 transition-colors flex items-center justify-center"
+                        title="Chat Pasien"
+                      >
+                        <MessageSquare size={18} />
+                      </Link>
                     </div>
                   </div>
                 ))}
@@ -662,12 +669,20 @@ export const DoctorDashboard: React.FC = () => {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {todayAppointments.map((appointment) => (
-                  <AppointmentCard
-                    key={appointment.id}
-                    appointment={appointment}
-                    showActions={false}
-                    userRole="doctor"
-                  />
+                  <div key={appointment.id} className="relative group">
+                    <AppointmentCard
+                      appointment={appointment}
+                      showActions={false}
+                      userRole="doctor"
+                    />
+                    <Link
+                      to={`/app/chat?partnerId=${appointment.patientId}`}
+                      className="absolute top-4 right-4 p-2 bg-white/90 backdrop-blur rounded-xl text-blue-600 shadow-sm opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all hover:bg-blue-50 z-10 border border-blue-100"
+                      title="Chat Pasien"
+                    >
+                      <MessageSquare size={18} />
+                    </Link>
+                  </div>
                 ))}
               </div>
             )}
