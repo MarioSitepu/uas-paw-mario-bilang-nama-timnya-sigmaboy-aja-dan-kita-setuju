@@ -64,15 +64,37 @@ export const BookAppointment: React.FC = () => {
   }, [doctorIdParam]);
 
   const loadTimeSlots = useCallback(async () => {
-    if (!selectedDoctor || !selectedDate) return;
+    if (!selectedDoctor || !selectedDate) {
+      setTimeSlots([]);
+      setSelectedTime('');
+      return;
+    }
     try {
+      setIsLoadingSlots(true);
+      setSelectedTime(''); // Reset selected time when loading new slots
       const { doctorsAPI } = await import('../../services/api');
       const response = await doctorsAPI.getSlots(selectedDoctor.id, selectedDate);
-      setTimeSlots(response.data); // data is array of slots
+      const slots = response.data || [];
+      setTimeSlots(slots);
+      
+      // Show message if no slots available
+      if (slots.length === 0) {
+        addToast('Tidak ada jam tersedia pada tanggal yang dipilih', 'info');
+      } else {
+        const availableCount = slots.filter((s: TimeSlot) => s.available).length;
+        if (availableCount === 0) {
+          addToast('Semua jam pada tanggal ini sudah terisi', 'warning');
+        }
+      }
     } catch (error) {
       console.error('Failed to load time slots:', error);
+      const errorMsg = (error as any)?.response?.data?.error || 'Gagal memuat jam yang tersedia';
+      addToast(errorMsg, 'error');
+      setTimeSlots([]);
+    } finally {
+      setIsLoadingSlots(false);
     }
-  }, [selectedDate, selectedDoctor]);
+  }, [selectedDate, selectedDoctor, addToast]);
 
   useEffect(() => {
     void loadDoctors();

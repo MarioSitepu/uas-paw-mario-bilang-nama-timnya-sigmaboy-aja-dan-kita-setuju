@@ -2,10 +2,20 @@
 from pyramid.view import view_config
 from pyramid.httpexceptions import HTTPBadRequest, HTTPNotFound, HTTPUnauthorized, HTTPForbidden
 from ..models import User, Doctor
-from ..utils import upload_profile_photo as upload_to_cloudinary
 import json
 import traceback
-from io import BytesIO
+import os
+import uuid
+from supabase import create_client, Client
+
+# Supabase config
+SUPABASE_URL = os.environ.get('SUPABASE_URL', 'https://eeygswpiygbqdztagizv.supabase.co')
+SUPABASE_KEY = os.environ.get('SUPABASE_KEY', '')
+BUCKET_NAME = 'profile-pictures'
+
+def get_supabase_client() -> Client:
+    """Get Supabase client"""
+    return create_client(SUPABASE_URL, SUPABASE_KEY)
 
 def get_db_session(request):
     """Get database session from request"""
@@ -54,26 +64,52 @@ def update_profile_photo(request):
             request.response.status_code = 400
             return {'error': 'File size exceeds 5MB limit'}
         
-        # Upload to Cloudinary with bytes
+        # Upload to Supabase Storage
         try:
-            file_stream = BytesIO(file_content)
-            photo_url = upload_to_cloudinary(file_stream, user.id)
+            supabase = get_supabase_client()
+            
+            # Generate unique filename
+            ext = content_type.split('/')[-1]
+            if ext == 'jpeg':
+                ext = 'jpg'
+            filename = f"{user.id}_{uuid.uuid4().hex[:8]}.{ext}"
+            
+            # Delete old profile picture if exists
+            if user.profile_photo_url:
+                try:
+                    # Extract filename from URL
+                    old_url_parts = user.profile_photo_url.split('/')
+                    if len(old_url_parts) > 0:
+                        old_filename = old_url_parts[-1].split('?')[0]  # Remove query params
+                        supabase.storage.from_(BUCKET_NAME).remove([old_filename])
+                except Exception as e:
+                    print(f'⚠️ Could not delete old photo: {e}')
+                    pass  # Ignore errors deleting old file
+            
+            # Upload new file
+            result = supabase.storage.from_(BUCKET_NAME).upload(
+                filename,
+                file_content,
+                file_options={"content-type": content_type, "upsert": "true"}
+            )
+            
+            # Get public URL
+            public_url = supabase.storage.from_(BUCKET_NAME).get_public_url(filename)
             
             # Save URL to database
-            user.profile_photo_url = photo_url
+            user.profile_photo_url = public_url
             session.commit()
             
             return {
                 'success': True,
                 'message': 'Profile photo updated successfully',
-                'profile_photo_url': photo_url,
+                'profile_photo_url': public_url,
                 'user': user.to_dict()
             }
         
         except Exception as e:
             session.rollback()
             request.response.status_code = 500
-            import traceback
             error_msg = f'Upload failed: {str(e)}'
             print(f'❌ Upload error: {error_msg}')
             print(f'Traceback: {traceback.format_exc()}')

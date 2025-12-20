@@ -23,10 +23,11 @@ export interface Doctor {
   id: number;
   name: string;
   specialization: string;
-  photoUrl: string;
-  rating: number;
-  location: string;
-  clinic: string;
+  photoUrl?: string;
+  profile_photo_url?: string;
+  rating?: number;
+  location?: string;
+  clinic?: string;
   schedule: DoctorSchedule[];
   bio?: string;
 }
