@@ -75,7 +75,6 @@ export const DatePicker: React.FC<DatePickerProps> = ({
     // Use local date to avoid timezone issues
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth();
-    const selectedDate = new Date(year, month, day);
     
     // Format as YYYY-MM-DD using local timezone (not UTC)
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
