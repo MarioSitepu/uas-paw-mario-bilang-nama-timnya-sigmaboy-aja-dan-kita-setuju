@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Calendar, Plus, Stethoscope, FileText, Bell, MessageSquare } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { notificationsAPI } from '../../services/api';
+import { notificationsAPI, chatAPI } from '../../services/api';
 
 import type { Appointment } from '../../types';
 import { AppointmentCard } from '../../components/cards/AppointmentCard';
@@ -13,6 +13,7 @@ export const PatientDashboard: React.FC = () => {
   const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
 
 
   const loadAppointments = useCallback(async () => {
@@ -84,8 +85,12 @@ export const PatientDashboard: React.FC = () => {
         const notifications = await notificationsAPI.getAll();
         const count = notifications.filter((n: any) => !n.is_read).length;
         if (isActive) setUnreadCount(count);
+
+        const chatResponse = await chatAPI.getUnreadCount();
+        if (isActive) setUnreadChatCount(chatResponse.data.count || 0);
+
       } catch (error) {
-        console.error('Failed to load notifications count:', error);
+        console.error('Failed to load counts:', error);
       }
     };
 
@@ -133,6 +138,13 @@ export const PatientDashboard: React.FC = () => {
       icon: Bell,
       color: 'bg-amber-500',
       link: '/app/notifications',
+    },
+    {
+      label: 'Messages',
+      value: unreadChatCount > 0 ? `${unreadChatCount} New` : 'No New',
+      icon: MessageSquare,
+      color: 'bg-blue-600',
+      link: '/app/messages',
     },
 
   ];

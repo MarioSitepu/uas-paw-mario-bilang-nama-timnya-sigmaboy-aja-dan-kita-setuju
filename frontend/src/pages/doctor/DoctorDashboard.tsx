@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Calendar, ClipboardList, FileText, Clock, Bell, MessageSquare } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { notificationsAPI } from '../../services/api';
+import { notificationsAPI, chatAPI } from '../../services/api';
 
 import type { Appointment, AppointmentStatus } from '../../types';
 import { AppointmentCard } from '../../components/cards/AppointmentCard';
@@ -20,6 +20,7 @@ export const DoctorDashboard: React.FC = () => {
   const [trendMode, setTrendMode] = useState<'daily' | 'weekly'>('daily');
   const [isUpdating, setIsUpdating] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
   const { addToast } = useToastContext();
 
 
@@ -33,8 +34,11 @@ export const DoctorDashboard: React.FC = () => {
         const notifications = await notificationsAPI.getAll();
         const count = notifications.filter((n: any) => !n.is_read).length;
         if (isActive) setUnreadCount(count);
+
+        const chatResponse = await chatAPI.getUnreadCount();
+        if (isActive) setUnreadChatCount(chatResponse.data.count || 0);
       } catch (error) {
-        console.error('Failed to load notifications count:', error);
+        console.error('Failed to load counts:', error);
       }
     };
 
@@ -334,7 +338,13 @@ export const DoctorDashboard: React.FC = () => {
       color: 'bg-amber-500',
       link: '/app/notifications',
     },
-
+    {
+      label: 'Messages',
+      value: unreadChatCount > 0 ? `${unreadChatCount} New` : 'No New',
+      icon: MessageSquare,
+      color: 'bg-blue-600',
+      link: '/app/messages',
+    },
     {
       label: 'Medical Records',
       value: 'Records',

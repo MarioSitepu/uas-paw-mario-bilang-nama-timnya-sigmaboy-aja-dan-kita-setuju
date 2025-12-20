@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Send, Search, Phone, Video, MoreVertical, ArrowLeft, Image as ImageIcon, Paperclip, MessageSquare } from 'lucide-react';
 import { chatAPI, usersAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { LoadingSkeleton } from '../components/ui/LoadingSkeleton';
 
 interface User {
     id: number;
@@ -30,6 +31,7 @@ const ChatPage: React.FC = () => {
     const [messages, setMessages] = useState<Message[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [loading, setLoading] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
     const [isMobileListVisible, setIsMobileListVisible] = useState(true);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -98,11 +100,14 @@ const ChatPage: React.FC = () => {
     }, [messages]);
 
     const fetchConversations = async () => {
+        setLoading(true);
         try {
             const response = await chatAPI.getConversations();
             setConversations(response.data);
         } catch (error) {
             console.error('Failed to fetch conversations', error);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -149,62 +154,80 @@ const ChatPage: React.FC = () => {
                         <input
                             type="text"
                             placeholder="Cari..."
+                            value={searchTerm}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
                             className="w-full pl-10 pr-4 py-2 bg-slate-100 border-none rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 text-slate-700"
                         />
                     </div>
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-3 space-y-2">
-                    {conversations.length === 0 ? (
-                        <div className="text-center py-10 text-slate-400 text-sm">
-                            Belum ada percakapan.
-                            <br />
-                            Selesaikan Appointment untuk memulai chat.
-                        </div>
-                    ) : (
-                        conversations.map(partner => (
-                            <div
-                                key={partner.id}
-                                onClick={() => setSelectedPartner(partner)}
-                                className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all ${selectedPartner?.id === partner.id
-                                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
-                                    : 'hover:bg-white hover:shadow-md text-slate-700'
-                                    }`}
-                            >
-                                <div className="relative">
-                                    <img
-                                        src={partner.photoUrl || `https://ui-avatars.com/api/?name=${partner.name}&background=random`}
-                                        alt={partner.name}
-                                        className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm"
-                                    />
-                                    {/* Online Status (Simulation) */}
-                                    <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
-                                </div>
-
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex justify-between items-center mb-1">
-                                        <h3 className={`font-semibold text-sm truncate ${selectedPartner?.id === partner.id ? 'text-white' : 'text-slate-800'}`}>
-                                            {partner.name}
-                                        </h3>
-                                        {partner.lastMessageTime && (
-                                            <span className={`text-[10px] ${selectedPartner?.id === partner.id ? 'text-blue-100' : 'text-slate-400'}`}>
-                                                {new Date(partner.lastMessageTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                            </span>
-                                        )}
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                        <p className={`text-xs truncate max-w-[140px] ${selectedPartner?.id === partner.id ? 'text-blue-100' : 'text-slate-500'}`}>
-                                            {partner.lastMessage || 'Mulai percakapan...'}
-                                        </p>
-                                        {partner.unreadCount && partner.unreadCount > 0 ? (
-                                            <span className="min-w-[18px] h-[18px] flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full px-1">
-                                                {partner.unreadCount}
-                                            </span>
-                                        ) : null}
-                                    </div>
+                    {loading && conversations.length === 0 ? (
+                        Array(5).fill(0).map((_, i) => (
+                            <div key={i} className="flex items-center gap-3 p-3">
+                                <LoadingSkeleton className="w-12 h-12 rounded-full" />
+                                <div className="flex-1">
+                                    <LoadingSkeleton className="h-4 w-3/4 mb-2" />
+                                    <LoadingSkeleton className="h-3 w-1/2" />
                                 </div>
                             </div>
                         ))
+                    ) : conversations.length === 0 ? (
+                        <div className="text-center py-10 text-slate-400 text-sm">
+                            Belum ada percakapan.
+                            <br />
+                            Kirim pesan dari Dashboard untuk memulai.
+                        </div>
+                    ) : conversations.filter((p: User) => p.name.toLowerCase().includes(searchTerm.toLowerCase())).length === 0 ? (
+                        <div className="text-center py-10 text-slate-400 text-sm">
+                            Tidak ditemukan "{searchTerm}"
+                        </div>
+                    ) : (
+                        conversations
+                            .filter((p: User) => p.name.toLowerCase().includes(searchTerm.toLowerCase()))
+                            .map((partner: User) => (
+                                <div
+                                    key={partner.id}
+                                    onClick={() => setSelectedPartner(partner)}
+                                    className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all ${selectedPartner?.id === partner.id
+                                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
+                                        : 'hover:bg-white hover:shadow-md text-slate-700'
+                                        }`}
+                                >
+                                    <div className="relative">
+                                        <img
+                                            src={partner.photoUrl || `https://ui-avatars.com/api/?name=${partner.name}&background=random`}
+                                            alt={partner.name}
+                                            className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm"
+                                        />
+                                        {/* Online Status (Simulation) */}
+                                        <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
+                                    </div>
+
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex justify-between items-center mb-1">
+                                            <h3 className={`font-semibold text-sm truncate ${selectedPartner?.id === partner.id ? 'text-white' : 'text-slate-800'}`}>
+                                                {partner.name}
+                                            </h3>
+                                            {partner.lastMessageTime && (
+                                                <span className={`text-[10px] ${selectedPartner?.id === partner.id ? 'text-blue-100' : 'text-slate-400'}`}>
+                                                    {new Date(partner.lastMessageTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <p className={`text-xs truncate max-w-[140px] ${selectedPartner?.id === partner.id ? 'text-blue-100' : 'text-slate-500'}`}>
+                                                {partner.lastMessage || 'Mulai percakapan...'}
+                                            </p>
+                                            {partner.unreadCount && partner.unreadCount > 0 ? (
+                                                <span className="min-w-[18px] h-[18px] flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full px-1">
+                                                    {partner.unreadCount}
+                                                </span>
+                                            ) : null}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
                     )}
                 </div>
             </div>
@@ -293,8 +316,8 @@ const ChatPage: React.FC = () => {
 
                             <textarea
                                 value={newMessage}
-                                onChange={(e) => setNewMessage(e.target.value)}
-                                onKeyDown={(e) => {
+                                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNewMessage(e.target.value)}
+                                onKeyDown={(e: React.KeyboardEvent<HTMLTextAreaElement>) => {
                                     if (e.key === 'Enter' && !e.shiftKey) {
                                         e.preventDefault();
                                         handleSendMessage(e);

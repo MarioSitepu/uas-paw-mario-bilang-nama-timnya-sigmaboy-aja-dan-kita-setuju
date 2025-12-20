@@ -13,15 +13,24 @@ import {
   X,
   Activity,
   Bell,
-  MessageSquare
+  MessageSquare,
+  LucideIcon
 } from 'lucide-react';
 import { notificationsAPI, chatAPI } from '../../services/api';
+
+interface MenuItem {
+  path: string;
+  label: string;
+  icon: LucideIcon;
+  badge?: number;
+  isNotification?: boolean;
+}
 
 interface AppLayoutProps {
   children: React.ReactNode;
 }
 
-export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
+export const AppLayout: React.FC<AppLayoutProps> = ({ children }: AppLayoutProps) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -85,7 +94,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           // Based on DoctorDashboard logic, it returns list.
           const notifs = notifResponse.data.notifications || notifResponse.data;
           if (Array.isArray(notifs)) {
-            setUnreadCount(notifs.filter((n: any) => !n.is_read).length);
+            setUnreadCount(notifs.filter((n: { is_read: boolean }) => !n.is_read).length);
           }
 
           // Fetch chat count
@@ -99,7 +108,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     };
 
     fetchCounts();
-    const interval = setInterval(fetchCounts, 30000);
+    const interval = setInterval(fetchCounts, 10000); // 10s poll for snappier UI
     return () => clearInterval(interval);
   }, [user]);
 
@@ -160,9 +169,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
           {/* Navigation */}
           <nav className="flex-1 space-y-2">
-            {menu.map((item) => {
-              const Icon = item.icon;
-              const isNotificationItem = 'isNotification' in item && item.isNotification;
+            {menu.map((item: MenuItem) => {
+              const Icon: LucideIcon = item.icon;
+              const isNotificationItem: boolean = 'isNotification' in item && item.isNotification === true;
 
               return (
                 <Link
@@ -185,9 +194,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                     </span>
                   )}
                   {/* Chat Badge */}
-                  {(item as any).badge > 0 && (
+                  {item.badge && item.badge > 0 && (
                     <span className="ml-auto flex items-center justify-center min-w-[24px] h-6 px-2 bg-blue-500 text-white text-xs font-bold rounded-full shadow-sm animate-pulse">
-                      {(item as any).badge > 99 ? '99+' : (item as any).badge}
+                      {item.badge > 99 ? '99+' : item.badge}
                     </span>
                   )}
                 </Link>

@@ -175,6 +175,17 @@ def send_message(request):
     )
     
     session.add(new_msg)
+    
+    # Notify recipient
+    sender = session.query(User).get(user_id)
+    notification = Notification(
+        user_id=recipient_id,
+        title=f"Pesan Baru dari {sender.name if sender else 'User'}",
+        message=content[:50] + ('...' if len(content) > 50 else ''),
+        is_read=False
+    )
+    session.add(notification)
+    
     session.flush() # flush to get ID and created_at
     
     return {
