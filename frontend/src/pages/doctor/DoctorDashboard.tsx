@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Calendar, ClipboardList, FileText, Clock, Bell } from 'lucide-react';
-import { NotificationBell } from '../../components/NotificationBell';
 import { useAuth } from '../../context/AuthContext';
+
 
 import type { Appointment, AppointmentStatus } from '../../types';
 import { AppointmentCard } from '../../components/cards/AppointmentCard';
@@ -304,9 +304,9 @@ export const DoctorDashboard: React.FC = () => {
       value: pendingAppointments.length > 0 ? `${pendingAppointments.length} New` : 'All Read',
       icon: Bell,
       color: 'bg-amber-500',
-      link: '#',
-      isNotification: true
+      link: '/app/notifications',
     },
+
     {
       label: 'Medical Records',
       value: 'Records',
@@ -380,27 +380,6 @@ export const DoctorDashboard: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {stats.map((stat, idx) => {
               const IconComponent = stat.icon;
-              const isNotification = 'isNotification' in stat && stat.isNotification;
-
-              if (isNotification) {
-                return (
-                  <div
-                    key={idx}
-                    className="group relative overflow-visible backdrop-blur-xl bg-white/80 border border-white/20 rounded-3xl p-6 shadow-xl hover:shadow-2xl hover:-translate-y-2 hover:bg-white/90 transition-all duration-500 cursor-pointer"
-                  >
-                    <div className={`absolute top-0 right-0 w-32 h-32 -mr-8 -mt-8 rounded-full opacity-20 group-hover:scale-125 transition-transform duration-500 ${stat.color}`}></div>
-                    <div className="relative flex items-center justify-between">
-                      <div>
-                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">{stat.label}</p>
-                        <p className="text-3xl font-black text-slate-900">{stat.value}</p>
-                      </div>
-                      <div className={`w-16 h-16 ${stat.color} rounded-2xl flex items-center justify-center shadow-lg group-hover:rotate-12 group-hover:scale-110 transition-all duration-300`}>
-                        <NotificationBell />
-                      </div>
-                    </div>
-                  </div>
-                );
-              }
 
               return (
                 <Link
@@ -422,6 +401,7 @@ export const DoctorDashboard: React.FC = () => {
               );
             })}
           </div>
+
 
           {/* Charts */}
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
