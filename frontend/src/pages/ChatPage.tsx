@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Send, Search, Phone, Video, MoreVertical, ArrowLeft, Image as ImageIcon, Paperclip, MessageSquare } from 'lucide-react';
-import { chatAPI } from '../services/api';
+import { chatAPI, usersAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 interface User {
@@ -53,11 +53,41 @@ const ChatPage: React.FC = () => {
     // Auto-select partner from URL
     useEffect(() => {
         const partnerId = searchParams.get('partnerId');
-        if (partnerId && conversations.length > 0) {
-            const partner = conversations.find(c => c.id === parseInt(partnerId));
+        if (partnerId) {
+            const pid = parseInt(partnerId);
+            const partner = conversations.find((c: User) => c.id === pid);
+
             if (partner) {
-                setSelectedPartner(partner);
-                // Clear param to avoid re-triggering or permalink issues (optional, but keep it simple for now)
+                if (selectedPartner?.id !== pid) {
+                    setSelectedPartner(partner);
+                }
+            } else {
+                // Fetch user details for new chat
+                const fetchPartner = async () => {
+                    try {
+                        const response = await usersAPI.getById(pid);
+                        // Handle both response formats (direct or nested)
+                        const userData = response.data.user || response.data;
+
+                        const newUser: User = {
+                            id: userData.id,
+                            name: userData.name,
+                            photoUrl: userData.photo_url || '',
+                            role: userData.role,
+                            unreadCount: 0
+                        };
+
+                        // Check if already added to avoid duplicates race condition
+                        setConversations((prev: User[]) => {
+                            if (prev.some((p: User) => p.id === newUser.id)) return prev;
+                            return [...prev, newUser];
+                        });
+                        setSelectedPartner(newUser);
+                    } catch (error) {
+                        console.error('Failed to fetch partner details:', error);
+                    }
+                };
+                fetchPartner();
             }
         }
     }, [conversations, searchParams]);

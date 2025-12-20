@@ -72,6 +72,11 @@ export const NotificationsPage: React.FC = () => {
             setUnreadCount(prev => Math.max(0, prev - 1));
 
             // Redirect to appointment
+            if (!appointmentId) {
+                console.warn('No appointmentId found for notification:', id);
+                return;
+            }
+
             const userRole = user?.role?.toLowerCase();
             if (userRole === 'doctor') {
                 navigate(`/app/doctor/appointments/${appointmentId}`);
@@ -231,9 +236,9 @@ export const NotificationsPage: React.FC = () => {
                                 <div className="flex gap-4">
                                     {/* Icon */}
                                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${notification.title.toLowerCase().includes('confirmed') ? 'bg-green-100' :
-                                            notification.title.toLowerCase().includes('cancelled') ? 'bg-red-100' :
-                                                notification.title.toLowerCase().includes('completed') ? 'bg-blue-100' :
-                                                    'bg-amber-100'
+                                        notification.title.toLowerCase().includes('cancelled') ? 'bg-red-100' :
+                                            notification.title.toLowerCase().includes('completed') ? 'bg-blue-100' :
+                                                'bg-amber-100'
                                         }`}>
                                         {getNotificationIcon(notification.title)}
                                     </div>

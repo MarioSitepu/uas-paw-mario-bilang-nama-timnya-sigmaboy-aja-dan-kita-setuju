@@ -118,10 +118,13 @@ def get_current_user(request):
         session.close()
 
 def require_auth(request):
-    """Require authentication - returns user or returns error dict"""
+    """Require authentication - returns user or raises error"""
     user = get_current_user(request)
     if not user:
-        return None
+        # Instead of returning None, we can raise an exception that the tween or exception view will catch
+        # or return a Response object that Pyramid can handle
+        from pyramid.httpexceptions import HTTPUnauthorized
+        raise HTTPUnauthorized(json.dumps({'error': 'Authentication required'}), content_type='application/json')
     return user
 
 def require_role(request, roles):

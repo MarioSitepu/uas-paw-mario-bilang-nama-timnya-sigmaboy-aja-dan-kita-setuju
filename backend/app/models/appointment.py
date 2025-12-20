@@ -63,6 +63,7 @@ class Appointment(Base):
             if self.doctor:
                 doctor_dict = {
                     'id': self.doctor.id,
+                    'user_id': self.doctor.user_id,
                     'name': self.doctor.user.name if self.doctor.user else 'Unknown',
                     'specialization': self.doctor.specialization,
                     'profile_photo_url': self.doctor.user.profile_photo_url if self.doctor.user else None,
