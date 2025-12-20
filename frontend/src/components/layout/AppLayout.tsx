@@ -14,8 +14,7 @@ import {
   Activity,
   Bell
 } from 'lucide-react';
-import { NotificationBell } from '../NotificationBell';
-
+import { notificationsAPI } from '../../services/api';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -27,6 +26,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [topBarVisible, setTopBarVisible] = useState(true);
+  const [unreadCount, setUnreadCount] = useState(0);
   const lastScrollYRef = useRef(0);
 
   const handleLogout = () => {
@@ -72,11 +72,29 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     }
   }, [sidebarOpen]);
 
+  // Fetch unread notification count
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      if (user) {
+        try {
+          const response = await notificationsAPI.getAll();
+          setUnreadCount(response.data.unread_count || 0);
+        } catch (error) {
+          console.error('Failed to fetch notification count:', error);
+        }
+      }
+    };
+
+    fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 30000);
+    return () => clearInterval(interval);
+  }, [user]);
+
   const patientMenu = [
     { path: '/app/patient/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/app/patient/doctors', label: 'Find Doctors', icon: Stethoscope },
     { path: '/app/patient/appointments', label: 'My Appointments', icon: Calendar },
-    { path: '#notifications', label: 'Notifications', icon: Bell, isNotification: true },
+    { path: '/app/notifications', label: 'Notifications', icon: Bell, isNotification: true },
     { path: '/app/profile', label: 'Profile', icon: User },
   ];
 
@@ -84,10 +102,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     { path: '/app/doctor/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/app/doctor/schedule', label: 'Schedule', icon: Calendar },
     { path: '/app/doctor/records', label: 'Medical Records', icon: ClipboardList },
-    { path: '#notifications', label: 'Notifications', icon: Bell, isNotification: true },
+    { path: '/app/notifications', label: 'Notifications', icon: Bell, isNotification: true },
     { path: '/app/profile', label: 'Profile', icon: User },
   ];
-
 
   const menu = user?.role === UserRole.PATIENT ? patientMenu : doctorMenu;
 
@@ -132,21 +149,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               const Icon = item.icon;
               const isNotificationItem = 'isNotification' in item && item.isNotification;
 
-              if (isNotificationItem) {
-                return (
-                  <div
-                    key={item.path}
-                    className="flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-200 group text-slate-600 hover:bg-white/50 hover:text-blue-700 cursor-pointer relative"
-                  >
-                    <Icon className="w-5 h-5 text-slate-400 group-hover:text-blue-600" />
-                    <span className="font-medium">{item.label}</span>
-                    <div className="ml-auto">
-                      <NotificationBell />
-                    </div>
-                  </div>
-                );
-              }
-
               return (
                 <Link
                   key={item.path}
@@ -162,11 +164,15 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                 >
                   <Icon className={`w-5 h-5 ${isActive(item.path) ? 'text-white' : 'text-slate-400 group-hover:text-blue-600'}`} />
                   <span className="font-medium">{item.label}</span>
+                  {isNotificationItem && unreadCount > 0 && (
+                    <span className="ml-auto flex items-center justify-center min-w-[24px] h-6 px-2 bg-red-500 text-white text-xs font-bold rounded-full shadow-sm">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
                 </Link>
               );
             })}
           </nav>
-
 
           {/* User Info & Logout */}
           <div className="pt-6 border-t border-slate-200/60">
@@ -227,4 +233,3 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     </div>
   );
 };
-

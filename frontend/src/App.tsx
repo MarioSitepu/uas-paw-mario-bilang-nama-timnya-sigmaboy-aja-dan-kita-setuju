@@ -19,6 +19,8 @@ import { Unauthorized } from './pages/Unauthorized';
 import { DashboardRedirect } from './pages/DashboardRedirect';
 import { Profile } from './pages/Profile';
 import { ArticleDetail } from './pages/ArticleDetail';
+import { NotificationsPage } from './pages/NotificationsPage';
+
 
 // Patient Pages
 import { PatientDashboard } from './pages/patient/PatientDashboard';
@@ -89,8 +91,19 @@ function App() {
                   </RequireAuth>
                 }
               />
+              <Route
+                path="/app/notifications"
+                element={
+                  <RequireAuth>
+                    <AppLayout>
+                      <NotificationsPage />
+                    </AppLayout>
+                  </RequireAuth>
+                }
+              />
 
               {/* Patient Routes */}
+
               <Route
                 path="/app/patient/dashboard"
                 element={
