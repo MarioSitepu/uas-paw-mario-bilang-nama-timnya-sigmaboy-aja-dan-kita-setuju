@@ -9,7 +9,7 @@ interface AuthContextType {
     isLoading: boolean;
     isAuthenticated: boolean;
     needsProfileSetup: boolean;
-    googleProfileSetup: { email: string; googleName: string; googleToken: string } | null;
+    googleProfileSetup: { email: string; googleName: string; googleToken: string; selectedRole?: UserRole } | null;
     login: (email: string, password: string) => Promise<void>;
     googleLogin: (credential: string, role?: UserRole) => Promise<{ isNewUser: boolean }>;
     completeGoogleProfile: (name: string, role: UserRole) => Promise<void>;
