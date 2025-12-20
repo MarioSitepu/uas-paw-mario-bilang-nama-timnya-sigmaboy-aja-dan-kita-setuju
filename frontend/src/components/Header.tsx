@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { LogIn, Newspaper } from 'lucide-react';
+import careHubLogo from '../assets/images/carehub-logo.png';
 
 export const Header: React.FC = () => {
   const [scrolled, setScrolled] = useState(false);
@@ -22,9 +23,11 @@ export const Header: React.FC = () => {
         <div className="flex items-center justify-between py-4">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-3 text-xl font-bold text-gray-900 flex-shrink-0 group">
-            <div className="w-11 h-11 bg-gradient-to-br from-blue-600 via-blue-500 to-blue-700 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all duration-300">
-              <span className="text-white font-bold text-lg">C</span>
-            </div>
+            <img
+              src={careHubLogo}
+              alt="CareHub Logo"
+              className="h-12 w-auto object-contain group-hover:scale-110 transition-transform duration-300 drop-shadow-md"
+            />
             <span className="bg-gradient-to-r from-blue-600 via-blue-500 to-blue-700 bg-clip-text text-transparent group-hover:from-blue-700 group-hover:to-blue-800 transition-all duration-300">
               CareHub
             </span>

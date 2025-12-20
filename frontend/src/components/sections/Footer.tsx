@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Facebook, Twitter, Instagram, Linkedin, Heart } from 'lucide-react';
+import careHubLogo from '../../assets/images/carehub-logo.png';
 
 export const Footer: React.FC = () => {
   const currentYear = new Date().getFullYear();
@@ -18,9 +19,11 @@ export const Footer: React.FC = () => {
           {/* Brand */}
           <div>
             <Link to="/" className="flex items-center gap-3 text-xl lg:text-2xl font-bold mb-5 lg:mb-6 hover:opacity-80 transition-opacity group">
-              <div className="w-10 h-10 lg:w-11 lg:h-11 bg-white rounded-xl flex items-center justify-center shadow-xl group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
-                <span className="text-blue-900 font-bold text-lg lg:text-xl">C</span>
-              </div>
+              <img
+                src={careHubLogo}
+                alt="CareHub Logo"
+                className="h-12 lg:h-14 w-auto object-contain bg-white rounded-xl p-1 shadow-xl group-hover:scale-110 group-hover:rotate-3 transition-all duration-300"
+              />
               <span className="bg-gradient-to-r from-white via-blue-100 to-white bg-clip-text text-transparent">
                 CareHub
               </span>
@@ -43,8 +46,8 @@ export const Footer: React.FC = () => {
             <ul className="space-y-2.5 lg:space-y-3">
               {['Beranda', 'Tentang', 'Layanan', 'Blog', 'Kontak'].map((link) => (
                 <li key={link}>
-                  <a 
-                    href={link === 'Beranda' ? '/' : `#${link.toLowerCase()}`} 
+                  <a
+                    href={link === 'Beranda' ? '/' : `#${link.toLowerCase()}`}
                     className="text-blue-200 hover:text-white transition-colors text-sm lg:text-base font-medium hover:translate-x-1 inline-block transform duration-200"
                   >
                     {link}
@@ -63,8 +66,8 @@ export const Footer: React.FC = () => {
             <ul className="space-y-2.5 lg:space-y-3">
               {['Pengobatan Umum', 'Perawatan Gigi', 'Pediatri', 'Kesehatan Wanita', 'Kardiologi', 'Fisioterapi'].map((service) => (
                 <li key={service}>
-                  <a 
-                    href="#" 
+                  <a
+                    href="#"
                     className="text-blue-200 hover:text-white transition-colors text-sm lg:text-base font-medium hover:translate-x-1 inline-block transform duration-200"
                   >
                     {service}
@@ -83,8 +86,8 @@ export const Footer: React.FC = () => {
             <ul className="space-y-2.5 lg:space-y-3">
               {['Spesialis Kami', 'Kualifikasi & Keahlian', 'Ulasan Pasien', 'Bergabung dengan Tim'].map((item) => (
                 <li key={item}>
-                  <a 
-                    href={item === 'Spesialis Kami' ? '#our-team' : item === 'Ulasan Pasien' ? '#testimonials' : '#'} 
+                  <a
+                    href={item === 'Spesialis Kami' ? '#our-team' : item === 'Ulasan Pasien' ? '#testimonials' : '#'}
                     className="text-blue-200 hover:text-white transition-colors text-sm lg:text-base font-medium hover:translate-x-1 inline-block transform duration-200"
                   >
                     {item}
