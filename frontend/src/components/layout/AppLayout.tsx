@@ -2,6 +2,17 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { UserRole } from '../../types';
+import {
+  LayoutDashboard,
+  Stethoscope,
+  Calendar,
+  User,
+  ClipboardList,
+  LogOut,
+  Menu,
+  X,
+  Activity
+} from 'lucide-react';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -59,17 +70,17 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   }, [sidebarOpen]);
 
   const patientMenu = [
-    { path: '/app/patient/dashboard', label: 'Dashboard', icon: '📊' },
-    { path: '/app/patient/doctors', label: 'Find Doctors', icon: '👨‍⚕️' },
-    { path: '/app/patient/appointments', label: 'My Appointments', icon: '📅' },
-    { path: '/app/profile', label: 'Profile', icon: '👤' },
+    { path: '/app/patient/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { path: '/app/patient/doctors', label: 'Find Doctors', icon: Stethoscope },
+    { path: '/app/patient/appointments', label: 'My Appointments', icon: Calendar },
+    { path: '/app/profile', label: 'Profile', icon: User },
   ];
 
   const doctorMenu = [
-    { path: '/app/doctor/dashboard', label: 'Dashboard', icon: '📊' },
-    { path: '/app/doctor/schedule', label: 'Schedule', icon: '📅' },
-    { path: '/app/doctor/records', label: 'Medical Records', icon: '📋' },
-    { path: '/app/profile', label: 'Profile', icon: '👤' },
+    { path: '/app/doctor/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { path: '/app/doctor/schedule', label: 'Schedule', icon: Calendar },
+    { path: '/app/doctor/records', label: 'Medical Records', icon: ClipboardList },
+    { path: '/app/profile', label: 'Profile', icon: User },
   ];
 
   const menu = user?.role === UserRole.PATIENT ? patientMenu : doctorMenu;
@@ -79,7 +90,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden backdrop-blur-sm transition-opacity"
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -87,73 +98,85 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       {/* Sidebar */}
       <aside
         className={`
-          fixed top-0 left-0 h-full w-64 glass-strong z-50 transform transition-transform duration-300
+          fixed top-0 left-0 h-full w-64 glass-strong z-50 transform transition-transform duration-300 border-r border-white/40 shadow-xl
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
           lg:translate-x-0
         `}
       >
         <div className="h-full flex flex-col p-6">
           {/* Logo */}
-          <Link to="/app" className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-gradient-blue flex items-center justify-center text-white text-xl">
-              🏥
+          <Link to="/app" className="flex items-center gap-3 mb-10 group">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform duration-300">
+              <Activity className="w-6 h-6" />
             </div>
-            <span className="text-xl font-bold text-slate-800">Clinic App</span>
+            <span className="text-xl font-bold bg-gradient-to-r from-blue-700 to-blue-900 bg-clip-text text-transparent">
+              Clinic App
+            </span>
+            <button
+              className="lg:hidden ml-auto text-slate-400 hover:text-slate-600"
+              onClick={() => setSidebarOpen(false)}
+            >
+              <X size={20} />
+            </button>
           </Link>
 
           {/* Navigation */}
           <nav className="flex-1 space-y-2">
-            {menu.map((item) => (
-              <Link
-                key={item.path}
-                to={item.path}
-                onClick={() => setSidebarOpen(false)}
-                className={`
-                  flex items-center gap-3 px-4 py-3 rounded-xl transition-all
-                  ${
-                    isActive(item.path)
-                      ? 'bg-white/80 text-pastel-blue-700 shadow-md'
-                      : 'text-slate-700 hover:bg-white/50'
-                  }
-                `}
-              >
-                <span className="text-xl">{item.icon}</span>
-                <span className="font-medium">{item.label}</span>
-              </Link>
-            ))}
+            {menu.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  onClick={() => setSidebarOpen(false)}
+                  className={`
+                    flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-200 group
+                    ${isActive(item.path)
+                      ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-500/30'
+                      : 'text-slate-600 hover:bg-white/50 hover:text-blue-700'
+                    }
+                  `}
+                >
+                  <Icon className={`w-5 h-5 ${isActive(item.path) ? 'text-white' : 'text-slate-400 group-hover:text-blue-600'}`} />
+                  <span className="font-medium">{item.label}</span>
+                </Link>
+              );
+            })}
           </nav>
 
           {/* User Info & Logout */}
-          <div className="pt-4 border-t border-white/30">
-            <div className="flex items-center gap-3 mb-4 px-4">
+          <div className="pt-6 border-t border-slate-200/60">
+            <div className="flex items-center gap-3 mb-4 px-2">
               <img
                 src={user?.profile_photo_url || user?.photoUrl || `https://i.pravatar.cc/150?img=${user?.id || 1}`}
                 alt={user?.name}
-                className="w-10 h-10 rounded-full border-2 border-white object-cover"
-                key={user?.profile_photo_url} // Force re-render when photo changes
+                className="w-10 h-10 rounded-full border-2 border-white shadow-md object-cover"
+                key={user?.profile_photo_url}
               />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-slate-800 truncate">{user?.name}</p>
-                <p className="text-xs text-slate-600 capitalize">{user?.role?.toLowerCase()}</p>
+                <p className="text-sm font-bold text-slate-800 truncate">{user?.name}</p>
+                <p className="text-xs text-slate-500 capitalize bg-slate-100 inline-block px-2 py-0.5 rounded-full mt-0.5">
+                  {user?.role?.toLowerCase()}
+                </p>
               </div>
             </div>
             <button
               onClick={handleLogout}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 transition-colors"
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 hover:text-red-700 transition-all font-medium group"
             >
-              <span>🚪</span>
-              <span className="font-medium">Logout</span>
+              <LogOut className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              <span>Sign Out</span>
             </button>
           </div>
         </div>
       </aside>
 
       {/* Main Content */}
-      <div className="lg:pl-64">
+      <div className="lg:pl-64 transition-all duration-300">
         {/* Top Bar */}
         <header
           className={[
-            'fixed top-0 left-0 right-0 lg:left-64 z-40 glass-strong border-b border-white/30',
+            'fixed top-0 left-0 right-0 lg:left-64 z-40 glass-strong border-b border-white/40',
             'transition-transform duration-300 ease-out will-change-transform',
             topBarVisible ? 'translate-y-0' : '-translate-y-full',
           ].join(' ')}
@@ -161,11 +184,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           <div className="flex items-center justify-between px-6 py-4">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="lg:hidden text-slate-700 hover:text-slate-900"
+              className="lg:hidden text-slate-600 hover:text-slate-900 p-2 hover:bg-slate-100 rounded-lg transition-colors"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
+              <Menu className="w-6 h-6" />
             </button>
             <div className="flex-1" />
             <div className="flex items-center gap-4">
