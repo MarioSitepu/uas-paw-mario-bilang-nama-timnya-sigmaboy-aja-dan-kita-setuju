@@ -632,9 +632,9 @@ export const DoctorDashboard: React.FC = () => {
                         Tolak
                       </button>
                       <Link
-                        to={`/app/chat?partnerId=${appointment.patientId}`}
+                        to={`/app/messages?partnerId=${appointment.patientId}`}
                         className="px-4 py-3 bg-blue-50 text-blue-600 rounded-2xl font-bold text-sm hover:bg-blue-100 transition-colors flex items-center justify-center"
-                        title="Chat Pasien"
+                        title="Kirim Pesan"
                       >
                         <MessageSquare size={18} />
                       </Link>
@@ -687,9 +687,9 @@ export const DoctorDashboard: React.FC = () => {
                       userRole="doctor"
                     />
                     <Link
-                      to={`/app/chat?partnerId=${appointment.patientId}`}
+                      to={`/app/messages?partnerId=${appointment.patientId}`}
                       className="absolute top-4 right-4 p-2 bg-white/90 backdrop-blur rounded-xl text-blue-600 shadow-sm opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all hover:bg-blue-50 z-10 border border-blue-100"
-                      title="Chat Pasien"
+                      title="Kirim Pesan"
                     >
                       <MessageSquare size={18} />
                     </Link>

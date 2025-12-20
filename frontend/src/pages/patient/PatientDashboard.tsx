@@ -272,9 +272,9 @@ export const PatientDashboard: React.FC = () => {
                       showActions={false}
                     />
                     <Link
-                      to={`/app/chat?partnerId=${appointment.doctor?.userId}`}
+                      to={`/app/messages?partnerId=${appointment.doctor?.userId}`}
                       className="absolute top-4 right-4 p-2 bg-white/90 backdrop-blur rounded-xl text-blue-600 shadow-sm opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all hover:bg-blue-50 z-10 border border-blue-100"
-                      title="Chat Dokter"
+                      title="Pesan Dokter"
                     >
                       <MessageSquare size={18} />
                     </Link>

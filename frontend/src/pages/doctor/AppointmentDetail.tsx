@@ -271,11 +271,11 @@ export const DoctorAppointmentDetail: React.FC = () => {
               <p className="text-sm text-slate-600">{appointment.patient?.email || ''}</p>
             </div>
             <Link
-              to={`/app/chat?partnerId=${appointment.patientId}`}
+              to={`/app/messages?partnerId=${appointment.patientId}`}
               className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors font-medium"
             >
               <MessageSquare size={18} />
-              <span>Chat</span>
+              <span>Kirim Pesan</span>
             </Link>
           </div>
         </div>

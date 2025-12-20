@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { authAPI } from '../../services/api';
 import type { Appointment, TimeSlot } from '../../types';
@@ -9,6 +9,7 @@ import { DatePicker } from '../../components/ui/DatePicker';
 import { TimeSlotPicker } from '../../components/ui/TimeSlotPicker';
 import { useToastContext } from '../../components/ui/Toast';
 import { LoadingSkeleton } from '../../components/ui/LoadingSkeleton';
+import { MessageSquare } from 'lucide-react';
 
 export const AppointmentDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -53,7 +54,7 @@ export const AppointmentDetail: React.FC = () => {
       setIsLoading(true);
       const response = await authAPI.get(`/api/appointments/${id}`);
       const apt = response.data.appointment;
-      
+
       // Transform backend format to frontend format
       const appointment: Appointment = {
         id: apt.id,
@@ -113,10 +114,10 @@ export const AppointmentDetail: React.FC = () => {
       console.log('✅ Delete request successful!');
       console.log('✅ Response status:', response.status);
       console.log('✅ Response data:', response.data);
-      
+
       addToast('Appointment cancelled successfully', 'success');
       setShowCancelModal(false);
-      
+
       // Wait a moment for the toast to show, then redirect
       console.log('⏳ Waiting 800ms before redirect...');
       await new Promise(resolve => setTimeout(resolve, 800));
@@ -154,14 +155,14 @@ export const AppointmentDetail: React.FC = () => {
       };
       console.log('📤 Sending PUT request to:', url);
       console.log('📤 Payload:', payload);
-      
+
       const response = await authAPI.put(url, payload);
       console.log('✅ Reschedule successful!');
       console.log('✅ Response:', response.data);
-      
+
       addToast('Appointment rescheduled successfully', 'success');
       setShowRescheduleModal(false);
-      
+
       // Wait a moment for the toast to show, then redirect
       console.log('⏳ Waiting 800ms before redirect...');
       await new Promise(resolve => setTimeout(resolve, 800));
@@ -230,6 +231,13 @@ export const AppointmentDetail: React.FC = () => {
               <p className="text-pastel-blue-600 font-medium">{appointment.doctor.specialization}</p>
               <p className="text-sm text-slate-600 mt-1">{appointment.doctor.clinic}</p>
             </div>
+            <Link
+              to={`/app/messages?partnerId=${appointment.doctor.user_id || appointment.doctor.userId}`}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors font-medium"
+            >
+              <MessageSquare size={18} />
+              <span>Pesan Dokter</span>
+            </Link>
           </div>
         )}
 
