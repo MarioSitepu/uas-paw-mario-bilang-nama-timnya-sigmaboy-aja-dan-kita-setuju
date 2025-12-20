@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { LogIn, ArrowRight } from 'lucide-react';
+import { LogIn, Newspaper } from 'lucide-react';
 
 export const Header: React.FC = () => {
   const [scrolled, setScrolled] = useState(false);
@@ -14,11 +14,10 @@ export const Header: React.FC = () => {
   }, []);
 
   return (
-    <header className={`sticky top-0 z-50 transition-all duration-300 ${
-      scrolled 
-        ? 'bg-white/98 backdrop-blur-xl shadow-xl border-b border-gray-200/50' 
-        : 'bg-white/95 backdrop-blur-sm shadow-md border-b border-gray-100'
-    }`}>
+    <header className={`sticky top-0 z-50 transition-all duration-300 ${scrolled
+      ? 'bg-white/98 backdrop-blur-xl shadow-xl border-b border-gray-200/50'
+      : 'bg-white/95 backdrop-blur-sm shadow-md border-b border-gray-100'
+      }`}>
       <div className="container mx-auto px-4 max-w-7xl">
         <div className="flex items-center justify-between py-4">
           {/* Logo */}
@@ -33,13 +32,15 @@ export const Header: React.FC = () => {
 
           {/* CTA Buttons */}
           <div className="flex items-center gap-3">
-            <Link
-              to="/auth/login"
-              className="inline-flex items-center gap-2 px-5 py-2.5 text-blue-600 hover:text-blue-700 font-semibold text-sm rounded-xl hover:bg-blue-50 transition-all duration-300"
+            <button
+              onClick={() => {
+                document.getElementById('news')?.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className="inline-flex items-center gap-2 px-5 py-2.5 text-blue-600 hover:text-blue-700 font-semibold text-sm rounded-xl hover:bg-blue-50 transition-all duration-300 cursor-pointer"
             >
-              <ArrowRight size={16} />
-              Jelajahi Layanan
-            </Link>
+              <Newspaper size={18} />
+              Lihat Berita
+            </button>
             <Link
               to="/auth/login"
               className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 via-blue-500 to-blue-700 text-white rounded-xl font-bold text-sm hover:from-blue-700 hover:via-blue-600 hover:to-blue-800 transition-all shadow-lg hover:shadow-2xl transform hover:scale-105 duration-300"
