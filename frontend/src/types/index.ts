@@ -21,6 +21,7 @@ export interface User {
 
 export interface Doctor {
   id: number;
+  userId: number;
   name: string;
   specialization: string;
   photoUrl: string;

@@ -37,6 +37,7 @@ export const PatientDashboard: React.FC = () => {
         doctor: raw.doctor ? {
           ...raw.doctor,
           id: raw.doctor.id,
+          userId: raw.doctor.user_id,
           name: raw.doctor.name || 'Doctor',
           specialization: raw.doctor.specialization,
           photoUrl: raw.doctor.profile_photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(raw.doctor.name || 'D')}&background=random`,
@@ -271,7 +272,7 @@ export const PatientDashboard: React.FC = () => {
                       showActions={false}
                     />
                     <Link
-                      to={`/app/chat?partnerId=${appointment.doctorId}`}
+                      to={`/app/chat?partnerId=${appointment.doctor?.userId}`}
                       className="absolute top-4 right-4 p-2 bg-white/90 backdrop-blur rounded-xl text-blue-600 shadow-sm opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all hover:bg-blue-50 z-10 border border-blue-100"
                       title="Chat Dokter"
                     >
