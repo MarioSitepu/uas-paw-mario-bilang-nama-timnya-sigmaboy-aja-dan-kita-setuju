@@ -11,8 +11,11 @@ import {
   LogOut,
   Menu,
   X,
-  Activity
+  Activity,
+  Bell
 } from 'lucide-react';
+import { NotificationBell } from '../NotificationBell';
+
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -73,6 +76,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     { path: '/app/patient/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/app/patient/doctors', label: 'Find Doctors', icon: Stethoscope },
     { path: '/app/patient/appointments', label: 'My Appointments', icon: Calendar },
+    { path: '#notifications', label: 'Notifications', icon: Bell, isNotification: true },
     { path: '/app/profile', label: 'Profile', icon: User },
   ];
 
@@ -80,8 +84,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     { path: '/app/doctor/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/app/doctor/schedule', label: 'Schedule', icon: Calendar },
     { path: '/app/doctor/records', label: 'Medical Records', icon: ClipboardList },
+    { path: '#notifications', label: 'Notifications', icon: Bell, isNotification: true },
     { path: '/app/profile', label: 'Profile', icon: User },
   ];
+
 
   const menu = user?.role === UserRole.PATIENT ? patientMenu : doctorMenu;
 
@@ -124,6 +130,23 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           <nav className="flex-1 space-y-2">
             {menu.map((item) => {
               const Icon = item.icon;
+              const isNotificationItem = 'isNotification' in item && item.isNotification;
+
+              if (isNotificationItem) {
+                return (
+                  <div
+                    key={item.path}
+                    className="flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-200 group text-slate-600 hover:bg-white/50 hover:text-blue-700 cursor-pointer relative"
+                  >
+                    <Icon className="w-5 h-5 text-slate-400 group-hover:text-blue-600" />
+                    <span className="font-medium">{item.label}</span>
+                    <div className="ml-auto">
+                      <NotificationBell />
+                    </div>
+                  </div>
+                );
+              }
+
               return (
                 <Link
                   key={item.path}
@@ -143,6 +166,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               );
             })}
           </nav>
+
 
           {/* User Info & Logout */}
           <div className="pt-6 border-t border-slate-200/60">
