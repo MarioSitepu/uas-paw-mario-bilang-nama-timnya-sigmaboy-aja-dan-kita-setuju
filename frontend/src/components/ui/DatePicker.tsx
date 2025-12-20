@@ -185,10 +185,8 @@ export const DatePicker: React.FC<DatePickerProps> = ({
                 clickedDate.setHours(0, 0, 0, 0);
                 const isPast = clickedDate < today;
                 
-                // If availableDates is provided, check if date is in the list
-                // Otherwise, allow any future date
-                const isAvailable = availableDates.length > 0 ? isDateAvailable(dateStr) : !isPast;
                 const isSelected = value === dateStr;
+                // Disable if past or if availableDates is provided and date is not in the list
                 const isDisabled = isPast || (availableDates.length > 0 && !isDateAvailable(dateStr));
 
                 return (
