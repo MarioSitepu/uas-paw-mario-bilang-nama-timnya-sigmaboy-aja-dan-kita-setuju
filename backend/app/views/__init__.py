@@ -110,8 +110,29 @@ def get_user(request):
         current_user = require_auth(request)
         user_id = int(request.matchdict['id'])
         
-        # Hanya bisa melihat profil sendiri kecuali admin
-        if current_user.role != 'admin' and current_user.id != user_id:
+        # Permissive check: allow if admin, self, or if there's an appointment relationship
+        is_allowed = False
+        if current_user.role == 'admin' or current_user.id == user_id:
+            is_allowed = True
+        else:
+            # Check for appointment relationship
+            if current_user.role == 'doctor':
+                doctor = session.query(Doctor).filter(Doctor.user_id == current_user.id).first()
+                if doctor:
+                    exists = session.query(Appointment).filter(
+                        Appointment.doctor_id == doctor.id,
+                        Appointment.patient_id == user_id
+                    ).first()
+                    if exists:
+                        is_allowed = True
+            elif current_user.role == 'patient':
+                exists = session.query(Appointment).filter(
+                    Appointment.patient_id == current_user.id
+                ).join(Doctor).filter(Doctor.user_id == user_id).first()
+                if exists:
+                    is_allowed = True
+
+        if not is_allowed:
             return {'error': 'Anda tidak memiliki akses ke profil ini'}
         
         user = session.query(User).filter(User.id == user_id).first()
