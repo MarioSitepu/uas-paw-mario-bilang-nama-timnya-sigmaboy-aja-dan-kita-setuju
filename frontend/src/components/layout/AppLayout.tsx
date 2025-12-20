@@ -126,9 +126,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           <div className="pt-4 border-t border-white/30">
             <div className="flex items-center gap-3 mb-4 px-4">
               <img
-                src={user?.photoUrl || `https://i.pravatar.cc/150?img=${user?.id || 1}`}
+                src={user?.profile_photo_url || user?.photoUrl || `https://i.pravatar.cc/150?img=${user?.id || 1}`}
                 alt={user?.name}
-                className="w-10 h-10 rounded-full border-2 border-white"
+                className="w-10 h-10 rounded-full border-2 border-white object-cover"
+                key={user?.profile_photo_url} // Force re-render when photo changes
               />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-slate-800 truncate">{user?.name}</p>

@@ -85,11 +85,12 @@ export const ProfilePhotoUpload: React.FC<ProfilePhotoUploadProps> = ({
       }
 
       const data = await response.json();
-      setPreview(data.profile_photo_url);
+      const photoUrl = data.profile_photo_url || data.url || data.profile_photo_url;
+      setPreview(photoUrl);
       
       // Call onSuccess callback first, then show success message
       if (onSuccess) {
-        onSuccess(data.profile_photo_url);
+        onSuccess(photoUrl);
       }
       
       // Set success state after callback

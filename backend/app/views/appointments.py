@@ -133,14 +133,31 @@ def create_appointment(request):
         print(f'  Doctor schedule: {doctor_schedule}')
         print(f'  Day schedule: {day_schedule}')
         
+        # Default: jika schedule tidak ada atau kosong, semua jam tersedia (00:00-23:59)
+        if not day_schedule or day_schedule == {}:
+            day_schedule = {
+                'available': True,
+                'startTime': '00:00',
+                'endTime': '23:59',
+                'breakStart': '',
+                'breakEnd': ''
+            }
+        
         # Cek apakah dokter tersedia pada hari itu
-        if not day_schedule.get('available', False):
+        # Default available = True jika tidak di-set
+        is_available = day_schedule.get('available', True)
+        if not is_available:
             request.response.status_int = 400
             return {'error': 'Dokter tidak tersedia pada tanggal yang dipilih'}
         
         # Cek apakah waktu berada dalam jam kerja dokter
-        start_time = day_schedule.get('startTime', '')
-        end_time = day_schedule.get('endTime', '')
+        start_time = day_schedule.get('startTime', '').strip()
+        end_time = day_schedule.get('endTime', '').strip()
+        
+        # Default: semua jam tersedia jika start/end time tidak di-set
+        if not start_time or not end_time:
+            start_time = '00:00'
+            end_time = '23:59'
         
         if start_time and end_time:
             start_hour, start_min = map(int, start_time.split(':'))
