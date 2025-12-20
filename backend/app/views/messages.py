@@ -2,7 +2,7 @@ from pyramid.view import view_config
 from pyramid.response import Response
 from sqlalchemy.orm import joinedload, aliased
 from sqlalchemy import or_, and_, desc, func
-from ..models import Message, User, Appointment, Doctor
+from ..models import Message, User, Appointment, Doctor, Notification
 import json
 from datetime import datetime
 

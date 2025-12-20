@@ -29,20 +29,26 @@ def cors_tween_factory(handler, registry):
         sys.stderr.write(f"[CORS TWEEN] Processing {request.method} {request.path}\n")
         sys.stderr.flush()
         
+        # Default origins for development and production
+        DEFAULT_ALLOWED_ORIGINS = [
+            'http://localhost:5173',
+            'http://localhost:5174',
+            'http://127.0.0.1:5173',
+            'http://127.0.0.1:5174',
+            'https://mario-bilang-nama-timnya-sigmaboy-a.vercel.app',
+            'https://mario-bilang-nama-timnya-sigmaboy-a.vercel.app/',
+            'https://mario-bilang-nama-timnya-sigmaboy-aja.vercel.app',
+            'https://mario-bilang-nama-timnya-sigmaboy-aja.vercel.app/',
+            'https://clinic-appoiment-system.vercel.app',
+            'https://clinic-appoiment-system.vercel.app/'
+        ]
+        
         # Get allowed origins from environment or use defaults
         cors_origins_env = os.environ.get('CORS_ORIGINS', '')
         if cors_origins_env:
             allowed_origins = [origin.strip() for origin in cors_origins_env.split(',')]
         else:
-            # Default origins for development
-            allowed_origins = [
-                'http://localhost:5173',
-                'http://localhost:5174',
-                'http://127.0.0.1:5173',
-                'http://127.0.0.1:5174',
-                'https://mario-bilang-nama-timnya-sigmaboy-a.vercel.app',
-                'https://mario-bilang-nama-timnya-sigmaboy-a.vercel.app/'
-            ]
+            allowed_origins = DEFAULT_ALLOWED_ORIGINS
         
         # Handle preflight OPTIONS requests immediately
         if request.method == 'OPTIONS':
@@ -383,18 +389,26 @@ def main(global_config, **settings):
             original_headers[:] = response_headers[:]
             
             # Add CORS headers - ALWAYS add them, even to error responses
+            # Default origins for development and production
+            DEFAULT_ALLOWED_ORIGINS = [
+                'http://localhost:5173',
+                'http://localhost:5174',
+                'http://127.0.0.1:5173',
+                'http://127.0.0.1:5174',
+                'https://mario-bilang-nama-timnya-sigmaboy-a.vercel.app',
+                'https://mario-bilang-nama-timnya-sigmaboy-a.vercel.app/',
+                'https://mario-bilang-nama-timnya-sigmaboy-aja.vercel.app',
+                'https://mario-bilang-nama-timnya-sigmaboy-aja.vercel.app/',
+                'https://clinic-appoiment-system.vercel.app',
+                'https://clinic-appoiment-system.vercel.app/'
+            ]
+            
             # Get allowed origins from environment or use defaults
             cors_origins_env = os.environ.get('CORS_ORIGINS', '')
             if cors_origins_env:
                 allowed_origins = [origin.strip() for origin in cors_origins_env.split(',')]
             else:
-                # Default origins for development
-                allowed_origins = [
-                    'http://localhost:5173',
-                    'http://localhost:5174',
-                    'http://127.0.0.1:5173',
-                    'http://127.0.0.1:5174',
-                ]
+                allowed_origins = DEFAULT_ALLOWED_ORIGINS
             
             # Check if CORS headers already exist
             has_cors = any(h[0].lower() == 'access-control-allow-origin' for h in response_headers)
@@ -450,18 +464,26 @@ def main(global_config, **settings):
                 status = '500 Internal Server Error'
                 headers = [('Content-Type', 'application/json')]
                 
+                # Default origins for development and production
+                DEFAULT_ALLOWED_ORIGINS = [
+                    'http://localhost:5173',
+                    'http://localhost:5174',
+                    'http://127.0.0.1:5173',
+                    'http://127.0.0.1:5174',
+                    'https://mario-bilang-nama-timnya-sigmaboy-a.vercel.app',
+                    'https://mario-bilang-nama-timnya-sigmaboy-a.vercel.app/',
+                    'https://mario-bilang-nama-timnya-sigmaboy-aja.vercel.app',
+                    'https://mario-bilang-nama-timnya-sigmaboy-aja.vercel.app/',
+                    'https://clinic-appoiment-system.vercel.app',
+                    'https://clinic-appoiment-system.vercel.app/'
+                ]
+                
                 # Get allowed origins from environment or use defaults
                 cors_origins_env = os.environ.get('CORS_ORIGINS', '')
                 if cors_origins_env:
                     allowed_origins = [origin.strip() for origin in cors_origins_env.split(',')]
                 else:
-                    # Default origins for development
-                    allowed_origins = [
-                        'http://localhost:5173',
-                        'http://localhost:5174',
-                        'http://127.0.0.1:5173',
-                        'http://127.0.0.1:5174',
-                    ]
+                    allowed_origins = DEFAULT_ALLOWED_ORIGINS
                 if origin and origin in allowed_origins:
                     headers.append(('Access-Control-Allow-Origin', origin))
                     headers.append(('Access-Control-Allow-Credentials', 'true'))
