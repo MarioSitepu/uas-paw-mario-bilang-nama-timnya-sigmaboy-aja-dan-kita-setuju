@@ -41,7 +41,8 @@ def upgrade() -> None:
                type_=sa.String(length=256),
                existing_nullable=False)
     op.drop_index('ix_tokens_user_id', table_name='tokens')
-    op.drop_constraint('tokens_token_key', 'tokens', type_='unique')
+    # op.drop_constraint('tokens_token_key', 'tokens', type_='unique')
+    op.execute("ALTER TABLE tokens DROP CONSTRAINT IF EXISTS tokens_token_key")
     op.drop_index('ix_tokens_token', table_name='tokens')
     op.create_index(op.f('ix_tokens_token'), 'tokens', ['token'], unique=True)
     op.drop_index('ix_users_email', table_name='users')
