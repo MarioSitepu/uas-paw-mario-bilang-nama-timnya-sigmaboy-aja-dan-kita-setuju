@@ -200,19 +200,6 @@ export const AboutSection: React.FC = () => {
                   />
                 ))}
               </div>
-              
-              {/* Medical badge overlay */}
-              <div className="absolute top-6 right-6 bg-white/95 backdrop-blur-sm rounded-2xl p-4 shadow-xl border border-blue-100 transform hover:scale-105 transition-transform z-10">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
-                    <Award className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Terakreditasi</div>
-                    <div className="text-sm font-bold text-gray-900">Standar Internasional</div>
-                  </div>
-                </div>
-              </div>
             </div>
             
             {/* Floating elements */}
