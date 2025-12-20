@@ -197,20 +197,23 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
           {/* User Info & Logout */}
           <div className="pt-6 border-t border-slate-200/60">
-            <div className="flex items-center gap-3 mb-4 px-2">
-              <img
-                src={user?.profile_photo_url || user?.photoUrl || `https://i.pravatar.cc/150?img=${user?.id || 1}`}
-                alt={user?.name}
-                className="w-10 h-10 rounded-full border-2 border-white shadow-md object-cover"
-                key={user?.profile_photo_url}
-              />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-slate-800 truncate">{user?.name}</p>
-                <p className="text-xs text-slate-500 capitalize bg-slate-100 inline-block px-2 py-0.5 rounded-full mt-0.5">
-                  {user?.role?.toLowerCase()}
-                </p>
+            {/* Hide user info (photo and name) when on profile page */}
+            {location.pathname !== '/app/profile' && (
+              <div className="flex items-center gap-3 mb-4 px-2">
+                <img
+                  src={user?.profile_photo_url || user?.photoUrl || `https://i.pravatar.cc/150?img=${user?.id || 1}`}
+                  alt={user?.name}
+                  className="w-10 h-10 rounded-full border-2 border-white shadow-md object-cover"
+                  key={user?.profile_photo_url}
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-slate-800 truncate">{user?.name}</p>
+                  <p className="text-xs text-slate-500 capitalize bg-slate-100 inline-block px-2 py-0.5 rounded-full mt-0.5">
+                    {user?.role?.toLowerCase()}
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
             <button
               onClick={handleLogout}
               className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 hover:text-red-700 transition-all font-medium group"
