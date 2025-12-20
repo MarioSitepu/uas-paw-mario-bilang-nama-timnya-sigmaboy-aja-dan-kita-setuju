@@ -247,31 +247,59 @@ export const Profile: React.FC = () => {
                 </div>
               </>
             ) : (
-              <>
-                <div>
-                  <label className="text-sm font-medium text-slate-600">Phone</label>
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    placeholder="Your contact number"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pastel-blue-500"
-                  />
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+                {/* Left Column: General Information (Read-only) */}
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-slate-800 mb-4">General Information</h3>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-slate-600">Name</label>
+                    <p className="text-lg text-slate-800 mt-1">{user?.name}</p>
+                    <p className="text-xs text-slate-500 mt-1">Read-only</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-slate-600">Email</label>
+                    <p className="text-lg text-slate-800 mt-1">{user?.email}</p>
+                    <p className="text-xs text-slate-500 mt-1">Read-only</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-slate-600">Role</label>
+                    <p className="text-lg text-slate-800 capitalize mt-1">{user?.role?.toLowerCase()}</p>
+                    <p className="text-xs text-slate-500 mt-1">Read-only</p>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="text-sm font-medium text-slate-600">Bio</label>
-                  <textarea
-                    name="bio"
-                    value={formData.bio}
-                    onChange={handleInputChange}
-                    placeholder="Tell us about yourself"
-                    rows={4}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pastel-blue-500 resize-none"
-                  />
+                {/* Right Column: Personal Information (Editable) */}
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-slate-800 mb-4">Personal Information</h3>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-slate-600">Phone</label>
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                      placeholder="Your contact number"
+                      className="w-full mt-1 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pastel-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-slate-600">Bio</label>
+                    <textarea
+                      name="bio"
+                      value={formData.bio}
+                      onChange={handleInputChange}
+                      placeholder="Tell us about yourself"
+                      rows={4}
+                      className="w-full mt-1 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pastel-blue-500 resize-none"
+                    />
+                  </div>
                 </div>
-              </>
+              </div>
             )}
 
             <div className="flex gap-3 pt-4">
@@ -303,21 +331,20 @@ export const Profile: React.FC = () => {
               <LoadingSkeleton count={3} />
             ) : (
               <>
-                <div>
-                  <label className="text-sm font-medium text-slate-600">Name</label>
-                  <p className="text-lg text-slate-800">{user?.name}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-slate-600">Email</label>
-                  <p className="text-lg text-slate-800">{user?.email}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-slate-600">Role</label>
-                  <p className="text-lg text-slate-800 capitalize">{user?.role?.toLowerCase()}</p>
-                </div>
-
                 {isDoctor && doctorData && (
                   <>
+                    <div>
+                      <label className="text-sm font-medium text-slate-600">Name</label>
+                      <p className="text-lg text-slate-800">{user?.name}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-slate-600">Email</label>
+                      <p className="text-lg text-slate-800">{user?.email}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-slate-600">Role</label>
+                      <p className="text-lg text-slate-800 capitalize">{user?.role?.toLowerCase()}</p>
+                    </div>
                     <div className="pt-4 mt-4 border-t border-slate-200">
                       <h3 className="text-lg font-semibold text-slate-800 mb-4">Professional Information</h3>
                     </div>
@@ -341,19 +368,41 @@ export const Profile: React.FC = () => {
                 )}
 
                 {!isDoctor && (
-                  <>
-                    <div className="pt-4 mt-4 border-t border-slate-200">
-                      <h3 className="text-lg font-semibold text-slate-800 mb-4">Personal Information</h3>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+                    {/* Left Column: General Information */}
+                    <div className="space-y-4">
+                      <div>
+                        <h3 className="text-lg font-semibold text-slate-800 mb-4">General Information</h3>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-slate-600">Name</label>
+                        <p className="text-lg text-slate-800 mt-1">{user?.name}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-slate-600">Email</label>
+                        <p className="text-lg text-slate-800 mt-1">{user?.email}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-slate-600">Role</label>
+                        <p className="text-lg text-slate-800 capitalize mt-1">{user?.role?.toLowerCase()}</p>
+                      </div>
                     </div>
-                    <div>
-                      <label className="text-sm font-medium text-slate-600">Phone</label>
-                      <p className="text-lg text-slate-800">{formData.phone || 'Not provided'}</p>
+
+                    {/* Right Column: Personal Information */}
+                    <div className="space-y-4">
+                      <div>
+                        <h3 className="text-lg font-semibold text-slate-800 mb-4">Personal Information</h3>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-slate-600">Phone</label>
+                        <p className="text-lg text-slate-800 mt-1">{formData.phone || 'Not provided'}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-slate-600">Bio</label>
+                        <p className="text-lg text-slate-800 mt-1 whitespace-pre-wrap">{formData.bio || 'Not provided'}</p>
+                      </div>
                     </div>
-                    <div>
-                      <label className="text-sm font-medium text-slate-600">Bio</label>
-                      <p className="text-lg text-slate-800">{formData.bio || 'Not provided'}</p>
-                    </div>
-                  </>
+                  </div>
                 )}
               </>
             )}
