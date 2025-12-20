@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { ArrowRight, Calendar, Clock, X, ExternalLink } from 'lucide-react';
+import { ArrowRight, Calendar, Clock, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
 
 interface InsightArticle {
   id: number;
@@ -14,7 +13,6 @@ interface InsightArticle {
 }
 
 export const InsightsSection: React.FC = () => {
-  const navigate = useNavigate();
   const [selectedArticle, setSelectedArticle] = useState<InsightArticle | null>(null);
 
   const articles: InsightArticle[] = [
@@ -195,21 +193,10 @@ export const InsightsSection: React.FC = () => {
                   {selectedArticle.excerpt}
                 </p>
 
-                <div className="flex gap-4">
-                  <button
-                    onClick={() => navigate(`/articles/${selectedArticle.id}`)}
-                    className="flex-1 btn btn-primary py-3 md:py-4 text-base gap-2"
-                  >
-                    Baca Artikel Lengkap
-                    <ExternalLink size={18} />
-                  </button>
-                  <button
-                    onClick={() => setSelectedArticle(null)}
-                    className="px-6 py-3 rounded-xl border border-gray-200 text-gray-600 font-semibold hover:bg-gray-50 transition-colors"
-                  >
-                    Tutup
-                  </button>
-                </div>
+                {/* 
+                  Buttons removed as requested. 
+                  The user can close the modal by clicking the X icon or the backdrop.
+                */}
               </div>
             </motion.div>
           </div>
