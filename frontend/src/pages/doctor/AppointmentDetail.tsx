@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { MessageSquare } from 'lucide-react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { authAPI } from '../../services/api';
 import type { Appointment, AppointmentStatus, MedicalRecord } from '../../types';
@@ -41,10 +42,10 @@ export const DoctorAppointmentDetail: React.FC = () => {
       setIsLoading(true);
       const response = await authAPI.get(`/api/appointments/${id}`);
       const apt = response.data.appointment;
-      
+
       console.log('🔍 Doctor AppointmentDetail - Raw appointment:', apt);
       console.log('🔍 Current user:', user);
-      
+
       // Transform backend format to frontend format
       const appointment: Appointment = {
         id: apt.id,
@@ -61,7 +62,7 @@ export const DoctorAppointmentDetail: React.FC = () => {
 
       console.log('🔍 Transformed appointment:', appointment);
       console.log('🔍 Checking: appointment.doctorId=' + appointment.doctorId + ', user?.id=' + user?.id);
-      
+
       // Get current user's doctor profile to verify access
       let doctorId: number | null = null;
       if (!user) {
@@ -69,7 +70,7 @@ export const DoctorAppointmentDetail: React.FC = () => {
         navigate('/auth/login');
         return;
       }
-      
+
       const userRole = user.role?.toLowerCase();
       if (userRole === 'doctor') {
         // Try to get doctor profile from user object
@@ -113,7 +114,7 @@ export const DoctorAppointmentDetail: React.FC = () => {
           console.log('No medical record found for this appointment');
         }
       } else {
-        console.error('❌ Access check failed:', { 
+        console.error('❌ Access check failed:', {
           appointmentDoctorId: appointment.doctorId,
           currentUserDoctorId: doctorId,
           currentUserId: user?.id,
@@ -194,22 +195,22 @@ export const DoctorAppointmentDetail: React.FC = () => {
         prescription: recordForm.prescription || undefined,
       };
       console.log('📤 Sending payload:', payload);
-      
+
       const response = await authAPI.post('/api/medical-records', payload);
       console.log('✅ Medical record created:', response.data);
-      
+
       if (response.data.medical_record) {
         setMedicalRecord(response.data.medical_record);
         console.log('📋 Medical record set:', response.data.medical_record);
       }
-      
+
       setShowRecordModal(false);
       addToast('Medical record created successfully', 'success');
       setRecordForm({ diagnosis: '', notes: '', symptoms: '', treatment: '', prescription: '' });
-      
+
       // Reload appointment to get updated status (should be completed now)
       await loadAppointment();
-      
+
       // Wait a moment then redirect to dashboard
       await new Promise(resolve => setTimeout(resolve, 1000));
       navigate('/app/doctor/dashboard');
@@ -263,9 +264,20 @@ export const DoctorAppointmentDetail: React.FC = () => {
 
         {/* Patient Info */}
         <div className="pb-4 border-b border-slate-200">
-          <h3 className="text-lg font-semibold text-slate-800 mb-2">Patient Information</h3>
-          <p className="text-slate-700">{appointment.patient?.name || 'Patient'}</p>
-          <p className="text-sm text-slate-600">{appointment.patient?.email || ''}</p>
+          <div className="flex justify-between items-start">
+            <div>
+              <h3 className="text-lg font-semibold text-slate-800 mb-2">Patient Information</h3>
+              <p className="text-slate-700">{appointment.patient?.name || 'Patient'}</p>
+              <p className="text-sm text-slate-600">{appointment.patient?.email || ''}</p>
+            </div>
+            <Link
+              to={`/app/chat?partnerId=${appointment.patientId}`}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors font-medium"
+            >
+              <MessageSquare size={18} />
+              <span>Chat</span>
+            </Link>
+          </div>
         </div>
 
         {/* Appointment Details */}
