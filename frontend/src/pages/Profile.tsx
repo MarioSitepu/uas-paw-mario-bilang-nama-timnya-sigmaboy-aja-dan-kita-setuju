@@ -247,59 +247,81 @@ export const Profile: React.FC = () => {
                 </div>
               </>
             ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
-                {/* Left Column: General Information (Read-only) */}
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-lg font-semibold text-slate-800 mb-4">General Information</h3>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-600">Name</label>
-                    <p className="text-lg text-slate-800 mt-1">{user?.name}</p>
-                    <p className="text-xs text-slate-500 mt-1">Read-only</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-600">Email</label>
-                    <p className="text-lg text-slate-800 mt-1">{user?.email}</p>
-                    <p className="text-xs text-slate-500 mt-1">Read-only</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-600">Role</label>
-                    <p className="text-lg text-slate-800 capitalize mt-1">{user?.role?.toLowerCase()}</p>
-                    <p className="text-xs text-slate-500 mt-1">Read-only</p>
-                  </div>
+              <>
+                {/* Profile Photo - Centered above both columns */}
+                <div className="flex justify-center mb-8">
+                  {profilePhoto ? (
+                    <div className="w-48 h-48 rounded-full overflow-hidden border-4 border-pastel-blue-200 shadow-lg">
+                      <img 
+                        src={profilePhoto} 
+                        alt={`${user?.name}'s profile`}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-48 h-48 rounded-full bg-pastel-blue-100 border-4 border-pastel-blue-200 shadow-lg flex items-center justify-center">
+                      <span className="text-5xl font-bold text-pastel-blue-600">
+                        {user?.name?.charAt(0).toUpperCase() || 'U'}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
-                {/* Right Column: Personal Information (Editable) */}
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-lg font-semibold text-slate-800 mb-4">Personal Information</h3>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-slate-600">Phone</label>
-                    <input
-                      type="tel"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleInputChange}
-                      placeholder="Your contact number"
-                      className="w-full mt-1 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pastel-blue-500"
-                    />
+                {/* Two columns: General Information and Personal Information */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+                  {/* Left Column: General Information (Read-only) */}
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-lg font-semibold text-slate-800 mb-4">General Information</h3>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-slate-600">Name</label>
+                      <p className="text-lg text-slate-800 mt-1">{user?.name}</p>
+                      <p className="text-xs text-slate-500 mt-1">Read-only</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-slate-600">Email</label>
+                      <p className="text-lg text-slate-800 mt-1">{user?.email}</p>
+                      <p className="text-xs text-slate-500 mt-1">Read-only</p>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-slate-600">Role</label>
+                      <p className="text-lg text-slate-800 capitalize mt-1">{user?.role?.toLowerCase()}</p>
+                      <p className="text-xs text-slate-500 mt-1">Read-only</p>
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="text-sm font-medium text-slate-600">Bio</label>
-                    <textarea
-                      name="bio"
-                      value={formData.bio}
-                      onChange={handleInputChange}
-                      placeholder="Tell us about yourself"
-                      rows={4}
-                      className="w-full mt-1 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pastel-blue-500 resize-none"
-                    />
+                  {/* Right Column: Personal Information (Editable) */}
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-lg font-semibold text-slate-800 mb-4">Personal Information</h3>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-slate-600">Phone</label>
+                      <input
+                        type="tel"
+                        name="phone"
+                        value={formData.phone}
+                        onChange={handleInputChange}
+                        placeholder="Your contact number"
+                        className="w-full mt-1 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pastel-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-sm font-medium text-slate-600">Bio</label>
+                      <textarea
+                        name="bio"
+                        value={formData.bio}
+                        onChange={handleInputChange}
+                        placeholder="Tell us about yourself"
+                        rows={4}
+                        className="w-full mt-1 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pastel-blue-500 resize-none"
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
+              </>
             )}
 
             <div className="flex gap-3 pt-4">
@@ -368,41 +390,63 @@ export const Profile: React.FC = () => {
                 )}
 
                 {!isDoctor && (
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
-                    {/* Left Column: General Information */}
-                    <div className="space-y-4">
-                      <div>
-                        <h3 className="text-lg font-semibold text-slate-800 mb-4">General Information</h3>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-slate-600">Name</label>
-                        <p className="text-lg text-slate-800 mt-1">{user?.name}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-slate-600">Email</label>
-                        <p className="text-lg text-slate-800 mt-1">{user?.email}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-slate-600">Role</label>
-                        <p className="text-lg text-slate-800 capitalize mt-1">{user?.role?.toLowerCase()}</p>
-                      </div>
+                  <>
+                    {/* Profile Photo - Centered above both columns */}
+                    <div className="flex justify-center mb-8">
+                      {profilePhoto ? (
+                        <div className="w-48 h-48 rounded-full overflow-hidden border-4 border-pastel-blue-200 shadow-lg">
+                          <img 
+                            src={profilePhoto} 
+                            alt={`${user?.name}'s profile`}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-48 h-48 rounded-full bg-pastel-blue-100 border-4 border-pastel-blue-200 shadow-lg flex items-center justify-center">
+                          <span className="text-5xl font-bold text-pastel-blue-600">
+                            {user?.name?.charAt(0).toUpperCase() || 'U'}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
-                    {/* Right Column: Personal Information */}
-                    <div className="space-y-4">
-                      <div>
-                        <h3 className="text-lg font-semibold text-slate-800 mb-4">Personal Information</h3>
+                    {/* Two columns: General Information and Personal Information */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+                      {/* Left Column: General Information */}
+                      <div className="space-y-4">
+                        <div>
+                          <h3 className="text-lg font-semibold text-slate-800 mb-4">General Information</h3>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-slate-600">Name</label>
+                          <p className="text-lg text-slate-800 mt-1">{user?.name}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-slate-600">Email</label>
+                          <p className="text-lg text-slate-800 mt-1">{user?.email}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-slate-600">Role</label>
+                          <p className="text-lg text-slate-800 capitalize mt-1">{user?.role?.toLowerCase()}</p>
+                        </div>
                       </div>
-                      <div>
-                        <label className="text-sm font-medium text-slate-600">Phone</label>
-                        <p className="text-lg text-slate-800 mt-1">{formData.phone || 'Not provided'}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-slate-600">Bio</label>
-                        <p className="text-lg text-slate-800 mt-1 whitespace-pre-wrap">{formData.bio || 'Not provided'}</p>
+
+                      {/* Right Column: Personal Information */}
+                      <div className="space-y-4">
+                        <div>
+                          <h3 className="text-lg font-semibold text-slate-800 mb-4">Personal Information</h3>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-slate-600">Phone</label>
+                          <p className="text-lg text-slate-800 mt-1">{formData.phone || 'Not provided'}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-slate-600">Bio</label>
+                          <p className="text-lg text-slate-800 mt-1 whitespace-pre-wrap">{formData.bio || 'Not provided'}</p>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  </>
                 )}
               </>
             )}
