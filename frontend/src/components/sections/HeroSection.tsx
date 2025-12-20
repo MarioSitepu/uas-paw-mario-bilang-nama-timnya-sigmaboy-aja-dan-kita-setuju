@@ -5,7 +5,7 @@ import { ArrowRight, X, Sparkles } from 'lucide-react';
 
 export const HeroSection: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   return (
     <section className="relative min-h-screen overflow-hidden flex items-center">
       {/* Background Image with Overlay */}
@@ -88,7 +88,7 @@ export const HeroSection: React.FC = () => {
             {/* CTA Button */}
             <button
               onClick={() => {
-                if (user && user.role) {
+                if (isAuthenticated && user && user.role) {
                   const role = user.role.toLowerCase();
                   if (role === 'doctor') {
                     navigate('/app/doctor/dashboard');

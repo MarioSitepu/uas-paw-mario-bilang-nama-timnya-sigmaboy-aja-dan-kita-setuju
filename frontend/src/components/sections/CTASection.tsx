@@ -1,8 +1,27 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import { ArrowRight } from 'lucide-react';
 
 export const CTASection: React.FC = () => {
+  const navigate = useNavigate();
+  const { user, isAuthenticated } = useAuth();
+
+  const handleGetStarted = () => {
+    if (isAuthenticated && user?.role) {
+      const role = user.role.toLowerCase();
+      if (role === 'doctor') {
+        navigate('/app/doctor/dashboard');
+      } else if (role === 'patient') {
+        navigate('/app/patient/dashboard');
+      } else {
+        navigate('/app');
+      }
+    } else {
+      navigate('/auth/register');
+    }
+  };
+
   return (
     <section className="py-20 lg:py-32 bg-gradient-to-r from-blue-500 to-blue-600">
       <div className="container mx-auto px-4">
@@ -15,13 +34,13 @@ export const CTASection: React.FC = () => {
             <p className="text-xl text-blue-50 mb-8 leading-relaxed">
               Join thousands of patients who have already discovered better healthcare with MedixWeb. Book your appointment today and experience compassionate, expert care.
             </p>
-            <Link
-              to="/auth/register"
+            <button
+              onClick={handleGetStarted}
               className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white text-blue-600 rounded-xl font-bold hover:bg-blue-50 transition-all transform hover:scale-105"
             >
               Get Started Now
               <ArrowRight size={20} />
-            </Link>
+            </button>
           </div>
 
           {/* Right Stats */}
