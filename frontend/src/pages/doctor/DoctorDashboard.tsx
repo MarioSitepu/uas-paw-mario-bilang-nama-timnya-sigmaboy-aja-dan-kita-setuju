@@ -13,6 +13,7 @@ export const DoctorDashboard: React.FC = () => {
   const { user } = useAuth();
   const [allAppointments, setAllAppointments] = useState<Appointment[]>([]);
   const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([]);
+  const [upcomingConfirmedAppointments, setUpcomingConfirmedAppointments] = useState<Appointment[]>([]);
   const [pendingAppointments, setPendingAppointments] = useState<Appointment[]>([]);
   const [doctorRating, setDoctorRating] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -106,6 +107,16 @@ export const DoctorDashboard: React.FC = () => {
           .filter((apt) => apt.date === today && apt.status === 'confirmed')
           .sort((a, b) => a.time.localeCompare(b.time));
         setTodayAppointments(todayApts);
+
+        // Upcoming (Confirmed & Future/Today) - Limit 6
+        const upcoming = all
+          .filter((apt) => apt.status === 'confirmed' && apt.date >= today)
+          .sort((a, b) => {
+            if (a.date === b.date) return a.time.localeCompare(b.time);
+            return a.date.localeCompare(b.date);
+          })
+          .slice(0, 6);
+        setUpcomingConfirmedAppointments(upcoming);
 
         const pending = all
           .filter((apt) => apt.status === 'pending')
@@ -634,21 +645,21 @@ export const DoctorDashboard: React.FC = () => {
             </div>
           )}
 
-          {/* Today's Schedule */}
+          {/* Upcoming Schedule */}
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-xl flex items-center justify-center text-2xl shadow-lg">📅</div>
                 <div>
-                  <h2 className="text-2xl font-bold text-slate-800">Jadwal Hari Ini</h2>
-                  <p className="text-sm text-slate-500">Janji temu yang sudah dikonfirmasi</p>
+                  <h2 className="text-2xl font-bold text-slate-800">Jadwal Mendatang</h2>
+                  <p className="text-sm text-slate-500">Janji temu aktif (Hari ini & Mendatang)</p>
                 </div>
               </div>
               <Link
                 to="/app/doctor/schedule"
                 className="group flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-teal-600 to-cyan-700 text-white rounded-xl font-semibold hover:from-teal-700 hover:to-cyan-800 shadow-lg hover:shadow-xl transition-all hover:scale-105"
               >
-                Lihat Jadwal
+                Lihat Semua Jadwal
                 <span className="group-hover:translate-x-1 transition-transform">→</span>
               </Link>
             </div>
@@ -659,16 +670,16 @@ export const DoctorDashboard: React.FC = () => {
                   <LoadingSkeleton key={i} className="h-48 rounded-3xl" />
                 ))}
               </div>
-            ) : todayAppointments.length === 0 ? (
+            ) : upcomingConfirmedAppointments.length === 0 ? (
               <div className="backdrop-blur-xl bg-white/80 border border-white/20 rounded-3xl p-12 text-center shadow-xl">
                 <div className="flex justify-center mb-4">
                   <Calendar size={48} className="text-slate-400" />
                 </div>
-                <p className="text-slate-500 font-medium">Tidak ada janji temu yang dikonfirmasi untuk hari ini.</p>
+                <p className="text-slate-500 font-medium">Tidak ada janji temu mendatang.</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {todayAppointments.map((appointment) => (
+                {upcomingConfirmedAppointments.map((appointment) => (
                   <div key={appointment.id} className="relative group">
                     <AppointmentCard
                       appointment={appointment}
