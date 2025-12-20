@@ -21,21 +21,27 @@ def get_conversations(request):
     if not current_user:
         return Response(json.dumps({'error': 'User not found'}), status=404, content_type='application/json')
 
+    # Normalize role
+    user_role = current_user.role.lower() if current_user.role else ''
+
     # Find eligible chat partners from appointments
-    if current_user.role == 'doctor':
+    if user_role == 'doctor':
         # Find all patients who have booked this doctor
         # We need to find the doctor ID first (since user_id is user table id)
         doctor = session.query(Doctor).filter(Doctor.user_id == user_id).first()
         if not doctor:
+            # Try to log this issue or handle it gracefully
+            print(f"Warning: User {user_id} has role 'doctor' but no Doctor profile found.")
             return []
             
         # Get unique patient IDs from appointments
+        # Include ALL appointments regardless of status so Pending requests can chat
         patient_ids = session.query(Appointment.patient_id)\
             .filter(Appointment.doctor_id == doctor.id)\
             .distinct().all()
         partner_ids = [pid[0] for pid in patient_ids]
         
-    elif current_user.role == 'patient':
+    elif user_role == 'patient':
         # Find all doctors booked by this patient
         doctor_ids = session.query(Appointment.doctor_id)\
             .filter(Appointment.patient_id == user_id)\
@@ -52,6 +58,7 @@ def get_conversations(request):
             .all()
         partner_ids = [uid[0] for uid in user_ids]
     else:
+        # Admin or other role
         return []
 
     # Filter out empty list if no appointments
