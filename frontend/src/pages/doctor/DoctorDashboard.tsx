@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, ClipboardList, FileText, Clock, Bell } from 'lucide-react';
+import { Calendar, ClipboardList, FileText, Clock, Bell, MessageSquare } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { notificationsAPI } from '../../services/api';
 
@@ -13,6 +13,7 @@ export const DoctorDashboard: React.FC = () => {
   const { user } = useAuth();
   const [allAppointments, setAllAppointments] = useState<Appointment[]>([]);
   const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([]);
+  const [upcomingConfirmedAppointments, setUpcomingConfirmedAppointments] = useState<Appointment[]>([]);
   const [pendingAppointments, setPendingAppointments] = useState<Appointment[]>([]);
   const [doctorRating, setDoctorRating] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -79,6 +80,7 @@ export const DoctorDashboard: React.FC = () => {
           status: raw.status,
           reason: raw.reason,
           notes: raw.notes,
+          createdAt: raw.created_at,
           patient: raw.patient ? {
             ...raw.patient,
             id: raw.patient.id,
@@ -105,6 +107,16 @@ export const DoctorDashboard: React.FC = () => {
           .filter((apt) => apt.date === today && apt.status === 'confirmed')
           .sort((a, b) => a.time.localeCompare(b.time));
         setTodayAppointments(todayApts);
+
+        // Upcoming (Confirmed & Future/Today) - Limit 6
+        const upcoming = all
+          .filter((apt) => apt.status === 'confirmed' && apt.date >= today)
+          .sort((a, b) => {
+            if (a.date === b.date) return a.time.localeCompare(b.time);
+            return a.date.localeCompare(b.date);
+          })
+          .slice(0, 6);
+        setUpcomingConfirmedAppointments(upcoming);
 
         const pending = all
           .filter((apt) => apt.status === 'pending')
@@ -597,11 +609,18 @@ export const DoctorDashboard: React.FC = () => {
                 {pendingAppointments.map((appointment) => (
                   <div key={appointment.id} className="group bg-white p-6 rounded-3xl border border-slate-100 shadow-xl space-y-4">
                     <AppointmentCard appointment={appointment} showActions={false} userRole="doctor" />
+
+                    {/* Booking Time */}
+                    <div className="text-xs text-slate-500 font-medium px-1 flex items-center gap-1">
+                      <Clock size={12} />
+                      Dibuat pada: {new Date((appointment as any).createdAt || new Date()).toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' })}
+                    </div>
+
                     <div className="flex gap-3 pt-2">
                       <button
                         onClick={() => handleStatusUpdate(appointment.id, 'confirmed')}
                         disabled={isUpdating}
-                        className="flex-1 px-4 py-3 bg-gradient-blue text-white rounded-2xl font-bold text-sm shadow-md hover:shadow-lg transition-all disabled:opacity-50"
+                        className="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-2xl font-bold text-sm shadow-md hover:shadow-lg transition-all disabled:opacity-50"
                       >
                         Konfirmasi
                       </button>
@@ -612,6 +631,13 @@ export const DoctorDashboard: React.FC = () => {
                       >
                         Tolak
                       </button>
+                      <Link
+                        to={`/app/chat?partnerId=${appointment.patientId}`}
+                        className="px-4 py-3 bg-blue-50 text-blue-600 rounded-2xl font-bold text-sm hover:bg-blue-100 transition-colors flex items-center justify-center"
+                        title="Chat Pasien"
+                      >
+                        <MessageSquare size={18} />
+                      </Link>
                     </div>
                   </div>
                 ))}
@@ -619,21 +645,21 @@ export const DoctorDashboard: React.FC = () => {
             </div>
           )}
 
-          {/* Today's Schedule */}
+          {/* Upcoming Schedule */}
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 bg-gradient-to-br from-teal-500 to-cyan-600 rounded-xl flex items-center justify-center text-2xl shadow-lg">📅</div>
                 <div>
-                  <h2 className="text-2xl font-bold text-slate-800">Jadwal Hari Ini</h2>
-                  <p className="text-sm text-slate-500">Janji temu yang sudah dikonfirmasi</p>
+                  <h2 className="text-2xl font-bold text-slate-800">Jadwal Mendatang</h2>
+                  <p className="text-sm text-slate-500">Janji temu aktif (Hari ini & Mendatang)</p>
                 </div>
               </div>
               <Link
                 to="/app/doctor/schedule"
                 className="group flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-teal-600 to-cyan-700 text-white rounded-xl font-semibold hover:from-teal-700 hover:to-cyan-800 shadow-lg hover:shadow-xl transition-all hover:scale-105"
               >
-                Lihat Jadwal
+                Lihat Semua Jadwal
                 <span className="group-hover:translate-x-1 transition-transform">→</span>
               </Link>
             </div>
@@ -644,22 +670,30 @@ export const DoctorDashboard: React.FC = () => {
                   <LoadingSkeleton key={i} className="h-48 rounded-3xl" />
                 ))}
               </div>
-            ) : todayAppointments.length === 0 ? (
+            ) : upcomingConfirmedAppointments.length === 0 ? (
               <div className="backdrop-blur-xl bg-white/80 border border-white/20 rounded-3xl p-12 text-center shadow-xl">
                 <div className="flex justify-center mb-4">
                   <Calendar size={48} className="text-slate-400" />
                 </div>
-                <p className="text-slate-500 font-medium">Tidak ada janji temu yang dikonfirmasi untuk hari ini.</p>
+                <p className="text-slate-500 font-medium">Tidak ada janji temu mendatang.</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {todayAppointments.map((appointment) => (
-                  <AppointmentCard
-                    key={appointment.id}
-                    appointment={appointment}
-                    showActions={false}
-                    userRole="doctor"
-                  />
+                {upcomingConfirmedAppointments.map((appointment) => (
+                  <div key={appointment.id} className="relative group">
+                    <AppointmentCard
+                      appointment={appointment}
+                      showActions={false}
+                      userRole="doctor"
+                    />
+                    <Link
+                      to={`/app/chat?partnerId=${appointment.patientId}`}
+                      className="absolute top-4 right-4 p-2 bg-white/90 backdrop-blur rounded-xl text-blue-600 shadow-sm opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all hover:bg-blue-50 z-10 border border-blue-100"
+                      title="Chat Pasien"
+                    >
+                      <MessageSquare size={18} />
+                    </Link>
+                  </div>
                 ))}
               </div>
             )}

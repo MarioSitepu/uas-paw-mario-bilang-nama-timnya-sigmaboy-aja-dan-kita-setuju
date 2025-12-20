@@ -20,6 +20,7 @@ import { DashboardRedirect } from './pages/DashboardRedirect';
 import { Profile } from './pages/Profile';
 import { ArticleDetail } from './pages/ArticleDetail';
 import { NotificationsPage } from './pages/NotificationsPage';
+import ChatPage from './pages/ChatPage';
 
 
 // Patient Pages
@@ -91,12 +92,25 @@ function App() {
                   </RequireAuth>
                 }
               />
+
+              {/* Doctor Chat Route */}
+
               <Route
                 path="/app/notifications"
                 element={
                   <RequireAuth>
                     <AppLayout>
                       <NotificationsPage />
+                    </AppLayout>
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/app/chat"
+                element={
+                  <RequireAuth>
+                    <AppLayout>
+                      <ChatPage />
                     </AppLayout>
                   </RequireAuth>
                 }

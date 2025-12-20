@@ -40,6 +40,8 @@ def cors_tween_factory(handler, registry):
                 'http://localhost:5174',
                 'http://127.0.0.1:5173',
                 'http://127.0.0.1:5174',
+                'https://mario-bilang-nama-timnya-sigmaboy-a.vercel.app',
+                'https://mario-bilang-nama-timnya-sigmaboy-a.vercel.app/'
             ]
         
         # Handle preflight OPTIONS requests immediately
