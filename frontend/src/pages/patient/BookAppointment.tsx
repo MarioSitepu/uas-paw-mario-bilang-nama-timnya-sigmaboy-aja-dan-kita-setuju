@@ -21,6 +21,7 @@ export const BookAppointment: React.FC = () => {
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [reason, setReason] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingSlots, setIsLoadingSlots] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { addToast } = useToastContext();
 
@@ -99,7 +100,14 @@ export const BookAppointment: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedDoctor || !selectedDate || !selectedTime || !user) {
-      addToast('Please fill in all required fields', 'error');
+      addToast('Mohon lengkapi semua field yang wajib diisi', 'error');
+      return;
+    }
+
+    // Validate selected time is still available
+    const selectedSlot = timeSlots.find(slot => slot.time === selectedTime);
+    if (!selectedSlot || !selectedSlot.available) {
+      addToast('Jam yang dipilih sudah tidak tersedia. Silakan pilih jam lain.', 'error');
       return;
     }
 
@@ -108,20 +116,15 @@ export const BookAppointment: React.FC = () => {
       const { appointmentsAPI } = await import('../../services/api');
       await appointmentsAPI.create({
         doctor_id: selectedDoctor.id,
-        appointment_date: selectedDate, // Backend expects appointment_date (snake_case) or handles mapping?
-        // Checking appointments.py create_appointment:
-        // data['doctor_id'], data['appointment_date'], data['appointment_time']
-        // So I must rename keys to match backend!
+        appointment_date: selectedDate,
         appointment_time: selectedTime,
         reason: reason || undefined,
-        // patient_id is from auth token, unnecessary to send
       });
-      addToast('Appointment booked successfully!', 'success');
+      addToast('Janji temu berhasil dibuat!', 'success');
       navigate('/app/patient/appointments');
     } catch (error: unknown) {
-      // Improve error handling
       console.error(error);
-      const msg = (error as any)?.response?.data?.error || (error as Error).message || 'Failed to book appointment';
+      const msg = (error as any)?.response?.data?.error || (error as Error).message || 'Gagal membuat janji temu';
       addToast(msg, 'error');
     } finally {
       setIsSubmitting(false);
@@ -137,17 +140,17 @@ export const BookAppointment: React.FC = () => {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-3xl mx-auto space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-slate-800 mb-2">Book Appointment</h1>
-        <p className="text-slate-600">Schedule your appointment with a doctor</p>
+        <h1 className="text-3xl font-bold text-slate-800 mb-2">Buat Janji Temu</h1>
+        <p className="text-slate-600">Pilih dokter dan jadwalkan janji temu Anda</p>
       </div>
 
       <form onSubmit={handleSubmit} className="bento-card space-y-6">
         {/* Doctor Selection */}
         <div>
           <label htmlFor="doctor-select" className="block text-sm font-medium text-slate-700 mb-2">
-            Select Doctor <span className="text-red-500">*</span>
+            Pilih Dokter <span className="text-red-500">*</span>
           </label>
           <select
             id="doctor-select"
@@ -159,10 +162,11 @@ export const BookAppointment: React.FC = () => {
               setSelectedDoctor(doctor || null);
               setSelectedDate('');
               setSelectedTime('');
+              setTimeSlots([]);
             }}
-            className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-pastel-blue-500 focus:border-pastel-blue-500"
+            className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
           >
-            <option value="">Choose a doctor...</option>
+            <option value="">Pilih dokter...</option>
             {doctors.map((doctor) => (
               <option key={doctor.id} value={doctor.id}>
                 {doctor.name} - {doctor.specialization}
@@ -170,10 +174,23 @@ export const BookAppointment: React.FC = () => {
             ))}
           </select>
           {selectedDoctor && (
-            <div className="mt-3 p-4 bg-pastel-blue-50 rounded-lg">
-              <p className="font-medium text-slate-800">{selectedDoctor.name}</p>
-              <p className="text-sm text-slate-600">{selectedDoctor.specialization}</p>
-              <p className="text-sm text-slate-600">{selectedDoctor.clinic}</p>
+            <div className="mt-3 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
+              <div className="flex items-start gap-3">
+                {selectedDoctor.profile_photo_url && (
+                  <img
+                    src={selectedDoctor.profile_photo_url}
+                    alt={selectedDoctor.name}
+                    className="w-12 h-12 rounded-full object-cover border-2 border-blue-200"
+                  />
+                )}
+                <div className="flex-1">
+                  <p className="font-semibold text-slate-800">{selectedDoctor.name}</p>
+                  <p className="text-sm text-slate-600 mt-1">{selectedDoctor.specialization}</p>
+                  {selectedDoctor.bio && (
+                    <p className="text-xs text-slate-500 mt-2 line-clamp-2">{selectedDoctor.bio}</p>
+                  )}
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -181,7 +198,7 @@ export const BookAppointment: React.FC = () => {
         {/* Date Selection */}
         <DatePicker
           id="appointment-date"
-          label="Select Date"
+          label="Pilih Tanggal"
           value={selectedDate}
           onChange={setSelectedDate}
           required
@@ -191,17 +208,30 @@ export const BookAppointment: React.FC = () => {
         {/* Time Slot Selection */}
         {selectedDate && selectedDoctor && (
           <TimeSlotPicker
-            label="Select Time"
+            label="Pilih Jam"
             slots={timeSlots}
             selectedTime={selectedTime}
             onSelect={setSelectedTime}
+            isLoading={isLoadingSlots}
           />
+        )}
+
+        {/* Selected Appointment Summary */}
+        {selectedDoctor && selectedDate && selectedTime && (
+          <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+            <h3 className="text-sm font-semibold text-green-800 mb-2">Ringkasan Janji Temu</h3>
+            <div className="space-y-1 text-sm text-green-700">
+              <p><span className="font-medium">Dokter:</span> {selectedDoctor.name}</p>
+              <p><span className="font-medium">Tanggal:</span> {new Date(selectedDate).toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+              <p><span className="font-medium">Jam:</span> {selectedTime} WIB</p>
+            </div>
+          </div>
         )}
 
         {/* Reason */}
         <div>
           <label htmlFor="reason" className="block text-sm font-medium text-slate-700 mb-2">
-            Reason (Optional)
+            Alasan Kunjungan (Opsional)
           </label>
           <textarea
             id="reason"
@@ -209,26 +239,34 @@ export const BookAppointment: React.FC = () => {
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             rows={3}
-            className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-pastel-blue-500 focus:border-pastel-blue-500"
-            placeholder="Brief description of your visit..."
+            className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all resize-none"
+            placeholder="Jelaskan alasan kunjungan Anda (opsional)..."
           />
+          <p className="mt-1 text-xs text-slate-500">Informasi ini akan membantu dokter mempersiapkan konsultasi</p>
         </div>
 
         {/* Submit Button */}
-        <div className="flex gap-4">
+        <div className="flex gap-4 pt-2">
           <button
             type="button"
             onClick={() => navigate('/app/patient/appointments')}
             className="flex-1 px-6 py-3 bg-slate-100 text-slate-700 rounded-lg font-medium hover:bg-slate-200 transition-colors"
           >
-            Cancel
+            Batal
           </button>
           <button
             type="submit"
-            disabled={isSubmitting || !selectedDoctor || !selectedDate || !selectedTime}
-            className="flex-1 px-6 py-3 bg-gradient-blue text-white rounded-lg font-medium hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={isSubmitting || !selectedDoctor || !selectedDate || !selectedTime || isLoadingSlots}
+            className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg font-medium hover:from-blue-700 hover:to-blue-800 hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
-            {isSubmitting ? 'Booking...' : 'Book Appointment'}
+            {isSubmitting ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                <span>Memproses...</span>
+              </>
+            ) : (
+              'Buat Janji Temu'
+            )}
           </button>
         </div>
       </form>

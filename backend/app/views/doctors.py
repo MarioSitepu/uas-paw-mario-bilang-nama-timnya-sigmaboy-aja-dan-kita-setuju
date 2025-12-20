@@ -266,17 +266,25 @@ def get_doctor_slots(request):
         date_str = request.params.get('date')
         
         if not date_str:
-            return {'error': 'Date parameter is required'}
+            request.response.status_int = 400
+            return {'error': 'Parameter tanggal diperlukan'}
             
         try:
             target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
         except ValueError:
-            return {'error': 'Invalid date format (YYYY-MM-DD)'}
+            request.response.status_int = 400
+            return {'error': 'Format tanggal tidak valid (gunakan YYYY-MM-DD)'}
+        
+        # Validasi: tidak bisa booking untuk tanggal yang sudah lewat
+        today = datetime.now().date()
+        if target_date < today:
+            request.response.status_int = 400
+            return {'error': 'Tidak dapat memilih tanggal yang sudah lewat'}
             
         doctor = session.query(Doctor).filter(Doctor.id == doctor_id).first()
         if not doctor:
             request.response.status_int = 404
-            return {'error': 'Doctor not found'}
+            return {'error': 'Dokter tidak ditemukan'}
             
         # Get doctor's schedule for the day
         days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
@@ -293,33 +301,58 @@ def get_doctor_slots(request):
              day_schedule = {
                 'available': day_name not in ['saturday', 'sunday'],
                 'startTime': '09:00',
-                'endTime': '17:00'
+                'endTime': '17:00',
+                'breakStart': '',
+                'breakEnd': ''
              }
 
-        if not day_schedule.get('available'):
+        if not day_schedule.get('available', False):
             return [] # No slots if not available
             
-        start_time_str = day_schedule.get('startTime')
-        end_time_str = day_schedule.get('endTime')
-        break_start_str = day_schedule.get('breakStart')
-        break_end_str = day_schedule.get('breakEnd')
+        start_time_str = day_schedule.get('startTime', '').strip()
+        end_time_str = day_schedule.get('endTime', '').strip()
+        break_start_str = day_schedule.get('breakStart', '').strip()
+        break_end_str = day_schedule.get('breakEnd', '').strip()
         
         if not start_time_str or not end_time_str:
             return []
             
         # Helper to parse time
         def parse_time(t_str):
-            h, m = map(int, t_str.split(':'))
+            """Parse time string HH:MM to time object"""
+            if not t_str or len(t_str.strip()) == 0:
+                return None
+            parts = t_str.split(':')
+            if len(parts) != 2:
+                raise ValueError(f"Invalid time format: {t_str}")
+            h, m = int(parts[0]), int(parts[1])
+            if not (0 <= h <= 23 and 0 <= m <= 59):
+                raise ValueError(f"Invalid time values: {t_str}")
             return time(h, m)
             
         try:
             start_time = parse_time(start_time_str)
             end_time = parse_time(end_time_str)
             
+            if not start_time or not end_time:
+                return []
+            
+            # Validate start < end
+            if start_time >= end_time:
+                return []
+            
             break_start = parse_time(break_start_str) if break_start_str else None
             break_end = parse_time(break_end_str) if break_end_str else None
-        except ValueError:
-             return [] # Invalid time format in schedule
+            
+            # Validate break time if both are provided
+            if break_start and break_end:
+                if break_start >= break_end:
+                    # Invalid break time, ignore it
+                    break_start = None
+                    break_end = None
+        except (ValueError, TypeError) as e:
+            print(f"Error parsing schedule times: {e}")
+            return [] # Invalid time format in schedule
         
         # Get existing appointments
         appointments = session.query(Appointment).filter(
@@ -330,13 +363,13 @@ def get_doctor_slots(request):
         
         taken_times = {apt.appointment_time for apt in appointments}
         
-        # Generate slots
+        # Generate slots (30 minutes interval for better flexibility)
         slots = []
         current_time = datetime.combine(target_date, start_time)
         end_datetime = datetime.combine(target_date, end_time)
         
-        # Slot duration 60 mins
-        slot_duration = 60
+        # Slot duration 30 mins (more flexible than 60 mins)
+        slot_duration = 30
         
         while current_time < end_datetime:
             slot_time = current_time.time()
@@ -350,7 +383,7 @@ def get_doctor_slots(request):
             # Check if taken
             is_taken = slot_time in taken_times
             
-            # Only add valid slots
+            # Only add valid slots (not in break)
             if not in_break:
                 slots.append({
                     'time': slot_time.strftime('%H:%M'),
@@ -361,5 +394,12 @@ def get_doctor_slots(request):
             
         return slots
         
+    except ValueError as e:
+        request.response.status_int = 400
+        return {'error': f'Parameter tidak valid: {str(e)}'}
+    except Exception as e:
+        print(f"Error in get_doctor_slots: {e}")
+        request.response.status_int = 500
+        return {'error': 'Terjadi kesalahan saat memuat slot waktu'}
     finally:
         session.close()
