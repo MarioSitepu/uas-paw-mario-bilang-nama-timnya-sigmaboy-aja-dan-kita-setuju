@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Stethoscope } from 'lucide-react';
+import { authAPI } from '../../services/api';
 import type { Doctor } from '../../types';
 import { DoctorCard } from '../../components/cards/DoctorCard';
 import { LoadingSkeleton } from '../../components/ui/LoadingSkeleton';
@@ -18,41 +18,25 @@ export const DoctorsList: React.FC = () => {
   const loadDoctors = async () => {
     try {
       setIsLoading(true);
-      const { doctorsAPI } = await import('../../services/api');
-      const response = await doctorsAPI.getAll();
-      // Backend might return { doctors: [], total: ... } or just array. Let's assume response.data is the array or check structure.
-      // Checking api.ts -> doctorsAPI.getAll -> api.get('/api/doctors')
-      // Checking backend views (if I could)... Usually returns { doctors: [...] }
-      // I'll assume standard format { doctors: [...] } based on appointments.
-      const rawDoctors = response.data.doctors || [];
-
-      const allDoctors = rawDoctors.map((doc: any) => {
-        // Transform schedule object to array
-        let scheduleArray: any[] = [];
-        if (doc.schedule && !Array.isArray(doc.schedule)) {
-          const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-          scheduleArray = days.map(day => {
-            const slot = doc.schedule[day];
-            if (!slot || !slot.available) return null;
-            return {
-              day: day.charAt(0).toUpperCase() + day.slice(1),
-              start: slot.startTime,
-              end: slot.endTime
-            };
-          }).filter(Boolean);
-        } else if (Array.isArray(doc.schedule)) {
-          scheduleArray = doc.schedule;
-        }
-
-        return {
-          ...doc,
-          schedule: scheduleArray
-        };
-      });
-
+      const response = await authAPI.get('/api/doctors');
+      let allDoctors = response.data.doctors || [];
+      
+      // Convert backend doctor format to frontend format
+      allDoctors = allDoctors.map((doc: any) => ({
+        id: doc.id,
+        name: doc.name || 'Unknown',
+        specialization: doc.specialization || 'General',
+        photoUrl: doc.profile_photo_url || `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2'%3E%3Cpath d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'/%3E%3Ccircle cx='12' cy='7' r='4'/%3E%3C/svg%3E`,
+        rating: doc.rating || 4.5,
+        clinic: doc.clinic || 'Medical Clinic',
+        bio: doc.bio || 'Experienced healthcare professional',
+        schedule: doc.schedule || {}
+      }));
+      
       setDoctors(allDoctors);
     } catch (error) {
       console.error('Failed to load doctors:', error);
+      setDoctors([]);
     } finally {
       setIsLoading(false);
     }
@@ -78,10 +62,8 @@ export const DoctorsList: React.FC = () => {
       <div className="bento-card">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label htmlFor="doctor-search" className="block text-sm font-medium text-slate-700 mb-2">Search</label>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Search</label>
             <input
-              id="doctor-search"
-              name="doctor-search"
               type="text"
               placeholder="Search by name or specialization..."
               value={searchTerm}
@@ -90,10 +72,8 @@ export const DoctorsList: React.FC = () => {
             />
           </div>
           <div>
-            <label htmlFor="spec-filter" className="block text-sm font-medium text-slate-700 mb-2">Specialization</label>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Specialization</label>
             <select
-              id="spec-filter"
-              name="spec-filter"
               value={specializationFilter}
               onChange={(e) => setSpecializationFilter(e.target.value)}
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-pastel-blue-500 focus:border-pastel-blue-500"
@@ -118,7 +98,7 @@ export const DoctorsList: React.FC = () => {
         </div>
       ) : filteredDoctors.length === 0 ? (
         <EmptyState
-          icon={<Stethoscope size={48} className="text-slate-400" />}
+          icon="👨‍⚕️"
           title="No doctors found"
           description="Try adjusting your search or filters"
         />

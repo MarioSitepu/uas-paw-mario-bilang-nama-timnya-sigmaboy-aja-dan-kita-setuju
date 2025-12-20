@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { LogIn } from 'lucide-react';
+import { LogIn, ArrowRight } from 'lucide-react';
 
 export const Header: React.FC = () => {
   const [scrolled, setScrolled] = useState(false);
@@ -31,10 +31,17 @@ export const Header: React.FC = () => {
             </span>
           </Link>
 
-          {/* CTA Button */}
-          <div className="flex items-center">
+          {/* CTA Buttons */}
+          <div className="flex items-center gap-3">
             <Link
-              to="/login"
+              to="/auth/login"
+              className="inline-flex items-center gap-2 px-5 py-2.5 text-blue-600 hover:text-blue-700 font-semibold text-sm rounded-xl hover:bg-blue-50 transition-all duration-300"
+            >
+              <ArrowRight size={16} />
+              Jelajahi Layanan
+            </Link>
+            <Link
+              to="/auth/login"
               className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 via-blue-500 to-blue-700 text-white rounded-xl font-bold text-sm hover:from-blue-700 hover:via-blue-600 hover:to-blue-800 transition-all shadow-lg hover:shadow-2xl transform hover:scale-105 duration-300"
             >
               <LogIn size={18} />

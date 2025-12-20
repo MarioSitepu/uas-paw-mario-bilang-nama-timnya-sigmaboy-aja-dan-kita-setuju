@@ -1,7 +1,7 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-
-
+import { useAuth } from '../../context/AuthContext';
+import { authAPI } from '../../services/api';
 import type { Appointment, AppointmentStatus, MedicalRecord } from '../../types';
 import { StatusBadge } from '../../components/ui/StatusBadge';
 import { Modal } from '../../components/ui/Modal';
@@ -11,10 +11,13 @@ import { LoadingSkeleton } from '../../components/ui/LoadingSkeleton';
 export const DoctorAppointmentDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-
+  const { user } = useAuth();
   const [appointment, setAppointment] = useState<Appointment | null>(null);
   const [medicalRecord, setMedicalRecord] = useState<MedicalRecord | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
   const [showRecordModal, setShowRecordModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [recordForm, setRecordForm] = useState({
@@ -26,90 +29,104 @@ export const DoctorAppointmentDetail: React.FC = () => {
   });
   const { addToast } = useToastContext();
 
-  const getErrorMessage = (err: unknown, fallback: string) => {
-    if (err instanceof Error && err.message) return err.message;
-    return fallback;
-  };
+  useEffect(() => {
+    if (id) {
+      loadAppointment();
+    }
+  }, [id]);
 
-  const loadAppointment = useCallback(async () => {
+  const loadAppointment = async () => {
     if (!id) return;
     try {
       setIsLoading(true);
-      const { appointmentsAPI, medicalRecordsAPI } = await import('../../services/api');
-      const response = await appointmentsAPI.getById(parseInt(id));
-      const raw = response.data.appointment;
-
-      const apt: Appointment = {
-        ...raw,
-        id: raw.id,
-        patientId: raw.patient_id,
-        doctorId: raw.doctor_id,
-        date: raw.appointment_date,
-        time: raw.appointment_time,
-        status: raw.status,
-        reason: raw.reason,
-        notes: raw.notes,
-        patient: raw.patient ? {
-          ...raw.patient,
-          id: raw.patient.id,
-          name: raw.patient.name,
-          email: raw.patient.email,
-          role: 'PATIENT',
-          photoUrl: raw.patient.profile_photo_url
-        } : undefined
+      const response = await authAPI.get(`/api/appointments/${id}`);
+      const apt = response.data.appointment;
+      
+      console.log('🔍 Doctor AppointmentDetail - Raw appointment:', apt);
+      console.log('🔍 Current user:', user);
+      
+      // Transform backend format to frontend format
+      const appointment: Appointment = {
+        id: apt.id,
+        doctorId: apt.doctor_id,
+        patientId: apt.patient_id,
+        date: apt.appointment_date,
+        time: apt.appointment_time,
+        status: apt.status,
+        reason: apt.reason,
+        createdAt: apt.created_at || new Date().toISOString(),
+        doctor: apt.doctor,
+        patient: apt.patient,
       };
 
-      // We rely on backend authorization. If we got the appointment, we can view it.
-      setAppointment(apt);
-
-      // Load medical record if exists
-      try {
-        const recordResponse = await medicalRecordsAPI.getByAppointment(apt.id);
-        const rawRec = recordResponse.data;
-        if (rawRec) {
-          setMedicalRecord({
-            ...rawRec,
-            id: rawRec.id,
-            appointmentId: rawRec.appointment_id,
-            patientId: rawRec.patient_id,
-            doctorId: rawRec.doctor_id,
-            diagnosis: rawRec.diagnosis,
-            notes: rawRec.notes,
-            createdAt: rawRec.created_at || new Date().toISOString()
-          });
+      console.log('🔍 Transformed appointment:', appointment);
+      console.log('🔍 Checking: appointment.doctorId=' + appointment.doctorId + ', user?.id=' + user?.id);
+      
+      if (appointment && appointment.doctorId === user?.doctor_profile?.id) {
+        console.log('✅ Access check passed - doctor owns this appointment');
+        setAppointment(appointment);
+        // Load medical record if exists
+        try {
+          const recordResponse = await authAPI.get(`/api/appointments/${id}/record`);
+          console.log('📋 Medical record response:', recordResponse.data);
+          if (recordResponse.data.medical_record) {
+            setMedicalRecord(recordResponse.data.medical_record);
+          }
+        } catch (error) {
+          // No record yet
+          console.log('No medical record found for this appointment');
         }
-      } catch {
-        // No record or 404
+      } else {
+        console.error('❌ Access check failed:', { 
+          appointmentDoctorId: appointment.doctorId,
+          currentUserDoctorProfileId: user?.doctor_profile?.id,
+          currentUserId: user?.id,
+          currentUserRole: user?.role
+        });
+        addToast('Appointment not found', 'error');
+        navigate('/app/doctor/schedule');
       }
-
     } catch (error) {
       console.error('Failed to load appointment:', error);
       addToast('Failed to load appointment', 'error');
-      navigate('/app/doctor/schedule');
     } finally {
       setIsLoading(false);
     }
-  }, [addToast, id, navigate]);
-
-  useEffect(() => {
-    if (id) {
-      void loadAppointment();
-    }
-  }, [id, loadAppointment]);
+  };
 
   const handleStatusUpdate = async (newStatus: AppointmentStatus) => {
     if (!appointment) return;
     setIsSubmitting(true);
     try {
-      const { appointmentsAPI } = await import('../../services/api');
-      await appointmentsAPI.update(appointment.id, { status: newStatus });
-      addToast('Status updated successfully', 'success');
-      await loadAppointment();
-    } catch (error: unknown) {
-      addToast(getErrorMessage(error, 'Failed to update status'), 'error');
+      console.log(`📋 Updating appointment ${appointment.id} status to ${newStatus}`);
+      await authAPI.put(`/api/appointments/${appointment.id}`, {
+        status: newStatus,
+      });
+      addToast(`Status updated to ${newStatus}`, 'success');
+      loadAppointment();
+    } catch (error: any) {
+      console.error('Status update error:', error);
+      addToast(error.response?.data?.error || 'Failed to update status', 'error');
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleConfirm = async () => {
+    await handleStatusUpdate('confirmed');
+    setShowConfirmModal(false);
+  };
+
+  const handleComplete = async () => {
+    // First close the confirmation modal
+    setShowCompleteModal(false);
+    // Then show the medical record form immediately
+    setShowRecordModal(true);
+  };
+
+  const handleCancel = async () => {
+    await handleStatusUpdate('cancelled');
+    setShowCancelModal(false);
   };
 
   const handleCreateRecord = async () => {
@@ -120,34 +137,38 @@ export const DoctorAppointmentDetail: React.FC = () => {
     }
     setIsSubmitting(true);
     try {
-      const { medicalRecordsAPI } = await import('../../services/api');
-      const response = await medicalRecordsAPI.create({
+      console.log('📝 Creating medical record for appointment:', appointment.id);
+      const payload = {
         appointment_id: appointment.id,
         diagnosis: recordForm.diagnosis,
         notes: recordForm.notes,
         symptoms: recordForm.symptoms || undefined,
         treatment: recordForm.treatment || undefined,
         prescription: recordForm.prescription || undefined,
-      });
-
-      const rawRec = response.data;
-      const record: MedicalRecord = {
-        ...rawRec,
-        id: rawRec.id,
-        appointmentId: rawRec.appointment_id,
-        patientId: rawRec.patient_id,
-        doctorId: rawRec.doctor_id,
-        diagnosis: rawRec.diagnosis,
-        notes: rawRec.notes,
-        createdAt: rawRec.created_at || new Date().toISOString()
       };
-
-      setMedicalRecord(record);
+      console.log('📤 Sending payload:', payload);
+      
+      const response = await authAPI.post('/api/medical-records', payload);
+      console.log('✅ Medical record created:', response.data);
+      
+      if (response.data.medical_record) {
+        setMedicalRecord(response.data.medical_record);
+        console.log('📋 Medical record set:', response.data.medical_record);
+      }
+      
       setShowRecordModal(false);
-      addToast('Medical record created successfully', 'success');
+      addToast('Medical record created successfully and appointment marked as completed', 'success');
       setRecordForm({ diagnosis: '', notes: '', symptoms: '', treatment: '', prescription: '' });
-    } catch (error: unknown) {
-      addToast(getErrorMessage(error, 'Failed to create medical record'), 'error');
+      
+      // Reload appointment to get updated status
+      await loadAppointment();
+      
+      // Wait a moment then redirect to dashboard
+      await new Promise(resolve => setTimeout(resolve, 800));
+      navigate('/app/doctor/dashboard');
+    } catch (error: any) {
+      console.error('❌ Failed to create medical record:', error);
+      addToast(error.response?.data?.error || 'Failed to create medical record', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -191,26 +212,10 @@ export const DoctorAppointmentDetail: React.FC = () => {
         </div>
 
         {/* Patient Info */}
-        <div className="pb-6 border-b border-slate-200">
-          <h3 className="text-lg font-semibold text-slate-800 mb-4">Patient Information</h3>
-          <div className="flex items-center gap-4">
-            <img
-              src={appointment.patient?.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(appointment.patient?.name || 'Patient')}&background=random`}
-              alt={appointment.patient?.name}
-              className="w-16 h-16 rounded-full object-cover border-2 border-white shadow-md"
-            />
-            <div>
-              <p className="text-xl font-bold text-slate-800">{appointment.patient?.name || 'Unknown Patient'}</p>
-              <div className="flex flex-col text-sm text-slate-600 mt-1">
-                <span className="flex items-center gap-2">
-                  📧 {appointment.patient?.email}
-                </span>
-                <span className="flex items-center gap-2">
-                  🆔 Patient ID: {appointment.patientId}
-                </span>
-              </div>
-            </div>
-          </div>
+        <div className="pb-4 border-b border-slate-200">
+          <h3 className="text-lg font-semibold text-slate-800 mb-2">Patient Information</h3>
+          <p className="text-slate-700">{appointment.patient?.name || 'Patient'}</p>
+          <p className="text-sm text-slate-600">{appointment.patient?.email || ''}</p>
         </div>
 
         {/* Appointment Details */}
@@ -243,7 +248,7 @@ export const DoctorAppointmentDetail: React.FC = () => {
           <div className="flex gap-4 pt-4 border-t border-slate-200">
             {appointment.status === 'pending' && (
               <button
-                onClick={() => handleStatusUpdate('confirmed')}
+                onClick={() => setShowConfirmModal(true)}
                 disabled={isSubmitting}
                 className="flex-1 px-6 py-3 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors disabled:opacity-50"
               >
@@ -252,13 +257,20 @@ export const DoctorAppointmentDetail: React.FC = () => {
             )}
             {appointment.status === 'confirmed' && (
               <button
-                onClick={() => handleStatusUpdate('completed')}
+                onClick={() => setShowCompleteModal(true)}
                 disabled={isSubmitting}
                 className="flex-1 px-6 py-3 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 transition-colors disabled:opacity-50"
               >
                 {isSubmitting ? 'Updating...' : 'Mark as Completed'}
               </button>
             )}
+            <button
+              onClick={() => setShowCancelModal(true)}
+              disabled={isSubmitting}
+              className="flex-1 px-6 py-3 bg-red-50 text-red-700 rounded-lg font-medium hover:bg-red-100 transition-colors disabled:opacity-50"
+            >
+              {isSubmitting ? 'Updating...' : 'Cancel Appointment'}
+            </button>
           </div>
         )}
 
@@ -321,12 +333,10 @@ export const DoctorAppointmentDetail: React.FC = () => {
       >
         <div className="space-y-4">
           <div>
-            <label htmlFor="diagnosis" className="block text-sm font-medium text-slate-700 mb-2">
+            <label className="block text-sm font-medium text-slate-700 mb-2">
               Diagnosis <span className="text-red-500">*</span>
             </label>
             <input
-              id="diagnosis"
-              name="diagnosis"
               type="text"
               required
               value={recordForm.diagnosis}
@@ -336,12 +346,10 @@ export const DoctorAppointmentDetail: React.FC = () => {
             />
           </div>
           <div>
-            <label htmlFor="notes" className="block text-sm font-medium text-slate-700 mb-2">
+            <label className="block text-sm font-medium text-slate-700 mb-2">
               Notes <span className="text-red-500">*</span>
             </label>
             <textarea
-              id="notes"
-              name="notes"
               required
               rows={4}
               value={recordForm.notes}
@@ -351,10 +359,8 @@ export const DoctorAppointmentDetail: React.FC = () => {
             />
           </div>
           <div>
-            <label htmlFor="symptoms" className="block text-sm font-medium text-slate-700 mb-2">Symptoms</label>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Symptoms</label>
             <textarea
-              id="symptoms"
-              name="symptoms"
               rows={2}
               value={recordForm.symptoms}
               onChange={(e) => setRecordForm({ ...recordForm, symptoms: e.target.value })}
@@ -363,10 +369,8 @@ export const DoctorAppointmentDetail: React.FC = () => {
             />
           </div>
           <div>
-            <label htmlFor="treatment" className="block text-sm font-medium text-slate-700 mb-2">Treatment</label>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Treatment</label>
             <textarea
-              id="treatment"
-              name="treatment"
               rows={2}
               value={recordForm.treatment}
               onChange={(e) => setRecordForm({ ...recordForm, treatment: e.target.value })}
@@ -375,10 +379,8 @@ export const DoctorAppointmentDetail: React.FC = () => {
             />
           </div>
           <div>
-            <label htmlFor="prescription" className="block text-sm font-medium text-slate-700 mb-2">Prescription</label>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Prescription</label>
             <textarea
-              id="prescription"
-              name="prescription"
               rows={2}
               value={recordForm.prescription}
               onChange={(e) => setRecordForm({ ...recordForm, prescription: e.target.value })}
@@ -401,6 +403,84 @@ export const DoctorAppointmentDetail: React.FC = () => {
               {isSubmitting ? 'Creating...' : 'Create Record'}
             </button>
           </div>
+        </div>
+      </Modal>
+
+      {/* Confirm Appointment Modal */}
+      <Modal
+        isOpen={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        title="Confirm Appointment"
+      >
+        <p className="mb-6 text-slate-600">
+          Are you sure you want to confirm this appointment?
+        </p>
+        <div className="flex gap-4">
+          <button
+            onClick={() => setShowConfirmModal(false)}
+            className="flex-1 px-6 py-3 bg-slate-100 text-slate-700 rounded-lg font-medium hover:bg-slate-200 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleConfirm}
+            disabled={isSubmitting}
+            className="flex-1 px-6 py-3 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors disabled:opacity-50"
+          >
+            {isSubmitting ? 'Confirming...' : 'Confirm'}
+          </button>
+        </div>
+      </Modal>
+
+      {/* Complete Appointment Modal */}
+      <Modal
+        isOpen={showCompleteModal}
+        onClose={() => setShowCompleteModal(false)}
+        title="Mark as Completed"
+      >
+        <p className="mb-6 text-slate-600">
+          Are you sure you want to mark this appointment as completed? You will be asked to enter medical records.
+        </p>
+        <div className="flex gap-4">
+          <button
+            onClick={() => setShowCompleteModal(false)}
+            className="flex-1 px-6 py-3 bg-slate-100 text-slate-700 rounded-lg font-medium hover:bg-slate-200 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleComplete}
+            disabled={isSubmitting}
+            className="flex-1 px-6 py-3 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 transition-colors disabled:opacity-50"
+          >
+            {isSubmitting ? 'Marking...' : 'Mark as Completed'}
+          </button>
+        </div>
+      </Modal>
+
+      {/* Cancel Appointment Modal */}
+      <Modal
+        isOpen={showCancelModal}
+        onClose={() => setShowCancelModal(false)}
+        title="Cancel Appointment"
+      >
+        <p className="mb-6 text-slate-600">
+          Are you sure you want to cancel this appointment?
+        </p>
+        <div className="flex gap-4">
+          <button
+            onClick={() => setShowCancelModal(false)}
+            className="flex-1 px-6 py-3 bg-slate-100 text-slate-700 rounded-lg font-medium hover:bg-slate-200 transition-colors"
+          >
+            No, Keep It
+          </button>
+          <button
+            onClick={handleCancel}
+            disabled={isSubmitting}
+            className="flex-1 px-6 py-3 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 transition-colors disabled:opacity-50"
+          >
+            {isSubmitting ? 'Cancelling...' : 'Yes, Cancel'}
+          </button>
         </div>
       </Modal>
     </div>

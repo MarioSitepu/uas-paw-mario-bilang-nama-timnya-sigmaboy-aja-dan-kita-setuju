@@ -1,8 +1,7 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ClipboardList } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-
+import { authAPI } from '../../services/api';
 import type { MedicalRecord } from '../../types';
 import { LoadingSkeleton } from '../../components/ui/LoadingSkeleton';
 import { EmptyState } from '../../components/ui/EmptyState';
@@ -12,40 +11,25 @@ export const MedicalRecords: React.FC = () => {
   const [records, setRecords] = useState<MedicalRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const loadRecords = useCallback(async () => {
-    if (!user?.id) return;
+  useEffect(() => {
+    if (user?.id) {
+      loadRecords();
+    }
+  }, [user]);
+
+  const loadRecords = async () => {
     try {
       setIsLoading(true);
-      const { medicalRecordsAPI } = await import('../../services/api');
-      const response = await medicalRecordsAPI.getAll();
-      const rawRecords = response.data.medical_records || [];
-
-      const all: MedicalRecord[] = rawRecords.map((raw: any) => ({
-        ...raw,
-        id: raw.id,
-        appointmentId: raw.appointment_id,
-        patientId: raw.patient_id,
-        doctorId: raw.doctor_id,
-        diagnosis: raw.diagnosis,
-        notes: raw.notes,
-        symptoms: raw.symptoms,
-        treatment: raw.treatment,
-        prescription: raw.prescription,
-        createdAt: raw.created_at || new Date().toISOString(),
-        patient: raw.patient // Backend returns this
-      }));
-
-      setRecords(all.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+      const response = await authAPI.get('/api/medical-records');
+      const all = response.data.medical_records || [];
+      console.log('📋 Loaded medical records:', all);
+      setRecords(all.sort((a: MedicalRecord, b: MedicalRecord) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()));
     } catch (error) {
       console.error('Failed to load records:', error);
     } finally {
       setIsLoading(false);
     }
-  }, [user?.id]);
-
-  useEffect(() => {
-    void loadRecords();
-  }, [loadRecords]);
+  };
 
   return (
     <div className="space-y-6">
@@ -62,53 +46,55 @@ export const MedicalRecords: React.FC = () => {
         </div>
       ) : records.length === 0 ? (
         <EmptyState
-          icon={<ClipboardList size={48} className="text-slate-400" />}
+          icon="📋"
           title="No medical records"
           description="Medical records will appear here after you complete appointments"
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {records.map((record) => (
-            <div key={record.id} className="bento-card group hover:shadow-lg transition-all">
-              <div className="flex items-start justify-between mb-4 border-b border-gray-100 pb-3">
-                <div className="flex items-center gap-3">
-                  <img
-                    src={record.patient?.profile_photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(record.patient?.name || 'P')}&background=random`}
-                    alt={record.patient?.name}
-                    className="w-10 h-10 rounded-full object-cover border border-slate-200 shadow-sm"
-                  />
-                  <div>
-                    <h3 className="text-lg font-bold text-slate-800">{record.patient?.name || 'Unknown Patient'}</h3>
-                    <p className="text-xs text-slate-500">{record.patient?.email}</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <span className="text-xs font-mono text-slate-400">#{record.id}</span>
-                  <p className="text-xs font-medium text-slate-600 mt-1">
-                    {new Date(record.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
-                  </p>
-                </div>
+            <div key={record.id} className="bento-card">
+              <div className="flex items-start justify-between mb-3">
+                <h3 className="text-lg font-semibold text-slate-800">
+                  {record.patient?.name || 'Patient'} Record #{record.id}
+                </h3>
+                <span className="text-xs text-slate-500 whitespace-nowrap">
+                  {new Date(record.created_at || new Date()).toLocaleDateString('id-ID')}
+                </span>
               </div>
-
-              <div className="space-y-3 mb-4">
-                <div className="bg-blue-50 p-2 rounded-lg">
-                  <label className="text-xs font-semibold text-blue-700 uppercase tracking-wide">Diagnosis</label>
-                  <p className="text-sm font-medium text-slate-800">{record.diagnosis}</p>
+              <div className="space-y-2 mb-4">
+                <div>
+                  <label className="text-xs font-medium text-slate-600">Diagnosis</label>
+                  <p className="text-sm text-slate-800 line-clamp-2">{record.diagnosis}</p>
                 </div>
-
-                {record.notes && (
+                <div>
+                  <label className="text-xs font-medium text-slate-600">Notes</label>
+                  <p className="text-sm text-slate-600 line-clamp-2">{record.notes}</p>
+                </div>
+                {record.symptoms && (
                   <div>
-                    <label className="text-xs font-medium text-slate-500">Notes</label>
-                    <p className="text-sm text-slate-600 line-clamp-2 italic">{record.notes}</p>
+                    <label className="text-xs font-medium text-slate-600">Symptoms</label>
+                    <p className="text-sm text-slate-600 line-clamp-1">{record.symptoms}</p>
+                  </div>
+                )}
+                {record.treatment && (
+                  <div>
+                    <label className="text-xs font-medium text-slate-600">Treatment</label>
+                    <p className="text-sm text-slate-600 line-clamp-1">{record.treatment}</p>
+                  </div>
+                )}
+                {record.prescription && (
+                  <div>
+                    <label className="text-xs font-medium text-slate-600">Prescription</label>
+                    <p className="text-sm text-slate-600 line-clamp-1">{record.prescription}</p>
                   </div>
                 )}
               </div>
-
               <Link
-                to={`/app/doctor/appointments/${record.appointmentId}`}
-                className="block w-full text-center px-4 py-2 bg-gradient-blue text-white rounded-lg font-medium hover:shadow-md transition-all transform group-hover:scale-[1.02]"
+                to={`/app/doctor/appointments/${record.appointment_id}`}
+                className="block w-full text-center px-4 py-2 bg-pastel-blue-50 text-pastel-blue-700 rounded-lg font-medium hover:bg-pastel-blue-100 transition-colors"
               >
-                View Full Details
+                View Details
               </Link>
             </div>
           ))}

@@ -1,4 +1,5 @@
 import React from 'react';
+import { Header } from '../components/Header';
 import { HeroSection } from '../components/sections/HeroSection';
 import { AboutSection } from '../components/sections/AboutSection';
 import { WhatWeOfferSection } from '../components/sections/WhatWeOfferSection';
@@ -11,6 +12,9 @@ import { Footer } from '../components/sections/Footer';
 export const Landing: React.FC = () => {
   return (
     <div className="min-h-screen">
+      {/* Navbar */}
+      <Header />
+      
       {/* Hero Section */}
       <HeroSection />
 

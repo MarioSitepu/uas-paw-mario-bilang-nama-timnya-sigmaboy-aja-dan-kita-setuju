@@ -385,8 +385,8 @@ export const DoctorDashboard: React.FC = () => {
             })}
           </div>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          {/* Charts */}
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <div className="bento-card">
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -502,7 +502,7 @@ export const DoctorDashboard: React.FC = () => {
               </span>
             </div>
           </div>
-            </div>
+          </div>
           </div>
 
           <div className="backdrop-blur-xl bg-white/80 border border-white/20 rounded-3xl p-6 shadow-xl">
@@ -562,7 +562,7 @@ export const DoctorDashboard: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {pendingAppointments.map((appointment) => (
               <div key={appointment.id} className="group bg-white p-6 rounded-3xl border border-slate-100 shadow-xl space-y-4">
-                <AppointmentCard appointment={appointment} showActions={false} isDoctorView={true} />
+                <AppointmentCard appointment={appointment} showActions={false} userRole="doctor" />
                 <div className="flex gap-3 pt-2">
                   <button
                     onClick={() => handleStatusUpdate(appointment.id, 'confirmed')}
@@ -624,7 +624,7 @@ export const DoctorDashboard: React.FC = () => {
                         key={appointment.id}
                         appointment={appointment}
                         showActions={false}
-                        isDoctorView={true}
+                        userRole="doctor"
                       />
                     ))}
                   </div>
@@ -632,9 +632,6 @@ export const DoctorDashboard: React.FC = () => {
               </div>
             </div>
           </div>
-        </div>
-      </div>
-
       <style>{`
         @keyframes float {
           0%, 100% { transform: translateY(0px) rotate(0deg); opacity: 0.2; }

@@ -70,7 +70,7 @@ export const ProfilePhotoUpload: React.FC<ProfilePhotoUploadProps> = ({
       const formData = new FormData();
       formData.append('file', file);
 
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:6543';
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:6543';
       const response = await fetch(`${apiUrl}/api/profile/photo`, {
         method: 'POST',
         headers: {
@@ -85,12 +85,11 @@ export const ProfilePhotoUpload: React.FC<ProfilePhotoUploadProps> = ({
       }
 
       const data = await response.json();
-      const photoUrl = data.profile_photo_url || data.url || data.profile_photo_url;
-      setPreview(photoUrl);
+      setPreview(data.profile_photo_url);
       
       // Call onSuccess callback first, then show success message
       if (onSuccess) {
-        onSuccess(photoUrl);
+        onSuccess(data.profile_photo_url);
       }
       
       // Set success state after callback
