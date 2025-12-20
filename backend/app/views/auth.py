@@ -7,6 +7,8 @@ import secrets
 import datetime
 import base64
 import traceback
+import sys
+import time
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 
@@ -432,8 +434,41 @@ def google_login(request):
         role_raw = data.get('role', 'patient')
         requested_role = role_raw.upper() if role_raw else 'PATIENT'
         
-        # Check if user exists
-        user = session.query(User).filter(User.email == email).first()
+        # Check if user exists with retry logic for connection issues
+        user = None
+        max_query_retries = 3
+        for query_attempt in range(max_query_retries):
+            try:
+                user = session.query(User).filter(User.email == email).first()
+                break  # Success, exit retry loop
+            except Exception as query_error:
+                error_type = type(query_error).__name__
+                error_msg = str(query_error)
+                
+                # Check if it's a connection-related error
+                is_connection_error = (
+                    'ConnectionTimeout' in error_type or
+                    'OperationalError' in error_type or
+                    'connection timeout' in error_msg.lower() or
+                    'connection refused' in error_msg.lower() or
+                    'timeout' in error_msg.lower()
+                )
+                
+                if query_attempt < max_query_retries - 1 and is_connection_error:
+                    wait_time = (query_attempt + 1) * 1  # 1s, 2s, 3s
+                    print(f'[google_login] Query attempt {query_attempt + 1}/{max_query_retries} failed: {error_type}. Retrying in {wait_time}s...', file=sys.stderr, flush=True)
+                    time.sleep(wait_time)
+                    # Try to get a new session
+                    try:
+                        session.close()
+                    except:
+                        pass
+                    session = get_db_session(request)
+                    continue
+                else:
+                    # Last attempt failed or non-retryable error
+                    print(f'[google_login] Query failed after {query_attempt + 1} attempts: {error_type}: {error_msg}', file=sys.stderr, flush=True)
+                    raise
         
         if not user:
             # New user - return info for profile completion (don't create yet)
@@ -492,14 +527,27 @@ def google_login(request):
         }
             
     except Exception as e:
-        print(f'[ERROR] Unexpected error in google_login: {type(e).__name__}: {str(e)}')
+        error_type = type(e).__name__
+        error_msg = str(e)
+        
+        print(f'[ERROR] Unexpected error in google_login: {error_type}: {error_msg}')
         traceback.print_exc()
+        
         try:
             session.rollback()
         except:
             pass
-        request.response.status_code = 500
-        return {'error': f'Server error: {type(e).__name__}: {str(e)}'}
+        
+        # Provide user-friendly error messages for connection issues
+        if 'ConnectionTimeout' in error_type or 'timeout' in error_msg.lower():
+            request.response.status_code = 503  # Service Unavailable
+            return {'error': 'Koneksi ke database timeout. Silakan coba lagi dalam beberapa saat.'}
+        elif 'OperationalError' in error_type:
+            request.response.status_code = 503
+            return {'error': 'Tidak dapat terhubung ke database. Silakan coba lagi nanti.'}
+        else:
+            request.response.status_code = 500
+            return {'error': f'Terjadi kesalahan server. Silakan coba lagi atau hubungi administrator.'}
     finally:
         try:
             session.close()
