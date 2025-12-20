@@ -6,7 +6,6 @@ import { WhatWeOfferSection } from '../components/sections/WhatWeOfferSection';
 import { TotalCareModelSection } from '../components/sections/TotalCareModelSection';
 import { TestimonialsSection } from '../components/sections/TestimonialsSection';
 import { InsightsSection } from '../components/sections/InsightsSection';
-import { EmailSubscriptionSection } from '../components/sections/EmailSubscriptionSection';
 import { Footer } from '../components/sections/Footer';
 
 export const Landing: React.FC = () => {
@@ -14,7 +13,7 @@ export const Landing: React.FC = () => {
     <div className="min-h-screen">
       {/* Navbar */}
       <Header />
-      
+
       {/* Hero Section */}
       <HeroSection />
 
@@ -40,9 +39,6 @@ export const Landing: React.FC = () => {
       <section id="news">
         <InsightsSection />
       </section>
-
-      {/* Email Subscription Section */}
-      <EmailSubscriptionSection />
 
       {/* Footer */}
       <Footer />

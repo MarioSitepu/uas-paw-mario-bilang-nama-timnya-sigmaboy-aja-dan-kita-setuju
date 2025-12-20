@@ -1,4 +1,4 @@
-import React from 'react';
+import medicalTeam from '../../assets/images/hero-medical-team.png';
 
 export const TotalCareModelSection: React.FC = () => {
   return (
@@ -25,22 +25,22 @@ export const TotalCareModelSection: React.FC = () => {
 
         {/* Main Image with Overlay */}
         <div className="relative rounded-3xl overflow-hidden shadow-2xl group">
-          <div 
+          <div
             className="relative w-full h-[500px] sm:h-[600px] lg:h-[650px] bg-cover bg-center bg-no-repeat transform group-hover:scale-105 transition-transform duration-700"
             style={{
-              backgroundImage: `url('https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=1200&q=80')`,
+              backgroundImage: `url(${medicalTeam})`,
               backgroundColor: '#dbeafe',
             }}
           >
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent"></div>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
             <div className="absolute inset-0 bg-gradient-to-r from-blue-600/0 via-blue-600/10 to-blue-600/0 animate-shimmer"></div>
           </div>
 
-          {/* Overlay Text Box */}
-          <div className="absolute bottom-8 lg:bottom-12 left-1/2 transform -translate-x-1/2 w-full max-w-4xl lg:max-w-5xl px-4 sm:px-6">
-            <div className="bg-white/97 backdrop-blur-lg rounded-2xl lg:rounded-3xl p-6 lg:p-8 shadow-2xl border-2 border-gray-200/50 transform group-hover:scale-105 transition-all duration-300">
-              <p className="text-base sm:text-lg lg:text-xl text-gray-800 leading-relaxed text-center font-semibold">
-                Model <span className="text-blue-600 font-bold">CareHub™</span> kami menyatukan dokter, spesialis, dan ahli kesehatan dalam satu tempat. Dari diagnosis hingga pemulihan, kami memastikan penyembuhan holistik dan kesejahteraan jangka panjang.
+          {/* Overlay Text Box (Transparent with White Text) */}
+          <div className="absolute bottom-8 lg:bottom-16 left-0 right-0 px-6 sm:px-10 text-center">
+            <div className="max-w-4xl mx-auto">
+              <p className="text-lg sm:text-2xl lg:text-3xl text-white leading-relaxed font-semibold drop-shadow-lg">
+                Model <span className="text-blue-400 font-bold">CareHub™</span> kami menyatukan dokter, spesialis, dan ahli kesehatan dalam satu tempat. Dari diagnosis hingga pemulihan, kami memastikan penyembuhan holistik dan kesejahteraan jangka panjang.
               </p>
             </div>
           </div>
