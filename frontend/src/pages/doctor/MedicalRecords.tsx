@@ -23,7 +23,7 @@ export const MedicalRecords: React.FC = () => {
       const response = await authAPI.get('/api/medical-records');
       const all = response.data.medical_records || [];
       console.log('📋 Loaded medical records:', all);
-      setRecords(all.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()));
+      setRecords(all.sort((a: MedicalRecord, b: MedicalRecord) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()));
     } catch (error) {
       console.error('Failed to load records:', error);
     } finally {

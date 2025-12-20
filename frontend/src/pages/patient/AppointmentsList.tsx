@@ -26,22 +26,22 @@ export const AppointmentsList: React.FC = () => {
       console.log('=== LOADING APPOINTMENTS ===');
       console.log('📥 useEffect triggered, location:', location.pathname + location.search);
       console.log('📥 statusFilter:', statusFilter);
-      
+
       const params = new URLSearchParams();
       if (statusFilter !== 'all') {
         params.append('status', statusFilter);
       }
-      
+
       const apiUrl = `/api/appointments?${params.toString()}`;
       console.log('🔗 Calling API:', apiUrl);
       const response = await authAPI.get(apiUrl);
       let appointments = response.data.appointments || [];
-      
+
       console.log('📋 Raw appointments from API - Total:', appointments.length);
       appointments.forEach((apt: any) => {
         console.log(`  - ID: ${apt.id}, Status: ${apt.status}, Patient: ${apt.patient?.name || 'N/A'}`);
       });
-      
+
       // Transform backend format to frontend format
       appointments = appointments.map((apt: any) => ({
         id: apt.id,
@@ -55,19 +55,19 @@ export const AppointmentsList: React.FC = () => {
         doctor: apt.doctor,
         patient: apt.patient,
       }));
-      
+
       console.log('✅ Transformed appointments - Total:', appointments.length);
-      
+
       // ALWAYS filter out cancelled appointments UNLESS user specifically filters for cancelled
       if (statusFilter !== 'cancelled') {
         const beforeFilter = appointments.length;
-        appointments = appointments.filter(apt => apt.status !== 'cancelled');
+        appointments = appointments.filter((apt: Appointment) => apt.status !== 'cancelled');
         const afterFilter = appointments.length;
         console.log(`🔍 Filtering cancelled: ${beforeFilter} → ${afterFilter} (removed ${beforeFilter - afterFilter})`);
       } else {
         console.log('🔍 Showing ONLY cancelled appointments');
       }
-      
+
       const sorted = appointments.sort((a: Appointment, b: Appointment) => new Date(b.date).getTime() - new Date(a.date).getTime());
       console.log('📊 Final appointments to display:', sorted.length);
       sorted.forEach((apt: Appointment) => {
@@ -93,10 +93,12 @@ export const AppointmentsList: React.FC = () => {
   };
 
   // Function to be called after successful appointment action (reschedule/cancel)
+  /*
   const handleAppointmentUpdated = async () => {
     // Reload appointments after a successful action
     await loadAppointments();
   };
+  */
 
   return (
     <div className="space-y-6">
@@ -120,11 +122,10 @@ export const AppointmentsList: React.FC = () => {
             <button
               key={status}
               onClick={() => setStatusFilter(status)}
-              className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                statusFilter === status
+              className={`px-4 py-2 rounded-lg font-medium transition-all ${statusFilter === status
                   ? 'bg-pastel-blue-500 text-white'
                   : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-              }`}
+                }`}
             >
               {status.charAt(0).toUpperCase() + status.slice(1)}
             </button>

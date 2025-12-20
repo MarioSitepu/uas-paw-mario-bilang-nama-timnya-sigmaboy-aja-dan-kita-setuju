@@ -30,9 +30,9 @@ export const Schedule: React.FC = () => {
       setIsLoading(true);
       const response = await authAPI.get('/api/appointments');
       let all = response.data.appointments || [];
-      
+
       console.log('📅 Doctor Schedule - Raw appointments from API:', all);
-      
+
       // Transform backend format to frontend format
       all = all.map((apt: any) => ({
         id: apt.id,
@@ -46,18 +46,18 @@ export const Schedule: React.FC = () => {
         doctor: apt.doctor,
         patient: apt.patient,
       }));
-      
+
       console.log('📅 Doctor Schedule - Transformed appointments:', all);
-      
+
       // Filter out cancelled appointments
       let filtered = all.filter((apt: Appointment) => apt.status !== 'cancelled');
-      
+
       // Sort by date and time (newest first)
       const sorted = filtered.sort((a: Appointment, b: Appointment) => {
         const dateCompare = b.date.localeCompare(a.date);
         return dateCompare !== 0 ? dateCompare : b.time.localeCompare(a.time);
       });
-      
+
       setAppointments(sorted);
     } catch (error) {
       console.error('Failed to load appointments:', error);
@@ -74,7 +74,7 @@ export const Schedule: React.FC = () => {
   };
 
   // Filter appointments based on selected statuses and date
-  let filteredAppointments = appointments.filter(apt => 
+  let filteredAppointments = appointments.filter(apt =>
     statusFilters[apt.status as keyof typeof statusFilters]
   );
 
@@ -83,6 +83,7 @@ export const Schedule: React.FC = () => {
     filteredAppointments = filteredAppointments.filter(apt => apt.date === selectedDate);
   }
 
+  /* 
   const handleStatusUpdate = async (appointmentId: number, newStatus: AppointmentStatus) => {
     try {
       await authAPI.put(`/api/appointments/${appointmentId}`, {
@@ -93,6 +94,7 @@ export const Schedule: React.FC = () => {
       console.error('Failed to update status:', error);
     }
   };
+  */
 
   return (
     <div className="space-y-6">

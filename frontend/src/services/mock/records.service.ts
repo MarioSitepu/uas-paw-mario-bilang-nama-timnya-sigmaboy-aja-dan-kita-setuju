@@ -16,10 +16,10 @@ export const recordsService = {
     let filtered = [...records];
 
     if (filters?.doctorId) {
-      filtered = filtered.filter((r) => r.doctorId === filters.doctorId);
+      filtered = filtered.filter((r) => r.doctor_id === filters.doctorId);
     }
     if (filters?.patientId) {
-      filtered = filtered.filter((r) => r.patientId === filters.patientId);
+      filtered = filtered.filter((r) => r.patient_id === filters.patientId);
     }
 
     return filtered;
@@ -32,7 +32,7 @@ export const recordsService = {
 
   async getByAppointment(appointmentId: number): Promise<MedicalRecord | null> {
     const records = initializeRecords();
-    return records.find((r) => r.appointmentId === appointmentId) || null;
+    return records.find((r) => r.appointment_id === appointmentId) || null;
   },
 
   async create(data: {
@@ -48,11 +48,11 @@ export const recordsService = {
     // Check if appointment is completed
     const { appointmentsService } = await import('./appointments.service');
     const appointment = await appointmentsService.getById(data.appointmentId);
-    
+
     if (!appointment) {
       throw new Error('Appointment not found');
     }
-    
+
     if (appointment.status !== 'completed') {
       throw new Error('Medical record can only be created for completed appointments');
     }
@@ -66,15 +66,15 @@ export const recordsService = {
     const records = initializeRecords();
     const newRecord: MedicalRecord = {
       id: records.length > 0 ? Math.max(...records.map((r) => r.id)) + 1 : 1,
-      appointmentId: data.appointmentId,
-      doctorId: data.doctorId,
-      patientId: data.patientId,
+      appointment_id: data.appointmentId,
+      doctor_id: data.doctorId,
+      patient_id: data.patientId,
       diagnosis: data.diagnosis,
       notes: data.notes,
       symptoms: data.symptoms,
       treatment: data.treatment,
       prescription: data.prescription,
-      createdAt: new Date().toISOString(),
+      created_at: new Date().toISOString(),
     };
 
     records.push(newRecord);
@@ -83,10 +83,10 @@ export const recordsService = {
     return newRecord;
   },
 
-  async update(id: number, data: Partial<Omit<MedicalRecord, 'id' | 'appointmentId' | 'doctorId' | 'patientId' | 'createdAt'>>): Promise<MedicalRecord> {
+  async update(id: number, data: Partial<Omit<MedicalRecord, 'id' | 'appointment_id' | 'doctor_id' | 'patient_id' | 'created_at'>>): Promise<MedicalRecord> {
     const records = initializeRecords();
     const index = records.findIndex((r) => r.id === id);
-    
+
     if (index === -1) {
       throw new Error('Medical record not found');
     }

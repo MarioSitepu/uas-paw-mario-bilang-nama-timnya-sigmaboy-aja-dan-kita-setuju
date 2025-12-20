@@ -22,7 +22,7 @@ export const BookAppointment: React.FC = () => {
   const [reason, setReason] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [doctorSchedule, setDoctorSchedule] = useState<any>(null);
+  // const [doctorSchedule, setDoctorSchedule] = useState<any>(null);
   const [availableDates, setAvailableDates] = useState<string[]>([]);
   const { addToast } = useToastContext();
 
@@ -65,27 +65,27 @@ export const BookAppointment: React.FC = () => {
       // Fetch doctor's schedule
       const scheduleResponse = await authAPI.get(`/api/doctors/${selectedDoctor.id}/schedule`);
       const doctorScheduleData = scheduleResponse.data.schedule || {};
-      
+
       console.log('📅 Doctor schedule for available dates:', doctorScheduleData);
-      
+
       // Generate available dates for next 30 days based on schedule
       const availableDatesArray: string[] = [];
       const today = new Date();
-      
+
       for (let i = 0; i < 30; i++) {
         const date = new Date(today);
         date.setDate(date.getDate() + i);
-        
+
         const dayOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][date.getDay()];
         const daySchedule = doctorScheduleData[dayOfWeek];
-        
+
         // If doctor is available on this day of week, include the date
         if (daySchedule && daySchedule.available) {
           const dateString = date.toISOString().split('T')[0];
           availableDatesArray.push(dateString);
         }
       }
-      
+
       console.log('✅ Available dates:', availableDatesArray);
       setAvailableDates(availableDatesArray);
     } catch (error) {
@@ -108,7 +108,7 @@ export const BookAppointment: React.FC = () => {
       setIsLoading(true);
       const response = await authAPI.get('/api/doctors');
       let allDoctors = response.data.doctors || [];
-      
+
       // Convert backend doctor format to frontend format
       allDoctors = allDoctors.map((doc: any) => ({
         id: doc.id,
@@ -124,7 +124,7 @@ export const BookAppointment: React.FC = () => {
           end: Array.isArray(times) ? times[0]?.split('-')[1] : '17:00'
         })) : []
       }));
-      
+
       setDoctors(allDoctors);
       if (doctorIdParam) {
         const doctor = allDoctors.find((d: Doctor) => d.id === parseInt(doctorIdParam));
@@ -144,20 +144,20 @@ export const BookAppointment: React.FC = () => {
       // Fetch doctor's schedule
       const scheduleResponse = await authAPI.get(`/api/doctors/${selectedDoctor.id}/schedule`);
       const doctorScheduleData = scheduleResponse.data.schedule || {};
-      
+
       console.log('🔍 Full schedule response:', scheduleResponse.data);
       console.log('📋 Doctor schedule data:', doctorScheduleData);
-      
-      setDoctorSchedule(doctorScheduleData);
+
+      // setDoctorSchedule(doctorScheduleData);
 
       // Get day of week from selected date
       const date = new Date(selectedDate);
       const dayOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][date.getDay()];
-      
+
       console.log('📅 Selected date:', selectedDate, 'Day of week:', dayOfWeek);
-      
+
       const daySchedule = doctorScheduleData[dayOfWeek];
-      
+
       console.log('🗓️ Day schedule:', daySchedule);
 
       const slots: TimeSlot[] = [];
@@ -178,7 +178,7 @@ export const BookAppointment: React.FC = () => {
 
         // Parse break times - only if both are provided and non-empty
         const hasBreak = breakStart && breakStart.length > 0 && breakEnd && breakEnd.length > 0;
-        
+
         let breakStartHour = null;
         let breakStartMin = null;
         let breakEndHour = null;
@@ -206,9 +206,9 @@ export const BookAppointment: React.FC = () => {
           if (hasBreak && breakStartHour !== null && breakEndHour !== null && breakStartMin !== null && breakEndMin !== null) {
             const breakStartInMinutes = breakStartHour * 60 + breakStartMin;
             const breakEndInMinutes = breakEndHour * 60 + breakEndMin;
-            
+
             isDuringBreak = currentTimeInMinutes >= breakStartInMinutes && currentTimeInMinutes < breakEndInMinutes;
-            
+
             console.log(`  Time: ${currentTimeStr} (${currentTimeInMinutes}min) - Break: ${breakStartInMinutes}-${breakEndInMinutes}min - During break: ${isDuringBreak}`);
           }
 
@@ -232,7 +232,7 @@ export const BookAppointment: React.FC = () => {
 
       console.log('✅ Final time slots:', slots);
       setTimeSlots(slots);
-      
+
       if (slots.length === 0) {
         addToast('Doctor is not available on this date', 'info');
       }
@@ -276,7 +276,7 @@ export const BookAppointment: React.FC = () => {
         appointment_time: selectedTime,
         reason: reason || undefined,
       });
-      
+
       if (response.data.error) {
         addToast(response.data.error, 'error');
       } else {

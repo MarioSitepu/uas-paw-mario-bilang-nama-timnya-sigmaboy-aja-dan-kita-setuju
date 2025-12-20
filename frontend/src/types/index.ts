@@ -29,6 +29,7 @@ export interface Doctor {
   clinic: string;
   schedule: DoctorSchedule[];
   bio?: string;
+  profile_photo_url?: string;
 }
 
 export interface DoctorSchedule {
@@ -61,6 +62,8 @@ export interface MedicalRecord {
   treatment?: string;
   prescription?: string;
   created_at?: string;
+  doctor_id?: number;
+  patient_id?: number;
   patient?: {
     id: number;
     name: string;

@@ -5,7 +5,17 @@ import { useToastContext } from '../../components/ui/Toast';
 import { UserRole } from '../../types';
 
 export const Register: React.FC = () => {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string;
+    email: string;
+    password: string;
+    confirmPassword: string;
+    role: UserRole;
+    specialization: string;
+    license_number: string;
+    phone: string;
+    bio: string;
+  }>({
     name: '',
     email: '',
     password: '',
@@ -146,7 +156,7 @@ export const Register: React.FC = () => {
             {formData.role === UserRole.DOCTOR && (
               <div className="pt-4 border-t border-slate-200">
                 <h3 className="text-sm font-semibold text-slate-700 mb-4">Professional Information</h3>
-                
+
                 <div className="space-y-4">
                   <div>
                     <label htmlFor="specialization" className="block text-sm font-medium text-slate-700 mb-2">
