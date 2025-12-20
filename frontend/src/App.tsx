@@ -18,6 +18,7 @@ import { Unauthorized } from './pages/Unauthorized';
 // Shared Pages
 import { DashboardRedirect } from './pages/DashboardRedirect';
 import { Profile } from './pages/Profile';
+import { ArticleDetail } from './pages/ArticleDetail';
 
 // Patient Pages
 import { PatientDashboard } from './pages/patient/PatientDashboard';
@@ -49,155 +50,156 @@ function App() {
       <Router>
         <AuthProvider>
           <ToastProvider>
-          <Routes>
-            {/* Public Routes */}
-            <Route path="/" element={<Landing />} />
-            <Route path="/auth/login" element={<Login />} />
-            <Route path="/auth/register" element={<Register />} />
-            <Route path="/auth/complete-profile" element={<CompleteGoogleProfile />} />
+            <Routes>
+              {/* Public Routes */}
+              <Route path="/" element={<Landing />} />
+              <Route path="/auth/login" element={<Login />} />
+              <Route path="/auth/register" element={<Register />} />
+              <Route path="/auth/complete-profile" element={<CompleteGoogleProfile />} />
+              <Route path="/articles/:id" element={<ArticleDetail />} />
 
-            {/* Protected Routes - All Authenticated */}
-            <Route
-              path="/app"
-              element={
-                <RequireAuth>
-                  <AppLayout>
-                    <DashboardRedirect />
-                  </AppLayout>
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/app/profile"
-              element={
-                <RequireAuth>
-                  <AppLayout>
-                    <Profile />
-                  </AppLayout>
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/app/unauthorized"
-              element={
-                <RequireAuth>
-                  <AppLayout>
-                    <Unauthorized />
-                  </AppLayout>
-                </RequireAuth>
-              }
-            />
+              {/* Protected Routes - All Authenticated */}
+              <Route
+                path="/app"
+                element={
+                  <RequireAuth>
+                    <AppLayout>
+                      <DashboardRedirect />
+                    </AppLayout>
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/app/profile"
+                element={
+                  <RequireAuth>
+                    <AppLayout>
+                      <Profile />
+                    </AppLayout>
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/app/unauthorized"
+                element={
+                  <RequireAuth>
+                    <AppLayout>
+                      <Unauthorized />
+                    </AppLayout>
+                  </RequireAuth>
+                }
+              />
 
-            {/* Patient Routes */}
-            <Route
-              path="/app/patient/dashboard"
-              element={
-                <RequireRole allowedRoles={[UserRole.PATIENT]}>
-                  <AppLayout>
-                    <PatientDashboard />
-                  </AppLayout>
-                </RequireRole>
-              }
-            />
-            <Route
-              path="/app/patient/doctors"
-              element={
-                <RequireRole allowedRoles={[UserRole.PATIENT]}>
-                  <AppLayout>
-                    <DoctorsList />
-                  </AppLayout>
-                </RequireRole>
-              }
-            />
-            <Route
-              path="/app/patient/appointments"
-              element={
-                <RequireRole allowedRoles={[UserRole.PATIENT]}>
-                  <AppLayout>
-                    <AppointmentsList />
-                  </AppLayout>
-                </RequireRole>
-              }
-            />
-            <Route
-              path="/app/patient/appointments/new"
-              element={
-                <RequireRole allowedRoles={[UserRole.PATIENT]}>
-                  <AppLayout>
-                    <BookAppointment />
-                  </AppLayout>
-                </RequireRole>
-              }
-            />
-            <Route
-              path="/app/patient/appointments/:id"
-              element={
-                <RequireRole allowedRoles={[UserRole.PATIENT]}>
-                  <AppLayout>
-                    <AppointmentDetail />
-                  </AppLayout>
-                </RequireRole>
-              }
-            />
+              {/* Patient Routes */}
+              <Route
+                path="/app/patient/dashboard"
+                element={
+                  <RequireRole allowedRoles={[UserRole.PATIENT]}>
+                    <AppLayout>
+                      <PatientDashboard />
+                    </AppLayout>
+                  </RequireRole>
+                }
+              />
+              <Route
+                path="/app/patient/doctors"
+                element={
+                  <RequireRole allowedRoles={[UserRole.PATIENT]}>
+                    <AppLayout>
+                      <DoctorsList />
+                    </AppLayout>
+                  </RequireRole>
+                }
+              />
+              <Route
+                path="/app/patient/appointments"
+                element={
+                  <RequireRole allowedRoles={[UserRole.PATIENT]}>
+                    <AppLayout>
+                      <AppointmentsList />
+                    </AppLayout>
+                  </RequireRole>
+                }
+              />
+              <Route
+                path="/app/patient/appointments/new"
+                element={
+                  <RequireRole allowedRoles={[UserRole.PATIENT]}>
+                    <AppLayout>
+                      <BookAppointment />
+                    </AppLayout>
+                  </RequireRole>
+                }
+              />
+              <Route
+                path="/app/patient/appointments/:id"
+                element={
+                  <RequireRole allowedRoles={[UserRole.PATIENT]}>
+                    <AppLayout>
+                      <AppointmentDetail />
+                    </AppLayout>
+                  </RequireRole>
+                }
+              />
 
-            {/* Doctor Routes */}
-            <Route
-              path="/app/doctor/dashboard"
-              element={
-                <RequireRole allowedRoles={[UserRole.DOCTOR]}>
-                  <AppLayout>
-                    <DoctorDashboard />
-                  </AppLayout>
-                </RequireRole>
-              }
-            />
-            <Route
-              path="/app/doctor/schedule"
-              element={
-                <RequireRole allowedRoles={[UserRole.DOCTOR]}>
-                  <AppLayout>
-                    <Schedule />
-                  </AppLayout>
-                </RequireRole>
-              }
-            />
-            <Route
-              path="/app/doctor/schedule-settings"
-              element={
-                <RequireRole allowedRoles={[UserRole.DOCTOR]}>
-                  <AppLayout>
-                    <ScheduleSettings />
-                  </AppLayout>
-                </RequireRole>
-              }
-            />
-            <Route
-              path="/app/doctor/appointments/:id"
-              element={
-                <RequireRole allowedRoles={[UserRole.DOCTOR]}>
-                  <AppLayout>
-                    <DoctorAppointmentDetail />
-                  </AppLayout>
-                </RequireRole>
-              }
-            />
-            <Route
-              path="/app/doctor/records"
-              element={
-                <RequireRole allowedRoles={[UserRole.DOCTOR]}>
-                  <AppLayout>
-                    <MedicalRecords />
-                  </AppLayout>
-                </RequireRole>
-              }
-            />
+              {/* Doctor Routes */}
+              <Route
+                path="/app/doctor/dashboard"
+                element={
+                  <RequireRole allowedRoles={[UserRole.DOCTOR]}>
+                    <AppLayout>
+                      <DoctorDashboard />
+                    </AppLayout>
+                  </RequireRole>
+                }
+              />
+              <Route
+                path="/app/doctor/schedule"
+                element={
+                  <RequireRole allowedRoles={[UserRole.DOCTOR]}>
+                    <AppLayout>
+                      <Schedule />
+                    </AppLayout>
+                  </RequireRole>
+                }
+              />
+              <Route
+                path="/app/doctor/schedule-settings"
+                element={
+                  <RequireRole allowedRoles={[UserRole.DOCTOR]}>
+                    <AppLayout>
+                      <ScheduleSettings />
+                    </AppLayout>
+                  </RequireRole>
+                }
+              />
+              <Route
+                path="/app/doctor/appointments/:id"
+                element={
+                  <RequireRole allowedRoles={[UserRole.DOCTOR]}>
+                    <AppLayout>
+                      <DoctorAppointmentDetail />
+                    </AppLayout>
+                  </RequireRole>
+                }
+              />
+              <Route
+                path="/app/doctor/records"
+                element={
+                  <RequireRole allowedRoles={[UserRole.DOCTOR]}>
+                    <AppLayout>
+                      <MedicalRecords />
+                    </AppLayout>
+                  </RequireRole>
+                }
+              />
 
-            {/* 404 */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </ToastProvider>
-      </AuthProvider>
-    </Router>
+              {/* 404 */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </ToastProvider>
+        </AuthProvider>
+      </Router>
     </GoogleOAuthProvider>
   );
 }
