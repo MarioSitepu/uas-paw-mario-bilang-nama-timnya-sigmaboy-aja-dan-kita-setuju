@@ -39,86 +39,79 @@ export const DoctorCard: React.FC<DoctorCardProps> = ({ doctor, showBookButton =
   const scheduleDisplay = formatScheduleForDisplay();
 
   return (
-    <div className="group relative bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 border border-slate-100 flex flex-col h-full">
-      {/* Card Header with Blue Gradient */}
-      <div className="h-24 bg-gradient-to-r from-blue-700 to-blue-900 relative">
+    <div className="group relative bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 border border-slate-100 flex flex-col h-full hover:-translate-y-1">
+      {/* Compact Card Header */}
+      <div className="h-16 bg-gradient-to-r from-blue-700 to-blue-900 relative">
         <div className="absolute inset-0 bg-white/5 opacity-30 pattern-grid-lg"></div>
       </div>
 
       {/* Content Container */}
-      <div className="px-5 pb-5 flex-1 flex flex-col relative">
-        {/* Avatar - Overlapping Header */}
-        <div className="relative -mt-12 mb-3">
+      <div className="px-4 pb-4 flex-1 flex flex-col relative">
+        {/* Avatar - Compact Overlap */}
+        <div className="relative -mt-8 mb-2 flex justify-between items-end">
           <img
             src={doctor.photoUrl}
             alt={doctor.name}
-            className="w-24 h-24 rounded-2xl object-cover border-4 border-white shadow-md mx-auto sm:mx-0"
+            className="w-16 h-16 rounded-xl object-cover border-2 border-white shadow-md bg-white"
           />
+          <span className="flex items-center gap-1 text-xs font-bold bg-blue-50 text-blue-600 px-2 py-1 rounded-lg mb-1">
+            ⭐ {doctor.rating}
+          </span>
         </div>
 
         {/* Doctor Info */}
-        <div className="mb-4">
-          <h3 className="text-xl font-bold text-slate-900 mb-1">{doctor.name}</h3>
-          <p className="text-sm font-semibold text-blue-600 bg-blue-50 inline-block px-2 py-1 rounded-md mb-3">
+        <div className="mb-3">
+          <h3 className="text-lg font-bold text-slate-900 leading-tight mb-1">{doctor.name}</h3>
+          <p className="text-sm font-medium text-slate-500 mb-2 flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
             {doctor.specialization}
           </p>
 
-          <div className="flex flex-col gap-2 mb-4 text-sm text-slate-600">
-            <div className="flex items-center gap-2">
-              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-yellow-100 text-yellow-600">
-                ⭐
-              </span>
-              <span className="font-bold text-slate-900">{doctor.rating}</span>
-              <span className="text-slate-400">Rating</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-slate-600">
-                📍
-              </span>
-              <span className="font-medium">{doctor.clinic}</span>
-            </div>
+          <div className="flex items-center gap-1 text-xs text-slate-400 mb-3">
+            <span>📍</span>
+            <span className="truncate">{doctor.clinic}</span>
           </div>
 
           {doctor.bio && (
-            <p className="text-sm text-slate-500 leading-relaxed mb-4 line-clamp-2">
+            <p className="text-xs text-slate-500 leading-relaxed mb-3 line-clamp-2">
               {doctor.bio}
             </p>
           )}
         </div>
 
-        {/* Schedule & Action - Pushed to bottom */}
-        <div className="mt-auto space-y-3">
-          {/* Schedule Dropdown */}
-          <div className="border border-slate-200 rounded-xl overflow-hidden bg-slate-50/50">
+        {/* Schedule & Action */}
+        <div className="mt-auto space-y-2">
+          {/* Schedule Dropdown - Compact */}
+          <div className="border border-slate-200 rounded-lg overflow-hidden bg-slate-50/50">
             <button
               onClick={() => setIsScheduleExpanded(!isScheduleExpanded)}
-              className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-100 transition-colors group/schedule"
+              className="w-full px-3 py-2 flex items-center justify-between hover:bg-slate-100 transition-colors group/schedule"
             >
               <div className="flex items-center gap-2">
-                <span className="text-lg">📅</span>
-                <span className="text-sm font-semibold text-slate-700">Available Schedule</span>
+                <span className="text-sm">📅</span>
+                <span className="text-xs font-semibold text-slate-700">Schedule</span>
               </div>
               <ChevronDown
-                size={16}
+                size={14}
                 className={`text-slate-500 transition-transform duration-300 ${isScheduleExpanded ? 'transform rotate-180' : 'group-hover/schedule:translate-y-0.5'
                   }`}
               />
             </button>
 
             {isScheduleExpanded && (
-              <div className="px-4 py-3 bg-white border-t border-slate-200 space-y-2 animate-slide-down">
+              <div className="px-3 py-2 bg-white border-t border-slate-200 space-y-1 animate-slide-down">
                 {scheduleDisplay.length > 0 ? (
                   scheduleDisplay.map((sched, idx) => (
                     <div
                       key={idx}
-                      className="flex justify-between items-center text-xs p-2 rounded-lg bg-blue-50/50 hover:bg-blue-50 transition-colors"
+                      className="flex justify-between items-center text-[10px] p-1.5 rounded bg-blue-50/30"
                     >
                       <span className="font-semibold text-slate-700">{sched.day}</span>
-                      <span className="font-bold text-blue-600 bg-white px-2 py-0.5 rounded shadow-sm border border-blue-100">{sched.time}</span>
+                      <span className="font-bold text-blue-600">{sched.time}</span>
                     </div>
                   ))
                 ) : (
-                  <p className="text-xs text-slate-500 text-center py-2 italic">No schedule available</p>
+                  <p className="text-[10px] text-slate-400 text-center italic">None available</p>
                 )}
               </div>
             )}
@@ -127,9 +120,9 @@ export const DoctorCard: React.FC<DoctorCardProps> = ({ doctor, showBookButton =
           {showBookButton && (
             <Link
               to={`/app/patient/appointments/new?doctorId=${doctor.id}`}
-              className="block w-full text-center px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl font-bold shadow-lg shadow-blue-500/30 hover:shadow-blue-600/40 transition-all transform hover:-translate-y-0.5"
+              className="block w-full text-center px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-bold text-sm shadow-md shadow-blue-500/20 transition-all transform hover:-translate-y-0.5"
             >
-              Book Appointment
+              Book
             </Link>
           )}
         </div>
