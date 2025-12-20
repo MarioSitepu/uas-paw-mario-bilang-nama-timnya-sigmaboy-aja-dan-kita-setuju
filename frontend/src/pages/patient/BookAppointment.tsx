@@ -19,6 +19,7 @@ export const BookAppointment: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedTime, setSelectedTime] = useState('');
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
+  const [availableDates, setAvailableDates] = useState<string[]>([]);
   const [reason, setReason] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
@@ -34,6 +35,10 @@ export const BookAppointment: React.FC = () => {
       const response = await doctorsAPI.getAll();
       const rawDoctors = response.data.doctors || [];
       const allDoctors = rawDoctors.map((doc: any) => {
+        // Keep original schedule for date generation
+        const originalSchedule = doc.schedule;
+        
+        // Also create scheduleArray for display purposes
         let scheduleArray: any[] = [];
         if (doc.schedule && !Array.isArray(doc.schedule)) {
           const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
@@ -49,7 +54,7 @@ export const BookAppointment: React.FC = () => {
         } else if (Array.isArray(doc.schedule)) {
           scheduleArray = doc.schedule;
         }
-        return { ...doc, schedule: scheduleArray };
+        return { ...doc, schedule: scheduleArray, originalSchedule };
       });
       setDoctors(allDoctors);
       if (doctorIdParam) {
@@ -62,6 +67,58 @@ export const BookAppointment: React.FC = () => {
       setIsLoading(false);
     }
   }, [doctorIdParam]);
+
+  // Generate available dates based on doctor schedule
+  const generateAvailableDates = useCallback((doctor: Doctor | null): string[] => {
+    if (!doctor) {
+      return []; // If no doctor, return empty (will allow all future dates)
+    }
+
+    const dates: string[] = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Get available days from schedule
+    const availableDays: string[] = [];
+    
+    // Use originalSchedule if available (from loadDoctors), otherwise use schedule
+    const scheduleObj = (doctor as any).originalSchedule || doctor.schedule;
+    
+    if (scheduleObj && typeof scheduleObj === 'object' && !Array.isArray(scheduleObj)) {
+      Object.entries(scheduleObj).forEach(([day, dayData]: [string, any]) => {
+        if (dayData && typeof dayData === 'object' && dayData.available === true) {
+          // Normalize day name to lowercase
+          const normalizedDay = day.toLowerCase();
+          availableDays.push(normalizedDay);
+        }
+      });
+    }
+
+    if (availableDays.length === 0) {
+      return []; // No available days - will allow all future dates if empty
+    }
+
+    // Generate dates for next 60 days
+    for (let i = 0; i < 60; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() + i);
+      
+      // Get day name (0 = Sunday, 1 = Monday, etc.)
+      const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      const dayName = dayNames[date.getDay()];
+      
+      // Check if this day is available in doctor's schedule
+      if (availableDays.includes(dayName)) {
+        // Format as YYYY-MM-DD using local timezone (not UTC)
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const dayNum = String(date.getDate()).padStart(2, '0');
+        dates.push(`${year}-${month}-${dayNum}`);
+      }
+    }
+
+    return dates;
+  }, []);
 
   const loadTimeSlots = useCallback(async () => {
     if (!selectedDoctor || !selectedDate) {
@@ -109,6 +166,22 @@ export const BookAppointment: React.FC = () => {
       }
     }
   }, [doctorIdParam, doctors]);
+
+  // Generate available dates when doctor is selected
+  useEffect(() => {
+    if (selectedDoctor) {
+      const dates = generateAvailableDates(selectedDoctor);
+      setAvailableDates(dates);
+      // Reset selected date if current selection is not available
+      if (selectedDate && dates.length > 0 && !dates.includes(selectedDate)) {
+        setSelectedDate('');
+        setSelectedTime('');
+        setTimeSlots([]);
+      }
+    } else {
+      setAvailableDates([]);
+    }
+  }, [selectedDoctor, generateAvailableDates]);
 
   useEffect(() => {
     if (selectedDoctor && selectedDate) {
@@ -225,6 +298,7 @@ export const BookAppointment: React.FC = () => {
           onChange={setSelectedDate}
           required
           min={new Date().toISOString().split('T')[0]}
+          availableDates={selectedDoctor ? availableDates : []}
         />
 
         {/* Time Slot Selection */}
@@ -245,7 +319,11 @@ export const BookAppointment: React.FC = () => {
             <h3 className="text-sm font-semibold text-green-800 mb-2">Ringkasan Janji Temu</h3>
             <div className="space-y-1 text-sm text-green-700">
               <p><span className="font-medium">Dokter:</span> {selectedDoctor.name}</p>
-              <p><span className="font-medium">Tanggal:</span> {new Date(selectedDate).toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+              <p><span className="font-medium">Tanggal:</span> {(() => {
+                const [year, month, day] = selectedDate.split('-').map(Number);
+                const date = new Date(year, month - 1, day);
+                return date.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+              })()}</p>
               <p><span className="font-medium">Jam:</span> {selectedTime} WIB</p>
             </div>
           </div>

@@ -44,7 +44,9 @@ export const DatePicker: React.FC<DatePickerProps> = ({
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '';
-    const date = new Date(dateStr);
+    // Parse YYYY-MM-DD format to avoid timezone issues
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
     return date.toLocaleDateString('id-ID', {
       weekday: 'long',
       year: 'numeric',
@@ -70,13 +72,18 @@ export const DatePicker: React.FC<DatePickerProps> = ({
   };
 
   const handleDateClick = (day: number) => {
-    const selectedDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
-    const dateStr = selectedDate.toISOString().split('T')[0];
+    // Use local date to avoid timezone issues
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    const selectedDate = new Date(year, month, day);
+    
+    // Format as YYYY-MM-DD using local timezone (not UTC)
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     
     // Check if date is not in the past
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const clickedDate = new Date(selectedDate);
+    const clickedDate = new Date(year, month, day);
     clickedDate.setHours(0, 0, 0, 0);
     
     if (clickedDate < today) {
@@ -175,19 +182,33 @@ export const DatePicker: React.FC<DatePickerProps> = ({
                   return <div key={`empty-${idx}`} className="h-10" />;
                 }
 
-                const selectedDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
-                const dateStr = selectedDate.toISOString().split('T')[0];
+                // Use local date to avoid timezone issues
+                const year = currentMonth.getFullYear();
+                const month = currentMonth.getMonth();
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                 
                 // Check if date is in the past
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
-                const clickedDate = new Date(selectedDate);
+                const clickedDate = new Date(year, month, day);
                 clickedDate.setHours(0, 0, 0, 0);
                 const isPast = clickedDate < today;
                 
                 const isSelected = value === dateStr;
                 // Disable if past or if availableDates is provided and date is not in the list
                 const isDisabled = isPast || (availableDates.length > 0 && !isDateAvailable(dateStr));
+
+                // If disabled and not past, make it completely blank (not clickable)
+                if (isDisabled && !isPast && availableDates.length > 0) {
+                  return (
+                    <div
+                      key={day}
+                      className="h-10 rounded text-sm text-slate-300 flex items-center justify-center"
+                    >
+                      {day}
+                    </div>
+                  );
+                }
 
                 return (
                   <button
