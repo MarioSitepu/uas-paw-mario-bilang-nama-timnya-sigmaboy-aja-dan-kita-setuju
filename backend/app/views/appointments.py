@@ -325,6 +325,26 @@ def update_appointment(request):
                         appointment_id=appointment.id
                     )
                     session.add(notification)
+                
+                # Notify patient if completed
+                if data['status'] == 'completed' and old_status != 'completed':
+                    notification = Notification(
+                        user_id=appointment.patient_id,
+                        title="Appointment Completed",
+                        message=f"Your appointment with Dr. {appointment.doctor.user.name if appointment.doctor and appointment.doctor.user else 'your doctor'} on {appointment.appointment_date} has been marked as completed.",
+                        appointment_id=appointment.id
+                    )
+                    session.add(notification)
+                
+                # Notify patient if cancelled by doctor
+                if data['status'] == 'cancelled' and old_status != 'cancelled':
+                    notification = Notification(
+                        user_id=appointment.patient_id,
+                        title="Appointment Cancelled",
+                        message=f"Your appointment with Dr. {appointment.doctor.user.name if appointment.doctor and appointment.doctor.user else 'your doctor'} on {appointment.appointment_date} at {appointment.appointment_time} has been cancelled.",
+                        appointment_id=appointment.id
+                    )
+                    session.add(notification)
         
         # Update jadwal (reschedule) - jika masih pending atau confirmed
         can_modify = appointment.can_be_modified()
@@ -426,7 +446,29 @@ def cancel_appointment(request):
         
         print(f"DEBUG DELETE: Setting appointment status to cancelled")
         appointment.status = 'cancelled'
+        
+        # Notify doctor when patient cancels
+        if is_patient and appointment.doctor and appointment.doctor.user:
+            notification = Notification(
+                user_id=appointment.doctor.user.id,
+                title="Appointment Cancelled by Patient",
+                message=f"Patient {current_user.name} has cancelled their appointment scheduled for {appointment.appointment_date} at {appointment.appointment_time}.",
+                appointment_id=appointment.id
+            )
+            session.add(notification)
+        
+        # Notify patient when doctor/admin cancels
+        if (is_doctor or is_admin) and appointment.patient_id:
+            notification = Notification(
+                user_id=appointment.patient_id,
+                title="Appointment Cancelled",
+                message=f"Your appointment with Dr. {appointment.doctor.user.name if appointment.doctor and appointment.doctor.user else 'your doctor'} on {appointment.appointment_date} at {appointment.appointment_time} has been cancelled.",
+                appointment_id=appointment.id
+            )
+            session.add(notification)
+        
         session.commit()
+
         
         print(f"DEBUG DELETE: Successfully cancelled appointment {appointment_id}")
         return {'message': 'Appointment berhasil dibatalkan'}
