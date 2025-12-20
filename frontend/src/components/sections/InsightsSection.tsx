@@ -162,23 +162,25 @@ export const InsightsSection: React.FC = () => {
                 className="w-full h-64 sm:h-72 bg-cover bg-center shrink-0"
                 style={{ backgroundImage: `url(${selectedArticle.image})` }}
               >
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
-                <div className="absolute bottom-6 left-6 right-6 text-white">
-                  <span className="inline-block px-3 py-1 bg-blue-600 rounded-full text-xs font-bold mb-3">
-                    {selectedArticle.category || 'Kesehatan'}
-                  </span>
-                  <motion.h3
-                    layoutId={`title-${selectedArticle.id}`}
-                    className="text-2xl sm:text-3xl font-bold leading-tight"
-                  >
-                    {selectedArticle.title}
-                  </motion.h3>
-                </div>
+                {/* Simplified overlay just for visual depth, no text */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
               </motion.div>
 
               {/* Modal Content */}
               <div className="p-6 md:p-8 overflow-y-auto">
-                <div className="flex items-center gap-6 text-sm text-gray-500 mb-6">
+                <div className="mb-6">
+                  <span className="inline-block px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-bold mb-3">
+                    {selectedArticle.category || 'Kesehatan'}
+                  </span>
+                  <motion.h3
+                    layoutId={`title-${selectedArticle.id}`}
+                    className="text-2xl sm:text-3xl font-bold leading-tight text-gray-900"
+                  >
+                    {selectedArticle.title}
+                  </motion.h3>
+                </div>
+
+                <div className="flex items-center gap-6 text-sm text-gray-500 mb-6 pb-6 border-b border-gray-100">
                   <span className="flex items-center gap-2">
                     <Calendar size={16} className="text-blue-600" />
                     {selectedArticle.date}
