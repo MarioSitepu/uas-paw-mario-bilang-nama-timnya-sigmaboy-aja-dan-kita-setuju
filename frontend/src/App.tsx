@@ -91,12 +91,27 @@ function App() {
                   </RequireAuth>
                 }
               />
+              import {NotificationsPage} from './pages/NotificationsPage';
+              import ChatPage from './pages/ChatPage';
+
+              // ... existing code ...
+
               <Route
                 path="/app/notifications"
                 element={
                   <RequireAuth>
                     <AppLayout>
                       <NotificationsPage />
+                    </AppLayout>
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/app/chat"
+                element={
+                  <RequireAuth>
+                    <AppLayout>
+                      <ChatPage />
                     </AppLayout>
                   </RequireAuth>
                 }

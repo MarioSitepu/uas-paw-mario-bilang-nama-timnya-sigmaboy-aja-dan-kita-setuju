@@ -166,4 +166,12 @@ export const notificationsAPI = {
   readOne: (id: number) => api.put(`/api/notifications/${id}/read`),
 };
 
+// ==================== CHAT API ====================
+export const chatAPI = {
+  getConversations: () => api.get('/api/chat/conversations'),
+  getMessages: (partnerId: number) => api.get(`/api/chat/${partnerId}/messages`),
+  sendMessage: (recipientId: number, content: string) => api.post('/api/chat/send', { recipient_id: recipientId, content }),
+  getUnreadCount: () => api.get('/api/chat/unread'),
+};
+
 export default api;

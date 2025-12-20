@@ -12,9 +12,10 @@ import {
   Menu,
   X,
   Activity,
-  Bell
+  Bell,
+  MessageCircle
 } from 'lucide-react';
-import { notificationsAPI } from '../../services/api';
+import { notificationsAPI, chatAPI } from '../../services/api';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -27,6 +28,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [topBarVisible, setTopBarVisible] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
   const lastScrollYRef = useRef(0);
 
   const handleLogout = () => {
@@ -74,19 +76,30 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
   // Fetch unread notification count
   useEffect(() => {
-    const fetchUnreadCount = async () => {
+    const fetchCounts = async () => {
       if (user) {
         try {
-          const response = await notificationsAPI.getAll();
-          setUnreadCount(response.data.unread_count || 0);
+          // Fetch notifications count
+          const notifResponse = await notificationsAPI.getAll();
+          // Calculate unread if backend returns list, or use property if available
+          // Based on DoctorDashboard logic, it returns list.
+          const notifs = notifResponse.data.notifications || notifResponse.data;
+          if (Array.isArray(notifs)) {
+            setUnreadCount(notifs.filter((n: any) => !n.is_read).length);
+          }
+
+          // Fetch chat count
+          const chatResponse = await chatAPI.getUnreadCount();
+          setUnreadChatCount(chatResponse.data.count || 0);
+
         } catch (error) {
-          console.error('Failed to fetch notification count:', error);
+          console.error('Failed to fetch counts:', error);
         }
       }
     };
 
-    fetchUnreadCount();
-    const interval = setInterval(fetchUnreadCount, 30000);
+    fetchCounts();
+    const interval = setInterval(fetchCounts, 30000);
     return () => clearInterval(interval);
   }, [user]);
 
@@ -95,6 +108,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     { path: '/app/patient/doctors', label: 'Find Doctors', icon: Stethoscope },
     { path: '/app/patient/appointments', label: 'My Appointments', icon: Calendar },
     { path: '/app/notifications', label: 'Notifications', icon: Bell, isNotification: true },
+    { path: '/app/chat', label: 'Pesan', icon: MessageCircle, badge: unreadChatCount },
     { path: '/app/profile', label: 'Profile', icon: User },
   ];
 
@@ -103,6 +117,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     { path: '/app/doctor/schedule', label: 'Schedule', icon: Calendar },
     { path: '/app/doctor/records', label: 'Medical Records', icon: ClipboardList },
     { path: '/app/notifications', label: 'Notifications', icon: Bell, isNotification: true },
+    { path: '/app/chat', label: 'Pesan', icon: MessageCircle, badge: unreadChatCount },
     { path: '/app/profile', label: 'Profile', icon: User },
   ];
 
@@ -167,6 +182,12 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                   {isNotificationItem && unreadCount > 0 && (
                     <span className="ml-auto flex items-center justify-center min-w-[24px] h-6 px-2 bg-red-500 text-white text-xs font-bold rounded-full shadow-sm">
                       {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
+                  {/* Chat Badge */}
+                  {(item as any).badge > 0 && (
+                    <span className="ml-auto flex items-center justify-center min-w-[24px] h-6 px-2 bg-blue-500 text-white text-xs font-bold rounded-full shadow-sm animate-pulse">
+                      {(item as any).badge > 99 ? '99+' : (item as any).badge}
                     </span>
                   )}
                 </Link>
