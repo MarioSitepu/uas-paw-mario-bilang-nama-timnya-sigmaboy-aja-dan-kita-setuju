@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Search, Phone, Video, MoreVertical, ArrowLeft, Image as ImageIcon, Paperclip } from 'lucide-react';
+import { Send, Search, Phone, Video, MoreVertical, ArrowLeft, Image as ImageIcon, Paperclip, MessageSquare } from 'lucide-react';
 import { chatAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
@@ -123,8 +123,8 @@ const ChatPage: React.FC = () => {
                                 key={partner.id}
                                 onClick={() => setSelectedPartner(partner)}
                                 className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all ${selectedPartner?.id === partner.id
-                                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
-                                        : 'hover:bg-white hover:shadow-md text-slate-700'
+                                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
+                                    : 'hover:bg-white hover:shadow-md text-slate-700'
                                     }`}
                             >
                                 <div className="relative">
@@ -219,8 +219,8 @@ const ChatPage: React.FC = () => {
                                     <div className={`max-w-[70%] sm:max-w-[60%] space-y-1 ${isMe ? 'items-end flex flex-col' : 'items-start'}`}>
                                         <div
                                             className={`text-sm px-4 py-2.5 rounded-2xl shadow-sm relative ${isMe
-                                                    ? 'bg-blue-600 text-white rounded-br-sm'
-                                                    : 'bg-white text-slate-700 rounded-bl-sm border border-slate-100'
+                                                ? 'bg-blue-600 text-white rounded-br-sm'
+                                                : 'bg-white text-slate-700 rounded-bl-sm border border-slate-100'
                                                 }`}
                                         >
                                             {msg.content}
@@ -274,7 +274,7 @@ const ChatPage: React.FC = () => {
             ) : (
                 <div className="hidden md:flex flex-1 flex-col items-center justify-center bg-slate-50 text-slate-400">
                     <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mb-4 animate-pulse">
-                        <MessageCircle size={48} className="text-blue-500" />
+                        <MessageSquare size={48} className="text-blue-500" />
                     </div>
                     <p className="text-lg font-medium text-slate-600">Pilih percakapan untuk memulai chat</p>
                     <p className="text-sm mt-2">Kirim pesan dan konsultasi dengan dokter/pasien Anda</p>

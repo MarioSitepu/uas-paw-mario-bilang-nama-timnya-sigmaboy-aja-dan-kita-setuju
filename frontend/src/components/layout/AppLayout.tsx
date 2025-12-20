@@ -13,7 +13,7 @@ import {
   X,
   Activity,
   Bell,
-  MessageCircle
+  MessageSquare
 } from 'lucide-react';
 import { notificationsAPI, chatAPI } from '../../services/api';
 
@@ -108,7 +108,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     { path: '/app/patient/doctors', label: 'Find Doctors', icon: Stethoscope },
     { path: '/app/patient/appointments', label: 'My Appointments', icon: Calendar },
     { path: '/app/notifications', label: 'Notifications', icon: Bell, isNotification: true },
-    { path: '/app/chat', label: 'Pesan', icon: MessageCircle, badge: unreadChatCount },
+    { path: '/app/chat', label: 'Pesan', icon: MessageSquare, badge: unreadChatCount },
     { path: '/app/profile', label: 'Profile', icon: User },
   ];
 
@@ -117,7 +117,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     { path: '/app/doctor/schedule', label: 'Schedule', icon: Calendar },
     { path: '/app/doctor/records', label: 'Medical Records', icon: ClipboardList },
     { path: '/app/notifications', label: 'Notifications', icon: Bell, isNotification: true },
-    { path: '/app/chat', label: 'Pesan', icon: MessageCircle, badge: unreadChatCount },
+    { path: '/app/chat', label: 'Pesan', icon: MessageSquare, badge: unreadChatCount },
     { path: '/app/profile', label: 'Profile', icon: User },
   ];
 
