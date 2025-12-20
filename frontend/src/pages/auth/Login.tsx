@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import careHubLogo from '../../assets/images/carehub-logo.png';
 import { GoogleLogin } from '@react-oauth/google';
 import { useAuth } from '../../context/AuthContext';
 import { useToastContext } from '../../components/ui/Toast';
 import { UserRole } from '../../types';
-import { User, Stethoscope, Sparkles } from 'lucide-react';
+import { User, Stethoscope } from 'lucide-react';
 
 export const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -68,11 +69,11 @@ export const Login: React.FC = () => {
           addToast('Please select your role first', 'error');
           return;
         }
-        
+
         console.log('🔐 Google credential received, calling googleLogin with role:', selectedRole);
         const result = await googleLogin(credentialResponse.credential, selectedRole);
         console.log('✅ googleLogin result:', result);
-        
+
         // result.isNewUser tells us what to do
         if (result.isNewUser) {
           console.log('👤 New user detected, navigating to profile setup');
@@ -112,8 +113,12 @@ export const Login: React.FC = () => {
       <div className="w-full max-w-4xl relative z-10">
         {/* Header */}
         <div className="text-center mb-8 animate-fade-in">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-blue rounded-3xl shadow-2xl mb-6 transform hover:scale-110 transition-transform duration-300">
-            <Sparkles className="w-10 h-10 text-white" />
+          <div className="flex justify-center mb-6">
+            <img
+              src={careHubLogo}
+              alt="CareHub Logo"
+              className="h-24 w-auto object-contain drop-shadow-xl hover:scale-105 transition-transform duration-300"
+            />
           </div>
           <h1 className="text-4xl md:text-5xl font-extrabold text-slate-800 mb-3">
             Selamat Datang Kembali
@@ -190,11 +195,10 @@ export const Login: React.FC = () => {
 
             {/* Role Badge */}
             <div className="flex items-center justify-center mb-6">
-              <div className={`inline-flex items-center gap-3 px-6 py-3 rounded-full ${
-                selectedRole === UserRole.PATIENT 
-                  ? 'bg-blue-100 text-blue-700' 
-                  : 'bg-emerald-100 text-emerald-700'
-              }`}>
+              <div className={`inline-flex items-center gap-3 px-6 py-3 rounded-full ${selectedRole === UserRole.PATIENT
+                ? 'bg-blue-100 text-blue-700'
+                : 'bg-emerald-100 text-emerald-700'
+                }`}>
                 {selectedRole === UserRole.PATIENT ? (
                   <>
                     <User className="w-5 h-5" />
@@ -249,11 +253,10 @@ export const Login: React.FC = () => {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className={`w-full py-4 rounded-xl font-bold text-white shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02] active:scale-[0.98] ${
-                  selectedRole === UserRole.PATIENT
-                    ? 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800'
-                    : 'bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800'
-                }`}
+                className={`w-full py-4 rounded-xl font-bold text-white shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02] active:scale-[0.98] ${selectedRole === UserRole.PATIENT
+                  ? 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800'
+                  : 'bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800'
+                  }`}
               >
                 {isSubmitting ? (
                   <span className="flex items-center justify-center gap-2">
@@ -266,31 +269,42 @@ export const Login: React.FC = () => {
               </button>
             </form>
 
-            <div className="mt-6">
+            <div className="mt-8">
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-slate-300"></div>
+                  <div className="w-full border-t border-slate-200"></div>
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-4 bg-white/80 backdrop-blur-sm text-slate-500">Atau lanjutkan dengan</span>
+                  <span className="px-4 bg-white text-slate-500 font-medium">Atau lanjutkan dengan</span>
                 </div>
               </div>
+
               <div className="mt-6 flex justify-center">
-                <GoogleLogin
-                  onSuccess={handleGoogleSuccess}
-                  onError={() => {
-                    setError('Google Login Failed');
-                    addToast('Google Login Failed', 'error');
-                  }}
-                />
+                <div className="transform hover:scale-[1.02] transition-transform duration-200">
+                  <GoogleLogin
+                    onSuccess={handleGoogleSuccess}
+                    onError={() => {
+                      setError('Google Login Failed');
+                      addToast('Google Login Failed', 'error');
+                    }}
+                    theme="outline"
+                    shape="pill"
+                    size="large"
+                    width="100%"
+                  />
+                </div>
               </div>
             </div>
 
-            <div className="mt-6 text-center">
-              <p className="text-sm text-slate-600">
+            <div className="mt-8 pt-6 border-t border-slate-100 text-center">
+              <p className="text-slate-600">
                 Belum punya akun?{' '}
-                <Link to="/auth/register" className="text-pastel-blue-600 font-semibold hover:underline hover:text-pastel-blue-700">
+                <Link
+                  to="/auth/register"
+                  className="font-bold text-blue-600 hover:text-blue-700 hover:underline transition-all inline-flex items-center gap-1 group"
+                >
                   Daftar sekarang
+                  <span className="group-hover:translate-x-1 transition-transform">→</span>
                 </Link>
               </p>
             </div>
