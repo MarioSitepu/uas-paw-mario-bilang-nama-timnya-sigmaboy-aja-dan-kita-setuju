@@ -95,12 +95,7 @@ export const WhatWeOfferSection: React.FC = () => {
                 </div>
 
                 {/* Overlay Text Box */}
-                <div className="absolute bottom-6 lg:bottom-8 left-6 lg:left-8 right-6 lg:right-8 bg-gradient-to-r from-blue-600 via-blue-500 to-blue-700 rounded-2xl p-6 lg:p-8 text-white shadow-2xl transform group-hover:scale-105 transition-transform duration-300">
-                  <p className="text-lg lg:text-xl leading-relaxed font-semibold">
-                    Kami berkomitmen untuk memberikan standar perawatan medis tertinggi dengan kepekaan.
-                  </p>
-                  {/* Values list removed here as requested to prevent overlap */}
-                </div>
+                {/* Overlay Text Box removed */}
               </div>
             </div>
           </div>
