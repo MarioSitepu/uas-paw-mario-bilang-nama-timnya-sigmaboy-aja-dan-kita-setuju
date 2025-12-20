@@ -88,6 +88,9 @@ export const doctorsAPI = {
   updateSchedule: (id: number, schedule: any) =>
     api.put(`/api/doctors/${id}/schedule`, { schedule }),
 
+  getSlots: (id: number, date: string) => 
+    api.get(`/api/doctors/${id}/slots`, { params: { date } }),
+
   getSpecializations: () => api.get('/api/specializations'),
 };
 

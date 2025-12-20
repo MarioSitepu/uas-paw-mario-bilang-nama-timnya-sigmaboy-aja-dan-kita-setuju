@@ -7,6 +7,7 @@ interface TimeSlotPickerProps {
   onSelect: (time: string) => void;
   className?: string;
   label?: string;
+  isLoading?: boolean;
 }
 
 export const TimeSlotPicker: React.FC<TimeSlotPickerProps> = ({
@@ -15,7 +16,21 @@ export const TimeSlotPicker: React.FC<TimeSlotPickerProps> = ({
   onSelect,
   className = '',
   label,
+  isLoading = false,
 }) => {
+  if (isLoading) {
+    return (
+      <div className={className}>
+        {label && <label className="block text-sm font-medium text-slate-700 mb-2">{label}</label>}
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="h-10 bg-slate-200 animate-pulse rounded-lg" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   if (slots.length === 0) {
     return (
       <div className={className}>

@@ -9,6 +9,7 @@ interface DatePickerProps {
   className?: string;
   label?: string;
   required?: boolean;
+  id?: string;
   availableDates?: string[]; // Array of dates in YYYY-MM-DD format that ARE available
 }
 
@@ -20,6 +21,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
   className = '',
   label,
   required = false,
+  id: _id,
   availableDates = [],
 }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());

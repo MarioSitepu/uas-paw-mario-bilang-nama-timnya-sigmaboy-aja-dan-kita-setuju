@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { UserRole } from '../../types';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -71,7 +72,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     { path: '/app/profile', label: 'Profile', icon: '👤' },
   ];
 
-  const menu = user?.role === 'PATIENT' ? patientMenu : doctorMenu;
+  const menu = user?.role === UserRole.PATIENT ? patientMenu : doctorMenu;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20">
