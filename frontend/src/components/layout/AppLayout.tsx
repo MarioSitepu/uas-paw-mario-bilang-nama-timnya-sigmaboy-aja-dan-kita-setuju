@@ -74,7 +74,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const menu = user?.role === 'PATIENT' ? patientMenu : doctorMenu;
 
   return (
-    <div className="min-h-screen bg-gradient-pastel">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20">
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div
