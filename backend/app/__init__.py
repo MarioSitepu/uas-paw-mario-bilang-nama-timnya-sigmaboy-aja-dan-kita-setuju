@@ -165,17 +165,31 @@ def main(global_config, **settings):
         # Supabase connection handling
         # NOTE: Supabase free tier only supports IPv6 for direct connections
         # Render is IPv4-only, so MUST use Connection Pooler (port 6543) or Transaction Pooler
-        if 'supabase.co' in database_url:
+        if 'supabase.co' in database_url or 'pooler.supabase.com' in database_url or 'supabase.com' in database_url:
             # Check if using direct connection (port 5432) - this won't work on IPv4-only networks
-            from urllib.parse import urlparse
+            from urllib.parse import urlparse, urlunparse
             parsed = urlparse(database_url)
             port = parsed.port or 5432
             
-            if port == 5432:
+            if port != 6543:
                 import sys
-                print(f"[MAIN] WARNING: Direct connection (port 5432) detected. Supabase free tier only supports IPv6 for direct connections.", file=sys.stderr, flush=True)
-                print(f"[MAIN] Render is IPv4-only. Please use Connection Pooler (port 6543) instead.", file=sys.stderr, flush=True)
-                print(f"[MAIN] Get Connection Pooler URL from Supabase Dashboard → Settings → Database → Connection Pooling", file=sys.stderr, flush=True)
+                print(f"[MAIN] Converting Supabase connection from port {port} to Connection Pooler port 6543...", file=sys.stderr, flush=True)
+                
+                # Build new netloc with port 6543
+                if '@' in parsed.netloc:
+                    # Has authentication: user:pass@host:port
+                    auth_part, host_part = parsed.netloc.split('@', 1)
+                    hostname = host_part.split(':')[0]  # Remove existing port if any
+                    new_netloc = f"{auth_part}@{hostname}:6543"
+                else:
+                    # No authentication: host:port
+                    hostname = parsed.netloc.split(':')[0]  # Remove existing port if any
+                    new_netloc = f"{hostname}:6543"
+                
+                # Reconstruct URL with new netloc
+                new_parsed = parsed._replace(netloc=new_netloc)
+                database_url = urlunparse(new_parsed)
+                print(f"[MAIN] Using Connection Pooler URL (port 6543)", file=sys.stderr, flush=True)
             
             # Add connection parameters if not present
             # Increase timeout for Supabase connections (30 seconds)
