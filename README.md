@@ -587,19 +587,21 @@ Semua endpoint mengembalikan error dalam format:
 ## 📸 Screenshot Aplikasi
 
 ### Landing Page
-![Landing Page](https://via.placeholder.com/800x400?text=Landing+Page)
+![Landing Page](img/landingpage.png)
 
 ### Login Page
-![Login Page](https://via.placeholder.com/800x400?text=Login+Page)
+![Login Page 1](/uas-paw-mario-bilang-nama-timnya-sigmaboy-aja-dan-kita-setuju/img/login1.png)
+
+![Login Page 2](/uas-paw-mario-bilang-nama-timnya-sigmaboy-aja-dan-kita-setuju/img/login2.png)
 
 ### Patient Dashboard
-![Patient Dashboard](https://via.placeholder.com/800x400?text=Patient+Dashboard)
+![Patient Dashboard](/uas-paw-mario-bilang-nama-timnya-sigmaboy-aja-dan-kita-setuju/img/dashboardpatient.png)
 
 ### Doctor Dashboard
-![Doctor Dashboard](https://via.placeholder.com/800x400?text=Doctor+Dashboard)
+![Doctor Dashboard](/uas-paw-mario-bilang-nama-timnya-sigmaboy-aja-dan-kita-setuju/img/dashboarddokter.png)
 
 ### Appointment Booking
-![Appointment Booking](https://via.placeholder.com/800x400?text=Appointment+Booking)
+![Appointment Booking](/uas-paw-mario-bilang-nama-timnya-sigmaboy-aja-dan-kita-setuju/img/appointmentbooking.png)
 
 ### Medical Records
 ![Medical Records](https://via.placeholder.com/800x400?text=Medical+Records)
@@ -610,17 +612,15 @@ Semua endpoint mengembalikan error dalam format:
 
 ## 🎥 Video Presentasi
 
-**Link Video:** https://www.youtube.com/watch?v=dQw4w9WgXcQ
+**Link Video:** https://drive.google.com/drive/folders/1SRzAjPf1AVpAPa3ZGhLwEykLF5iyhWiq 
 
-**Durasi:** ~10 menit
+**Durasi:** 9 menit 57 detik
 
 **Isi Video:**
 - Intro tim dan pembagian tugas
 - Demo semua fitur aplikasi
 - Penjelasan technical implementation
 - Deployment process
-
-**Catatan:** Silakan ganti dengan link video presentasi yang sebenarnya sebelum submit.
 
 ---
 
