@@ -159,4 +159,11 @@ export const usersAPI = {
   delete: (id: number) => api.delete(`/api/users/${id}`),
 };
 
+// ==================== NOTIFICATIONS API ====================
+export const notificationsAPI = {
+  getAll: () => api.get('/api/notifications'),
+  readAll: () => api.post('/api/notifications/read-all'),
+  readOne: (id: number) => api.put(`/api/notifications/${id}/read`),
+};
+
 export default api;

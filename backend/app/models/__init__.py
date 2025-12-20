@@ -10,5 +10,6 @@ from .doctor import Doctor
 from .appointment import Appointment
 from .medical_record import MedicalRecord
 from .token import Token
+from .notification import Notification
 
-__all__ = ['Base', 'User', 'Doctor', 'Appointment', 'MedicalRecord', 'Token']
+__all__ = ['Base', 'User', 'Doctor', 'Appointment', 'MedicalRecord', 'Token', 'Notification']

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, Plus, Stethoscope } from 'lucide-react';
+import { Calendar, Plus, Stethoscope, FileText, Bell } from 'lucide-react';
+import { NotificationBell } from '../../components/NotificationBell';
 import { useAuth } from '../../context/AuthContext';
 
 import type { Appointment } from '../../types';
@@ -91,8 +92,23 @@ export const PatientDashboard: React.FC = () => {
       label: 'Book New',
       value: 'Appointment',
       icon: Plus,
-      color: 'bg-purple-500',
+      color: 'bg-indigo-500',
       link: '/app/patient/appointments/new',
+    },
+    {
+      label: 'Medical Records',
+      value: 'Records',
+      icon: FileText,
+      color: 'bg-purple-500',
+      link: '/app/patient/records',
+    },
+    {
+      label: 'Notifications',
+      value: 'All Read',
+      icon: Bell,
+      color: 'bg-amber-500',
+      link: '#',
+      isNotification: true
     },
   ];
 
@@ -156,12 +172,10 @@ export const PatientDashboard: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {stats.map((stat, idx) => {
               const IconComponent = stat.icon;
-              return (
-                <Link
-                  key={idx}
-                  to={stat.link}
-                  className="group relative overflow-hidden backdrop-blur-xl bg-white/80 border border-white/20 rounded-3xl p-6 shadow-xl hover:shadow-2xl hover:-translate-y-2 hover:bg-white/90 transition-all duration-500"
-                >
+              const isNotification = 'isNotification' in stat && stat.isNotification;
+
+              const content = (
+                <>
                   <div className={`absolute top-0 right-0 w-32 h-32 -mr-8 -mt-8 rounded-full opacity-20 group-hover:scale-125 transition-transform duration-500 ${stat.color}`}></div>
                   <div className="relative flex items-center justify-between">
                     <div>
@@ -169,12 +183,35 @@ export const PatientDashboard: React.FC = () => {
                       <p className="text-3xl font-black text-slate-900">{stat.value}</p>
                     </div>
                     <div className={`w-16 h-16 ${stat.color} rounded-2xl flex items-center justify-center shadow-lg group-hover:rotate-12 group-hover:scale-110 transition-all duration-300`}>
-                      <IconComponent size={28} className="text-white" />
+                      {isNotification ? <NotificationBell /> : <IconComponent size={28} className="text-white" />}
                     </div>
                   </div>
-                  <div className="mt-4 flex items-center text-sm font-semibold text-blue-600 group-hover:text-blue-700 transition-colors">
-                    Lihat {stat.label.split(' ')[0]} →
+                  {!isNotification && (
+                    <div className="mt-4 flex items-center text-sm font-semibold text-blue-600 group-hover:text-blue-700 transition-colors">
+                      Lihat {stat.label.split(' ')[0]} →
+                    </div>
+                  )}
+                </>
+              );
+
+              if (isNotification) {
+                return (
+                  <div
+                    key={idx}
+                    className="group relative overflow-visible backdrop-blur-xl bg-white/80 border border-white/20 rounded-3xl p-6 shadow-xl hover:shadow-2xl transition-all duration-500"
+                  >
+                    {content}
                   </div>
+                );
+              }
+
+              return (
+                <Link
+                  key={idx}
+                  to={stat.link}
+                  className="group relative overflow-hidden backdrop-blur-xl bg-white/80 border border-white/20 rounded-3xl p-6 shadow-xl hover:shadow-2xl hover:-translate-y-2 hover:bg-white/90 transition-all duration-500"
+                >
+                  {content}
                 </Link>
               );
             })}
@@ -199,12 +236,12 @@ export const PatientDashboard: React.FC = () => {
               </Link>
             </div>
 
-        {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3].map((i) => (
-              <LoadingSkeleton key={i} className="h-48 rounded-3xl" />
-            ))}
-          </div>
+            {isLoading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[1, 2, 3].map((i) => (
+                  <LoadingSkeleton key={i} className="h-48 rounded-3xl" />
+                ))}
+              </div>
             ) : upcomingAppointments.length === 0 ? (
               <div className="backdrop-blur-xl bg-white/80 border border-white/20 rounded-3xl p-12 text-center shadow-xl">
                 <div className="max-w-md mx-auto space-y-6">

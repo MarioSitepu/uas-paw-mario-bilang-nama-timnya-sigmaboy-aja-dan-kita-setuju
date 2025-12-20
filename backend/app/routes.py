@@ -39,6 +39,11 @@ def includeme(config):
     config.add_route('api_appointments_today', '/api/appointments/today')
     config.add_route('api_patient_history', '/api/appointments/history')
     
+    # ==================== NOTIFICATIONS ROUTES ====================
+    config.add_route('api_notifications', '/api/notifications')
+    config.add_route('api_notifications_read', '/api/notifications/read-all')
+    config.add_route('api_notification_read', '/api/notifications/{id}/read')
+    
     # ==================== MEDICAL RECORDS ROUTES ====================
     config.add_route('api_medical_records', '/api/medical-records')
     config.add_route('api_medical_record', '/api/medical-records/{id}')

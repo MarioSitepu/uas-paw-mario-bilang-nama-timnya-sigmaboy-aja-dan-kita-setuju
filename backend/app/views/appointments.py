@@ -1,6 +1,6 @@
 from pyramid.view import view_config
 from pyramid.httpexceptions import HTTPNotFound, HTTPForbidden, HTTPBadRequest
-from ..models import Appointment, Doctor, User
+from ..models import Appointment, Doctor, User, Notification
 from .auth import get_db_session, require_auth, get_current_user
 from datetime import datetime, date, time
 
@@ -211,6 +211,18 @@ def create_appointment(request):
         )
         
         session.add(appointment)
+        session.flush() # Flush to get appointment id
+        
+        # Notify doctor
+        if doctor and doctor.user:
+            notification = Notification(
+                user_id=doctor.user.id,
+                title="New Appointment Booking",
+                message=f"Patient {current_user.name} has booked a new appointment for {data['appointment_date']} at {data['appointment_time']}.",
+                appointment_id=appointment.id
+            )
+            session.add(notification)
+        
         session.commit()
         
         print(f"DEBUG CREATE: Created appointment id={appointment.id}, patient_id={appointment.patient_id}, doctor_id={appointment.doctor_id}")
@@ -301,7 +313,18 @@ def update_appointment(request):
             print(f"DEBUG PUT: Updating status to {data['status']}")
             valid_statuses = ['pending', 'confirmed', 'completed', 'cancelled']
             if data['status'] in valid_statuses:
+                old_status = appointment.status
                 appointment.status = data['status']
+                
+                # Notify patient if confirmed
+                if data['status'] == 'confirmed' and old_status != 'confirmed':
+                    notification = Notification(
+                        user_id=appointment.patient_id,
+                        title="Appointment Confirmed",
+                        message=f"Dr. {appointment.doctor.user.name if appointment.doctor and appointment.doctor.user else 'your doctor'} has confirmed your appointment for {appointment.appointment_date} at {appointment.appointment_time}.",
+                        appointment_id=appointment.id
+                    )
+                    session.add(notification)
         
         # Update jadwal (reschedule) - jika masih pending atau confirmed
         can_modify = appointment.can_be_modified()

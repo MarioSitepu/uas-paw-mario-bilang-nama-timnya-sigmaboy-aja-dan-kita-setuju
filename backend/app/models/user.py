@@ -29,6 +29,7 @@ class User(Base):
     doctor_profile = relationship("Doctor", back_populates="user", uselist=False, cascade="all, delete-orphan")
     patient_appointments = relationship("Appointment", foreign_keys="Appointment.patient_id", back_populates="patient", cascade="all, delete-orphan")
     tokens = relationship("Token", back_populates="user", cascade="all, delete-orphan")
+    notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
     
     def set_password(self, password: str):
         """Hash and store password with salt"""
