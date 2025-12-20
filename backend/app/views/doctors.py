@@ -41,12 +41,13 @@ def get_doctors(request):
                         normalized_schedule[key.lower()] = value
                 
                 # Ensure all days are present
+                # Default: semua hari tersedia dengan jam 00:00-23:59
                 for day in days:
                     if day not in normalized_schedule:
                         normalized_schedule[day] = {
-                            'available': day not in ['saturday', 'sunday'],
-                            'startTime': '09:00' if day not in ['saturday', 'sunday'] else '',
-                            'endTime': '17:00' if day not in ['saturday', 'sunday'] else '',
+                            'available': True,  # Default: semua hari tersedia
+                            'startTime': '00:00',  # Default: mulai dari 00:00
+                            'endTime': '23:59',  # Default: sampai 23:59
                             'breakStart': '',
                             'breakEnd': ''
                         }
@@ -162,13 +163,14 @@ def get_doctor_schedule(request):
         schedule = doctor.schedule or {}
         
         # Ensure all days are present with valid structure
+        # Default: semua hari tersedia dengan jam 00:00-23:59
         days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
         for day in days:
             if day not in schedule:
                 schedule[day] = {
-                    'available': day not in ['saturday', 'sunday'],  # Default: weekdays only
-                    'startTime': '08:00' if day not in ['saturday', 'sunday'] else '',
-                    'endTime': '16:00' if day not in ['saturday', 'sunday'] else '',
+                    'available': True,  # Default: semua hari tersedia
+                    'startTime': '00:00',  # Default: mulai dari 00:00
+                    'endTime': '23:59',  # Default: sampai 23:59
                     'breakStart': '',
                     'breakEnd': ''
                 }
@@ -297,11 +299,11 @@ def get_doctor_slots(request):
              day_schedule = schedule.get(str(target_date.weekday()))
              
         if not day_schedule:
-             # Try default if not found
+             # Default: semua jam tersedia (00:00-23:59) jika schedule tidak di-set
              day_schedule = {
-                'available': day_name not in ['saturday', 'sunday'],
-                'startTime': '09:00',
-                'endTime': '17:00',
+                'available': True,
+                'startTime': '00:00',
+                'endTime': '23:59',
                 'breakStart': '',
                 'breakEnd': ''
              }
@@ -314,8 +316,10 @@ def get_doctor_slots(request):
         break_start_str = day_schedule.get('breakStart', '').strip()
         break_end_str = day_schedule.get('breakEnd', '').strip()
         
+        # Default: semua jam tersedia jika start/end time tidak di-set
         if not start_time_str or not end_time_str:
-            return []
+            start_time_str = '00:00'
+            end_time_str = '23:59'
             
         # Helper to parse time
         def parse_time(t_str):

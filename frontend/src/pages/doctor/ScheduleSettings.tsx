@@ -200,13 +200,14 @@ export const ScheduleSettings: React.FC = () => {
     field: null,
   });
   const [schedule, setSchedule] = useState<ScheduleData>({
-    monday: { available: true, startTime: '08:00', endTime: '16:00', breakStart: '', breakEnd: '' },
-    tuesday: { available: true, startTime: '08:00', endTime: '16:00', breakStart: '', breakEnd: '' },
-    wednesday: { available: true, startTime: '08:00', endTime: '16:00', breakStart: '', breakEnd: '' },
-    thursday: { available: true, startTime: '08:00', endTime: '16:00', breakStart: '', breakEnd: '' },
-    friday: { available: true, startTime: '08:00', endTime: '16:00', breakStart: '', breakEnd: '' },
-    saturday: { available: false, startTime: '', endTime: '', breakStart: '', breakEnd: '' },
-    sunday: { available: false, startTime: '', endTime: '', breakStart: '', breakEnd: '' },
+    // Default: semua hari tersedia dengan jam 00:00-23:59
+    monday: { available: true, startTime: '00:00', endTime: '23:59', breakStart: '', breakEnd: '' },
+    tuesday: { available: true, startTime: '00:00', endTime: '23:59', breakStart: '', breakEnd: '' },
+    wednesday: { available: true, startTime: '00:00', endTime: '23:59', breakStart: '', breakEnd: '' },
+    thursday: { available: true, startTime: '00:00', endTime: '23:59', breakStart: '', breakEnd: '' },
+    friday: { available: true, startTime: '00:00', endTime: '23:59', breakStart: '', breakEnd: '' },
+    saturday: { available: true, startTime: '00:00', endTime: '23:59', breakStart: '', breakEnd: '' },
+    sunday: { available: true, startTime: '00:00', endTime: '23:59', breakStart: '', breakEnd: '' },
   });
 
   useEffect(() => {
