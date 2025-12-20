@@ -21,9 +21,15 @@ def get_db_session(request):
         traceback.print_exc(file=sys.stderr)
         raise
 
-def generate_token(request, user_id: int) -> str:
+def generate_token(request, user_id: int, session=None) -> str:
     """Generate authentication token - stored in database"""
-    session = get_db_session(request)
+    # Use provided session if available, otherwise create new one
+    if session is None:
+        session = get_db_session(request)
+        should_close = True
+    else:
+        should_close = False
+    
     try:
         token_string = secrets.token_urlsafe(32)
         expires_at = datetime.datetime.now() + datetime.timedelta(hours=24)
@@ -40,7 +46,8 @@ def generate_token(request, user_id: int) -> str:
         session.rollback()
         raise e
     finally:
-        session.close()
+        if should_close:
+            session.close()
 
 def validate_token(request) -> dict:
     """Validate token from Authorization header - check database"""
@@ -154,8 +161,8 @@ def register(request):
         
         session.commit()
         
-        # Generate token
-        token = generate_token(request, user.id)
+        # Generate token - use existing session
+        token = generate_token(request, user.id, session=session)
         
         return {
             'message': 'Registration successful',
@@ -172,39 +179,98 @@ def register(request):
 @view_config(route_name='auth_login', request_method='POST', renderer='json')
 def login(request):
     """Login user"""
+    import sys
+    import os
+    import traceback
+    
+    # ULTRA-AGGRESSIVE LOGGING: Log immediately with multiple methods
+    log_msg = "[LOGIN] ===== LOGIN ENDPOINT CALLED =====\n"
+    for i in range(10):
+        try:
+            sys.stderr.write(log_msg)
+            sys.stderr.flush()
+        except:
+            pass
+        try:
+            print(log_msg.strip(), file=sys.stderr, flush=True)
+        except:
+            pass
+        try:
+            os.write(2, log_msg.encode())
+            os.fsync(2)
+        except:
+            pass
+    
     session = None
     try:
+        # Log that we're getting session
+        sys.stderr.write("[LOGIN] Getting database session...\n")
+        sys.stderr.flush()
         session = get_db_session(request)
+        sys.stderr.write("[LOGIN] Database session obtained\n")
+        sys.stderr.flush()
         
         # Safely get JSON body - catch ALL possible exceptions
         data = None
         try:
+            sys.stderr.write("[LOGIN] Attempting to read request body...\n")
+            sys.stderr.flush()
+            
+            # Check if request has body attribute
+            if not hasattr(request, 'body'):
+                sys.stderr.write("[LOGIN] ERROR: request has no 'body' attribute\n")
+                sys.stderr.flush()
+                request.response.status_code = 400
+                return {'error': 'Request object missing body attribute'}
+            
             # Try to get body first, then parse as JSON
             body = request.body
+            sys.stderr.write(f"[LOGIN] Request body type: {type(body)}, length: {len(body) if body else 0}\n")
+            sys.stderr.flush()
+            
             if not body:
+                sys.stderr.write("[LOGIN] ERROR: Request body is empty\n")
+                sys.stderr.flush()
                 request.response.status_code = 400
                 return {'error': 'Request body is required'}
             
             # Parse JSON manually to avoid Pyramid's json_body issues
             import json
             try:
-                data = json.loads(body.decode('utf-8'))
+                sys.stderr.write("[LOGIN] Attempting to decode JSON...\n")
+                sys.stderr.flush()
+                body_str = body.decode('utf-8') if isinstance(body, bytes) else str(body)
+                sys.stderr.write(f"[LOGIN] Body string (first 100 chars): {body_str[:100]}\n")
+                sys.stderr.flush()
+                data = json.loads(body_str)
+                sys.stderr.write(f"[LOGIN] JSON decoded successfully: {type(data)}\n")
+                sys.stderr.flush()
             except (UnicodeDecodeError, json.JSONDecodeError) as e:
+                sys.stderr.write(f"[LOGIN] JSON decode error: {type(e).__name__}: {e}\n")
+                sys.stderr.flush()
+                traceback.print_exc(file=sys.stderr)
+                sys.stderr.flush()
                 request.response.status_code = 400
                 return {'error': f'Invalid JSON: {str(e)}'}
             
             if not isinstance(data, dict):
+                sys.stderr.write(f"[LOGIN] Data is not a dict: {type(data)}\n")
+                sys.stderr.flush()
                 request.response.status_code = 400
                 return {'error': 'Request body must be JSON object'}
         except AttributeError as e:
+            sys.stderr.write(f"[LOGIN] AttributeError accessing request body: {type(e).__name__}: {e}\n")
+            sys.stderr.flush()
+            traceback.print_exc(file=sys.stderr)
+            sys.stderr.flush()
             request.response.status_code = 400
             return {'error': f'Request parsing error: {str(e)}'}
         except Exception as e:
             # Catch any other exception when accessing request body
-            import traceback
-            import sys
-            print(f"[LOGIN] Error accessing request body: {type(e).__name__}: {e}", file=sys.stderr, flush=True)
+            sys.stderr.write(f"[LOGIN] Error accessing request body: {type(e).__name__}: {e}\n")
+            sys.stderr.flush()
             traceback.print_exc(file=sys.stderr)
+            sys.stderr.flush()
             request.response.status_code = 400
             return {'error': f'Error parsing request: {str(e)}'}
         
@@ -215,6 +281,9 @@ def login(request):
         email = data.get('email') if isinstance(data, dict) else None
         password = data.get('password') if isinstance(data, dict) else None
         
+        sys.stderr.write(f"[LOGIN] Email: {email}, Password provided: {bool(password)}\n")
+        sys.stderr.flush()
+        
         if not email or not password:
             request.response.status_code = 400
             return {'error': 'Email and password are required'}
@@ -222,11 +291,12 @@ def login(request):
         user = session.query(User).filter(User.email == email).first()
         
         # Debug
-        import sys
-        print(f"DEBUG: email={email}, user found={user is not None}", flush=True, file=sys.stderr)
+        sys.stderr.write(f"[LOGIN] DEBUG: email={email}, user found={user is not None}\n")
+        sys.stderr.flush()
         if user:
             result = user.check_password(password)
-            print(f"DEBUG: check_password result={result}", flush=True, file=sys.stderr)
+            sys.stderr.write(f"[LOGIN] DEBUG: check_password result={result}\n")
+            sys.stderr.flush()
         
         if not user or not user.check_password(password):
             request.response.status_code = 401
@@ -237,7 +307,8 @@ def login(request):
             from ..models import Doctor
             doctor = session.query(Doctor).filter(Doctor.user_id == user.id).first()
             if not doctor:
-                print(f'[INFO] Creating missing Doctor profile for user {user.id}')
+                sys.stderr.write(f'[LOGIN] Creating missing Doctor profile for user {user.id}\n')
+                sys.stderr.flush()
                 doctor = Doctor(
                     user_id=user.id,
                     specialization='General Practitioner',
@@ -246,8 +317,15 @@ def login(request):
                 session.add(doctor)
                 session.commit()
 
-        # Generate token
-        token = generate_token(request, user.id)
+        # Generate token - use existing session
+        sys.stderr.write("[LOGIN] Generating token...\n")
+        sys.stderr.flush()
+        token = generate_token(request, user.id, session=session)
+        sys.stderr.write("[LOGIN] Token generated successfully\n")
+        sys.stderr.flush()
+        
+        sys.stderr.write("[LOGIN] ===== LOGIN SUCCESS =====\n")
+        sys.stderr.flush()
         
         return {
             'message': 'Login successful',
@@ -255,16 +333,18 @@ def login(request):
             'user': user.to_dict()
         }
     except Exception as e:
-        import traceback
-        import sys
-        print(f"[LOGIN] UNHANDLED EXCEPTION: {type(e).__name__}: {e}", file=sys.stderr, flush=True)
+        sys.stderr.write(f"[LOGIN] UNHANDLED EXCEPTION: {type(e).__name__}: {e}\n")
+        sys.stderr.flush()
         traceback.print_exc(file=sys.stderr)
+        sys.stderr.flush()
         request.response.status_code = 500
         return {'error': f'Login error: {str(e)}', 'type': type(e).__name__}
     finally:
         if session:
             try:
                 session.close()
+                sys.stderr.write("[LOGIN] Session closed\n")
+                sys.stderr.flush()
             except:
                 pass
 
@@ -387,7 +467,7 @@ def google_login(request):
 
         # Login user
         print(f'[INFO] User logged in: {email}')
-        app_token = generate_token(request, user.id)
+        app_token = generate_token(request, user.id, session=session)
         
         return {
             'message': 'Login successful',
@@ -436,7 +516,7 @@ def google_login_complete(request):
             existing_user = session.query(User).filter(User.email == email).first()
             if existing_user:
                 # User was created between steps, just login
-                app_token = generate_token(request, existing_user.id)
+                app_token = generate_token(request, existing_user.id, session=session)
                 return {
                     'message': 'Login successful',
                     'is_new_user': False,
@@ -468,7 +548,7 @@ def google_login_complete(request):
             session.commit()
             
             # Generate app token
-            app_token = generate_token(request, user.id)
+            app_token = generate_token(request, user.id, session=session)
             
             return {
                 'message': 'Profile created and login successful',

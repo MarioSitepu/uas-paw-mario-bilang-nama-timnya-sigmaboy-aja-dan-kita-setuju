@@ -70,7 +70,7 @@ export const ProfilePhotoUpload: React.FC<ProfilePhotoUploadProps> = ({
       const formData = new FormData();
       formData.append('file', file);
 
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:6543';
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:6543';
       const response = await fetch(`${apiUrl}/api/profile/photo`, {
         method: 'POST',
         headers: {

@@ -5,6 +5,7 @@ def includeme(config):
     
     # ==================== HOME ====================
     config.add_route('health_check', '/health')
+    config.add_route('test_post', '/api/test-post')
     config.add_route('home', '/')
     
     # ==================== AUTH ROUTES ====================
@@ -51,4 +52,5 @@ def includeme(config):
     config.add_route('upload_profile_picture', '/api/upload/profile-picture')
     config.add_route('delete_profile_picture', '/api/upload/profile-picture')
     
+    # CORS is handled via tween in __init__.py
     # CORS is handled via tween in __init__.py

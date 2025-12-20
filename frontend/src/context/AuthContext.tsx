@@ -40,9 +40,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const storedUser = localStorage.getItem('user');
 
         if (storedToken && storedUser) {
-            setToken(storedToken);
-            setUser(JSON.parse(storedUser));
-            setIsLoading(false);
+            try {
+                // Validate that storedUser is valid JSON
+                if (storedUser === 'undefined' || storedUser === 'null' || !storedUser.trim()) {
+                    // Invalid stored user, clear it
+                    localStorage.removeItem('user');
+                    localStorage.removeItem('token');
+                    setIsLoading(false);
+                    return;
+                }
+                setToken(storedToken);
+                setUser(JSON.parse(storedUser));
+                setIsLoading(false);
+            } catch (error) {
+                // If JSON parse fails, clear invalid data
+                console.error('Error parsing stored user:', error);
+                localStorage.removeItem('user');
+                localStorage.removeItem('token');
+                setIsLoading(false);
+                return;
+            }
 
             // Verify session with backend
             import('../services/api').then(({ authAPI }) => {

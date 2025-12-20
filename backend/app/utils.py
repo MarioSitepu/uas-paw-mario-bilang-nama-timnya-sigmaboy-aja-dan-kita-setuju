@@ -1,18 +1,26 @@
 """Cloudinary configuration and utilities for image upload"""
-import cloudinary
-import cloudinary.uploader
+try:
+    import cloudinary
+    import cloudinary.uploader
+    CLOUDINARY_AVAILABLE = True
+except ImportError:
+    CLOUDINARY_AVAILABLE = False
+    cloudinary = None
+    cloudinary_uploader = None
+
 import os
 from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
 
-# Configure Cloudinary immediately on module load
-cloudinary.config(
-    cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
-    api_key=os.getenv('CLOUDINARY_API_KEY'),
-    api_secret=os.getenv('CLOUDINARY_API_SECRET')
-)
+# Configure Cloudinary immediately on module load (if available)
+if CLOUDINARY_AVAILABLE:
+    cloudinary.config(
+        cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME', ''),
+        api_key=os.getenv('CLOUDINARY_API_KEY', ''),
+        api_secret=os.getenv('CLOUDINARY_API_SECRET', '')
+    )
 
 def upload_profile_photo(file_stream, user_id: int) -> str:
     """
@@ -25,6 +33,9 @@ def upload_profile_photo(file_stream, user_id: int) -> str:
     Returns:
         Secure URL of uploaded image
     """
+    if not CLOUDINARY_AVAILABLE:
+        raise Exception("Cloudinary is not available. Please install cloudinary package.")
+    
     try:
         # Upload with public_id based on user_id for easy replacement
         result = cloudinary.uploader.upload(
@@ -56,6 +67,9 @@ def delete_profile_photo(user_id: int) -> bool:
     Returns:
         True if successful
     """
+    if not CLOUDINARY_AVAILABLE:
+        raise Exception("Cloudinary is not available. Please install cloudinary package.")
+    
     try:
         cloudinary.uploader.destroy(
             f"clinic/profile_photos/user_{user_id}",

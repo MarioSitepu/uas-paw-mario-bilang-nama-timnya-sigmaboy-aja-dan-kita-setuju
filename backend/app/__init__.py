@@ -29,34 +29,59 @@ def cors_tween_factory(handler, registry):
         sys.stderr.write(f"[CORS TWEEN] Processing {request.method} {request.path}\n")
         sys.stderr.flush()
         
+        # Get allowed origins from environment or use defaults
+        cors_origins_env = os.environ.get('CORS_ORIGINS', '')
+        if cors_origins_env:
+            allowed_origins = [origin.strip() for origin in cors_origins_env.split(',')]
+        else:
+            # Default origins for development
+            allowed_origins = [
+                'http://localhost:5173',
+                'http://localhost:5174',
+                'http://127.0.0.1:5173',
+                'http://127.0.0.1:5174',
+            ]
+        
         # Handle preflight OPTIONS requests immediately
         if request.method == 'OPTIONS':
             response = Response()
             response.status_int = 200
             response.headers['Content-Length'] = '0'
-        else:
-            # Process the actual request
-            response = None
+            # Add CORS headers to preflight response
+            if origin and origin in allowed_origins:
+                response.headers['Access-Control-Allow-Origin'] = origin
+                response.headers['Access-Control-Allow-Credentials'] = 'true'
+            else:
+                response.headers['Access-Control-Allow-Origin'] = '*'
+            response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS, HEAD, PATCH'
+            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With, Accept'
+            response.headers['Access-Control-Max-Age'] = '86400'
+            sys.stderr.write(f"[CORS TWEEN] OPTIONS preflight handled\n")
+            sys.stderr.flush()
+            return response
+        
+        # Process the actual request
+        response = None
+        try:
+            response = handler(request)
+            print(f"[CORS TWEEN] Handler returned successfully", file=sys.stderr, flush=True)
+        except BaseException as e:
+            # Even on exceptions, we need CORS headers
+            # Catch BaseException to catch ALL exceptions including SystemExit, KeyboardInterrupt
+            import traceback
+            print(f"[CORS TWEEN] CAUGHT EXCEPTION: {type(e).__name__}: {e}", file=sys.stderr, flush=True)
+            traceback.print_exc(file=sys.stderr)
             try:
-                response = handler(request)
-                print(f"[CORS TWEEN] Handler returned successfully", file=sys.stderr, flush=True)
-            except BaseException as e:
-                # Even on exceptions, we need CORS headers
-                # Catch BaseException to catch ALL exceptions including SystemExit, KeyboardInterrupt
-                import traceback
-                print(f"[CORS TWEEN] CAUGHT EXCEPTION: {type(e).__name__}: {e}", file=sys.stderr, flush=True)
-                traceback.print_exc(file=sys.stderr)
-                try:
-                    response = Response(
-                        json_body={'error': str(e), 'type': type(e).__name__},
-                        status=500,
-                        content_type='application/json'
-                    )
-                except Exception as resp_error:
-                    # If creating response fails, create a minimal response
-                    print(f"[CORS TWEEN] Failed to create error response: {resp_error}", file=sys.stderr, flush=True)
                 response = Response(
-                        body=f'{{"error": "Internal server error", "type": "{type(e).__name__}"}}'.encode('utf-8'),
+                    json_body={'error': str(e), 'type': type(e).__name__},
+                    status=500,
+                    content_type='application/json'
+                )
+            except Exception as resp_error:
+                # If creating response fails, create a minimal response
+                print(f"[CORS TWEEN] Failed to create error response: {resp_error}", file=sys.stderr, flush=True)
+                response = Response(
+                    body=f'{{"error": "Internal server error", "type": "{type(e).__name__}"}}'.encode('utf-8'),
                     status=500,
                     content_type='application/json'
                 )
@@ -77,19 +102,6 @@ def cors_tween_factory(handler, registry):
         
         # Add CORS headers to ALL responses - use try/except to ensure it always works
         try:
-            # Get allowed origins from environment or use defaults
-            cors_origins_env = os.environ.get('CORS_ORIGINS', '')
-            if cors_origins_env:
-                allowed_origins = [origin.strip() for origin in cors_origins_env.split(',')]
-            else:
-                # Default origins for development
-                allowed_origins = [
-                    'http://localhost:5173',
-                    'http://localhost:5174',
-                    'http://127.0.0.1:5173',
-                    'http://127.0.0.1:5174',
-                ]
-            
             # If origin is in allowed list, use it; otherwise use * (but can't use credentials with *)
             if origin and origin in allowed_origins:
                 response.headers['Access-Control-Allow-Origin'] = origin
@@ -101,6 +113,8 @@ def cors_tween_factory(handler, registry):
             response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS, HEAD, PATCH'
             response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With, Accept'
             response.headers['Access-Control-Max-Age'] = '86400'
+            sys.stderr.write(f"[CORS TWEEN] CORS headers added: Origin={origin}, Allow-Origin={response.headers.get('Access-Control-Allow-Origin', 'NONE')}\n")
+            sys.stderr.flush()
         except Exception as cors_error:
             # If adding headers fails, log but don't crash
             import sys
