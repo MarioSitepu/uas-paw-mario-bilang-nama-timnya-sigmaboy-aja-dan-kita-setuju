@@ -1,14 +1,17 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import { ArrowRight, X, Sparkles } from 'lucide-react';
 
 export const HeroSection: React.FC = () => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   return (
     <section className="relative min-h-screen overflow-hidden flex items-center">
       {/* Background Image with Overlay */}
       <div className="absolute inset-0">
-        <img 
-          src="https://images.unsplash.com/photo-1551601651-2a8555f1a136?w=1920&q=80&auto=format&fit=crop" 
+        <img
+          src="https://images.unsplash.com/photo-1551601651-2a8555f1a136?w=1920&q=80&auto=format&fit=crop"
           alt="Pasien sembuh dan sehat"
           className="absolute inset-0 w-full h-full object-cover"
           loading="eager"
@@ -41,22 +44,22 @@ export const HeroSection: React.FC = () => {
             <div className="mb-6 sm:mb-8 flex items-center gap-3 sm:gap-4 flex-wrap">
               <div className="flex -space-x-3">
                 <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden border-3 sm:border-4 border-white shadow-2xl">
-                  <img 
-                    src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=faces" 
+                  <img
+                    src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=faces"
                     alt="User 1"
                     className="w-full h-full object-cover"
                   />
                 </div>
                 <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden border-3 sm:border-4 border-white shadow-2xl">
-                  <img 
-                    src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=faces" 
+                  <img
+                    src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=faces"
                     alt="User 2"
                     className="w-full h-full object-cover"
                   />
                 </div>
                 <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden border-3 sm:border-4 border-white shadow-2xl">
-                  <img 
-                    src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop&crop=faces" 
+                  <img
+                    src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop&crop=faces"
                     alt="User 3"
                     className="w-full h-full object-cover"
                   />
@@ -82,14 +85,29 @@ export const HeroSection: React.FC = () => {
             </p>
 
             {/* CTA Button */}
-            <Link
-              to="/patient/doctors-list"
-              className="group inline-flex items-center gap-2 sm:gap-3 px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 hover:from-blue-600 hover:via-blue-700 hover:to-blue-800 text-white rounded-xl sm:rounded-2xl font-bold text-sm sm:text-base lg:text-lg transition-all hover:shadow-2xl mb-8 sm:mb-10 lg:mb-12 transform hover:scale-105 duration-300 relative overflow-hidden"
+            {/* CTA Button */}
+            <button
+              onClick={() => {
+                if (user && user.role) {
+                  const role = user.role.toLowerCase();
+                  if (role === 'doctor') {
+                    navigate('/app/doctor/dashboard');
+                  } else if (role === 'patient') {
+                    navigate('/app/patient/dashboard');
+                  } else {
+                    // Fallback for admin or other roles
+                    navigate('/app');
+                  }
+                } else {
+                  navigate('/auth/login');
+                }
+              }}
+              className="group inline-flex items-center gap-2 sm:gap-3 px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 hover:from-blue-600 hover:via-blue-700 hover:to-blue-800 text-white rounded-xl sm:rounded-2xl font-bold text-sm sm:text-base lg:text-lg transition-all hover:shadow-2xl mb-8 sm:mb-10 lg:mb-12 transform hover:scale-105 duration-300 relative overflow-hidden cursor-pointer"
             >
               <span className="relative z-10">Jelajahi Layanan</span>
               <ArrowRight size={18} className="sm:w-5 sm:h-5 relative z-10 group-hover:translate-x-1 transition-transform duration-300" />
               <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
-            </Link>
+            </button>
 
             {/* Comprehensive Care Label */}
             <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
