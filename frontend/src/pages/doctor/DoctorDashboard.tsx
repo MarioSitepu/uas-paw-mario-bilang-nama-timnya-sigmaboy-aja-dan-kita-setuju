@@ -79,6 +79,7 @@ export const DoctorDashboard: React.FC = () => {
           status: raw.status,
           reason: raw.reason,
           notes: raw.notes,
+          createdAt: raw.created_at,
           patient: raw.patient ? {
             ...raw.patient,
             id: raw.patient.id,
@@ -597,11 +598,18 @@ export const DoctorDashboard: React.FC = () => {
                 {pendingAppointments.map((appointment) => (
                   <div key={appointment.id} className="group bg-white p-6 rounded-3xl border border-slate-100 shadow-xl space-y-4">
                     <AppointmentCard appointment={appointment} showActions={false} userRole="doctor" />
+
+                    {/* Booking Time */}
+                    <div className="text-xs text-slate-500 font-medium px-1 flex items-center gap-1">
+                      <Clock size={12} />
+                      Dibuat pada: {new Date((appointment as any).createdAt || new Date()).toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' })}
+                    </div>
+
                     <div className="flex gap-3 pt-2">
                       <button
                         onClick={() => handleStatusUpdate(appointment.id, 'confirmed')}
                         disabled={isUpdating}
-                        className="flex-1 px-4 py-3 bg-gradient-blue text-white rounded-2xl font-bold text-sm shadow-md hover:shadow-lg transition-all disabled:opacity-50"
+                        className="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-2xl font-bold text-sm shadow-md hover:shadow-lg transition-all disabled:opacity-50"
                       >
                         Konfirmasi
                       </button>
