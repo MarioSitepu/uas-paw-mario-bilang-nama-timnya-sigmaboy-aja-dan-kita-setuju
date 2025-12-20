@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Calendar, ClipboardList, FileText, Clock, Bell } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-
+import { notificationsAPI } from '../../services/api';
 
 import type { Appointment, AppointmentStatus } from '../../types';
 import { AppointmentCard } from '../../components/cards/AppointmentCard';
@@ -18,12 +18,27 @@ export const DoctorDashboard: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [trendMode, setTrendMode] = useState<'daily' | 'weekly'>('daily');
   const [isUpdating, setIsUpdating] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const { addToast } = useToastContext();
+
 
   useEffect(() => {
     if (!user?.id) return;
 
     let isActive = true;
+
+    const loadUnreadCount = async () => {
+      try {
+        const notifications = await notificationsAPI.getAll();
+        const count = notifications.filter((n: any) => !n.is_read).length;
+        if (isActive) setUnreadCount(count);
+      } catch (error) {
+        console.error('Failed to load notifications count:', error);
+      }
+    };
+
+    void loadUnreadCount();
+    const notificationInterval = window.setInterval(() => void loadUnreadCount(), 30000);
 
     const loadDashboardData = async () => {
       try {
@@ -108,6 +123,7 @@ export const DoctorDashboard: React.FC = () => {
     return () => {
       isActive = false;
       window.clearInterval(intervalId);
+      window.clearInterval(notificationInterval);
     };
   }, [user?.id]);
 
@@ -301,7 +317,7 @@ export const DoctorDashboard: React.FC = () => {
     },
     {
       label: 'Notifications',
-      value: pendingAppointments.length > 0 ? `${pendingAppointments.length} New` : 'All Read',
+      value: unreadCount > 0 ? `${unreadCount} New` : 'All Read',
       icon: Bell,
       color: 'bg-amber-500',
       link: '/app/notifications',

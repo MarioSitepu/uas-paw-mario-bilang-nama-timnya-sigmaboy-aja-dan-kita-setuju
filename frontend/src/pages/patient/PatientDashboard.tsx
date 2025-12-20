@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Calendar, Plus, Stethoscope, FileText, Bell } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-
+import { notificationsAPI } from '../../services/api';
 
 import type { Appointment } from '../../types';
 import { AppointmentCard } from '../../components/cards/AppointmentCard';
@@ -12,6 +12,8 @@ export const PatientDashboard: React.FC = () => {
   const { user } = useAuth();
   const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [unreadCount, setUnreadCount] = useState(0);
+
 
   const loadAppointments = useCallback(async () => {
     if (!user?.id) return;
@@ -73,6 +75,28 @@ export const PatientDashboard: React.FC = () => {
     void loadAppointments();
   }, [loadAppointments]);
 
+  useEffect(() => {
+    let isActive = true;
+
+    const loadUnreadCount = async () => {
+      try {
+        const notifications = await notificationsAPI.getAll();
+        const count = notifications.filter((n: any) => !n.is_read).length;
+        if (isActive) setUnreadCount(count);
+      } catch (error) {
+        console.error('Failed to load notifications count:', error);
+      }
+    };
+
+    void loadUnreadCount();
+    const notificationInterval = window.setInterval(() => void loadUnreadCount(), 30000);
+
+    return () => {
+      isActive = false;
+      window.clearInterval(notificationInterval);
+    };
+  }, []);
+
   const stats = [
     {
       label: 'Upcoming Appointments',
@@ -104,7 +128,7 @@ export const PatientDashboard: React.FC = () => {
     },
     {
       label: 'Notifications',
-      value: 'All Read',
+      value: unreadCount > 0 ? `${unreadCount} New` : 'All Read',
       icon: Bell,
       color: 'bg-amber-500',
       link: '/app/notifications',
