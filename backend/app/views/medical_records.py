@@ -11,12 +11,15 @@ def get_medical_records(request):
     try:
         current_user = require_auth(request)
         
-        if current_user.role == 'patient':
+        # Normalize role to lowercase for comparison
+        user_role = current_user.role.lower() if current_user.role else ''
+        
+        if user_role == 'patient':
             # Pasien melihat medical records miliknya
             records = session.query(MedicalRecord).join(
                 Appointment, MedicalRecord.appointment_id == Appointment.id
             ).filter(Appointment.patient_id == current_user.id).all()
-        elif current_user.role == 'doctor':
+        elif user_role == 'doctor':
             # Dokter melihat medical records yang dia buat
             doctor = session.query(Doctor).filter(Doctor.user_id == current_user.id).first()
             if not doctor:
@@ -43,7 +46,9 @@ def create_medical_record(request):
     try:
         current_user = require_auth(request)
         
-        if current_user.role != 'doctor':
+        # Normalize role to lowercase for comparison
+        user_role = current_user.role.lower() if current_user.role else ''
+        if user_role != 'doctor':
             request.response.status_int = 403
             return {'error': 'Hanya dokter yang dapat membuat medical record'}
         
@@ -71,6 +76,11 @@ def create_medical_record(request):
             request.response.status_int = 403
             return {'error': 'Anda tidak memiliki akses ke appointment ini'}
         
+        # Cek apakah appointment bisa dibuat record (harus confirmed atau completed)
+        if appointment.status not in ['confirmed', 'completed']:
+            request.response.status_int = 400
+            return {'error': 'Medical record hanya dapat dibuat untuk appointment yang sudah confirmed atau completed'}
+        
         # Cek apakah sudah ada medical record untuk appointment ini
         existing = session.query(MedicalRecord).filter(
             MedicalRecord.appointment_id == data['appointment_id']
@@ -90,8 +100,9 @@ def create_medical_record(request):
             notes=data.get('notes')
         )
         
-        # Update status appointment menjadi completed
-        appointment.status = 'completed'
+        # Update status appointment menjadi completed (jika belum)
+        if appointment.status != 'completed':
+            appointment.status = 'completed'
         
         session.add(medical_record)
         session.commit()

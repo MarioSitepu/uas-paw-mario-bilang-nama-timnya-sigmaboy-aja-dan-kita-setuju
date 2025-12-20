@@ -73,7 +73,24 @@ export const DatePicker: React.FC<DatePickerProps> = ({
     const selectedDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
     const dateStr = selectedDate.toISOString().split('T')[0];
     
-    if (isDateAvailable(dateStr)) {
+    // Check if date is not in the past
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const clickedDate = new Date(selectedDate);
+    clickedDate.setHours(0, 0, 0, 0);
+    
+    if (clickedDate < today) {
+      return; // Don't allow past dates
+    }
+    
+    // If availableDates is provided, check if date is in the list
+    // Otherwise, allow any future date
+    if (availableDates.length > 0) {
+      if (isDateAvailable(dateStr)) {
+        onChange(dateStr);
+        setShowCalendar(false);
+      }
+    } else {
       onChange(dateStr);
       setShowCalendar(false);
     }
@@ -160,22 +177,33 @@ export const DatePicker: React.FC<DatePickerProps> = ({
 
                 const selectedDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
                 const dateStr = selectedDate.toISOString().split('T')[0];
-                const isAvailable = isDateAvailable(dateStr);
+                
+                // Check if date is in the past
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const clickedDate = new Date(selectedDate);
+                clickedDate.setHours(0, 0, 0, 0);
+                const isPast = clickedDate < today;
+                
+                // If availableDates is provided, check if date is in the list
+                // Otherwise, allow any future date
+                const isAvailable = availableDates.length > 0 ? isDateAvailable(dateStr) : !isPast;
                 const isSelected = value === dateStr;
+                const isDisabled = isPast || (availableDates.length > 0 && !isDateAvailable(dateStr));
 
                 return (
                   <button
                     key={day}
                     type="button"
                     onClick={() => handleDateClick(day)}
-                    disabled={!isAvailable}
+                    disabled={isDisabled}
                     className={`
                       h-10 rounded text-sm font-medium transition-colors
                       ${isSelected
                         ? 'bg-pastel-blue-500 text-white'
-                        : isAvailable
-                        ? 'bg-pastel-blue-50 text-slate-700 hover:bg-pastel-blue-200 cursor-pointer'
-                        : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                        : isDisabled
+                        ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                        : 'bg-pastel-blue-50 text-slate-700 hover:bg-pastel-blue-200 cursor-pointer'
                       }
                     `}
                   >

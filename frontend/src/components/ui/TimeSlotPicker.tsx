@@ -8,6 +8,7 @@ interface TimeSlotPickerProps {
   className?: string;
   label?: string;
   isLoading?: boolean;
+  selectedDate?: string; // To check if time has passed for today
 }
 
 export const TimeSlotPicker: React.FC<TimeSlotPickerProps> = ({
@@ -17,7 +18,21 @@ export const TimeSlotPicker: React.FC<TimeSlotPickerProps> = ({
   className = '',
   label,
   isLoading = false,
+  selectedDate,
 }) => {
+  // Check if a time slot has passed (for today only)
+  const isTimePast = (time: string): boolean => {
+    if (!selectedDate) return false;
+    const today = new Date().toISOString().split('T')[0];
+    if (selectedDate !== today) return false;
+    
+    const now = new Date();
+    const [hours, minutes] = time.split(':').map(Number);
+    const slotTime = new Date();
+    slotTime.setHours(hours, minutes, 0, 0);
+    
+    return slotTime < now;
+  };
   if (isLoading) {
     return (
       <div className={className}>
@@ -44,26 +59,31 @@ export const TimeSlotPicker: React.FC<TimeSlotPickerProps> = ({
     <div className={className}>
       {label && <label className="block text-sm font-medium text-slate-700 mb-2">{label}</label>}
       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
-        {slots.map((slot) => (
-          <button
-            key={slot.time}
-            type="button"
-            onClick={() => slot.available && onSelect(slot.time)}
-            disabled={!slot.available}
-            className={`
-              px-4 py-2 rounded-lg text-sm font-medium transition-all
-              ${
-                selectedTime === slot.time
-                  ? 'bg-pastel-blue-500 text-white shadow-md'
-                  : slot.available
-                  ? 'bg-white text-slate-700 border border-slate-300 hover:border-pastel-blue-500 hover:bg-pastel-blue-50'
-                  : 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
-              }
-            `}
-          >
-            {slot.time}
-          </button>
-        ))}
+        {slots.map((slot) => {
+          const isPast = isTimePast(slot.time);
+          const isDisabled = !slot.available || isPast;
+          
+          return (
+            <button
+              key={slot.time}
+              type="button"
+              onClick={() => !isDisabled && onSelect(slot.time)}
+              disabled={isDisabled}
+              className={`
+                px-4 py-2 rounded-lg text-sm font-medium transition-all
+                ${
+                  selectedTime === slot.time
+                    ? 'bg-pastel-blue-500 text-white shadow-md'
+                    : isDisabled
+                    ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
+                    : 'bg-white text-slate-700 border border-slate-300 hover:border-pastel-blue-500 hover:bg-pastel-blue-50'
+                }
+              `}
+            >
+              {slot.time}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

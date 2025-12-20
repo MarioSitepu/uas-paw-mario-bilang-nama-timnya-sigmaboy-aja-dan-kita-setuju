@@ -45,7 +45,7 @@ export const AppointmentDetail: React.FC = () => {
     if (showRescheduleModal && appointment?.doctorId && rescheduleDate) {
       loadTimeSlots();
     }
-  }, [showRescheduleModal, appointment, rescheduleDate]);
+  }, [showRescheduleModal, appointment?.doctorId, rescheduleDate]);
 
   const loadAppointment = async () => {
     if (!id) return;
@@ -70,10 +70,9 @@ export const AppointmentDetail: React.FC = () => {
 
       if (appointment && appointment.patientId === user?.id) {
         setAppointment(appointment);
-        if (showRescheduleModal) {
-          setRescheduleDate(appointment.date);
-          setRescheduleTime(appointment.time);
-        }
+        // Set initial reschedule date/time from current appointment
+        setRescheduleDate(appointment.date);
+        setRescheduleTime(appointment.time);
       } else {
         addToast('Appointment not found', 'error');
         navigate('/app/patient/appointments');
@@ -89,17 +88,13 @@ export const AppointmentDetail: React.FC = () => {
   const loadTimeSlots = async () => {
     if (!appointment?.doctorId || !rescheduleDate) return;
     try {
-      // For now, generate time slots (9:00 to 17:00 in 30-minute intervals)
-      const slots: TimeSlot[] = [];
-      for (let hour = 9; hour < 17; hour++) {
-        for (let minute = 0; minute < 60; minute += 30) {
-          const time = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
-          slots.push({ time, available: true });
-        }
-      }
+      const { doctorsAPI } = await import('../../services/api');
+      const response = await doctorsAPI.getSlots(appointment.doctorId, rescheduleDate);
+      const slots = response.data || [];
       setTimeSlots(slots);
     } catch (error) {
       console.error('Failed to load time slots:', error);
+      addToast('Gagal memuat jam yang tersedia', 'error');
     }
   };
 
@@ -333,6 +328,7 @@ export const AppointmentDetail: React.FC = () => {
               slots={timeSlots}
               selectedTime={rescheduleTime}
               onSelect={setRescheduleTime}
+              selectedDate={rescheduleDate}
             />
           )}
           <div className="flex gap-4 pt-4">

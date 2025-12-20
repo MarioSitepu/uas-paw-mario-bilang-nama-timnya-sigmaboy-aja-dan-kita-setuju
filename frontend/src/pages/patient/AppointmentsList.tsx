@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { authAPI } from '../../services/api';
 import type { Appointment, AppointmentStatus } from '../../types';
@@ -10,6 +10,7 @@ import { EmptyState } from '../../components/ui/EmptyState';
 export const AppointmentsList: React.FC = () => {
   const { user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<AppointmentStatus | 'all'>('all');
@@ -84,11 +85,9 @@ export const AppointmentsList: React.FC = () => {
 
   const handleAction = (action: string, appointmentId: number) => {
     if (action === 'reschedule') {
-      // Navigate to reschedule page or open modal
-      window.location.href = `/app/patient/appointments/${appointmentId}?action=reschedule`;
+      navigate(`/app/patient/appointments/${appointmentId}?action=reschedule`);
     } else if (action === 'cancel') {
-      // Handle cancel
-      window.location.href = `/app/patient/appointments/${appointmentId}?action=cancel`;
+      navigate(`/app/patient/appointments/${appointmentId}?action=cancel`);
     }
   };
 

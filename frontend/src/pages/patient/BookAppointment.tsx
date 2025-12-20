@@ -235,6 +235,7 @@ export const BookAppointment: React.FC = () => {
             selectedTime={selectedTime}
             onSelect={setSelectedTime}
             isLoading={isLoadingSlots}
+            selectedDate={selectedDate}
           />
         )}
 

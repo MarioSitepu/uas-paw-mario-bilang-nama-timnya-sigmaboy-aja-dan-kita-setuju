@@ -62,7 +62,43 @@ export const DoctorAppointmentDetail: React.FC = () => {
       console.log('🔍 Transformed appointment:', appointment);
       console.log('🔍 Checking: appointment.doctorId=' + appointment.doctorId + ', user?.id=' + user?.id);
       
-      if (appointment && appointment.doctorId === user?.doctor_profile?.id) {
+      // Get current user's doctor profile to verify access
+      let doctorId: number | null = null;
+      if (!user) {
+        addToast('User not authenticated', 'error');
+        navigate('/auth/login');
+        return;
+      }
+      
+      const userRole = user.role?.toLowerCase();
+      if (userRole === 'doctor') {
+        // Try to get doctor profile from user object
+        if (user.doctor_profile?.id) {
+          doctorId = user.doctor_profile.id;
+        } else {
+          // If not in user object, fetch it from API
+          try {
+            const meResponse = await authAPI.getMe();
+            const meUser = meResponse.data.user || meResponse.data;
+            if (meUser?.doctor_profile?.id) {
+              doctorId = meUser.doctor_profile.id;
+            } else {
+              // Try to get doctor by user_id
+              const { doctorsAPI } = await import('../../services/api');
+              const doctorsResponse = await doctorsAPI.getAll();
+              const doctors = doctorsResponse.data.doctors || [];
+              const doctor = doctors.find((d: any) => d.user_id === user.id);
+              if (doctor) {
+                doctorId = doctor.id;
+              }
+            }
+          } catch (err) {
+            console.error('Failed to get doctor profile:', err);
+          }
+        }
+      }
+
+      if (appointment && doctorId && appointment.doctorId === doctorId) {
         console.log('✅ Access check passed - doctor owns this appointment');
         setAppointment(appointment);
         // Load medical record if exists
@@ -79,11 +115,11 @@ export const DoctorAppointmentDetail: React.FC = () => {
       } else {
         console.error('❌ Access check failed:', { 
           appointmentDoctorId: appointment.doctorId,
-          currentUserDoctorProfileId: user?.doctor_profile?.id,
+          currentUserDoctorId: doctorId,
           currentUserId: user?.id,
           currentUserRole: user?.role
         });
-        addToast('Appointment not found', 'error');
+        addToast('Appointment not found or access denied', 'error');
         navigate('/app/doctor/schedule');
       }
     } catch (error) {
@@ -118,10 +154,21 @@ export const DoctorAppointmentDetail: React.FC = () => {
   };
 
   const handleComplete = async () => {
-    // First close the confirmation modal
-    setShowCompleteModal(false);
-    // Then show the medical record form immediately
-    setShowRecordModal(true);
+    if (!appointment) return;
+    // First update status to completed
+    setIsSubmitting(true);
+    try {
+      await handleStatusUpdate('completed');
+      setShowCompleteModal(false);
+      // Reload appointment to get updated status
+      await loadAppointment();
+      // Then show the medical record form immediately
+      setShowRecordModal(true);
+    } catch (error) {
+      console.error('Failed to complete appointment:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleCancel = async () => {
@@ -157,18 +204,20 @@ export const DoctorAppointmentDetail: React.FC = () => {
       }
       
       setShowRecordModal(false);
-      addToast('Medical record created successfully and appointment marked as completed', 'success');
+      addToast('Medical record created successfully', 'success');
       setRecordForm({ diagnosis: '', notes: '', symptoms: '', treatment: '', prescription: '' });
       
-      // Reload appointment to get updated status
+      // Reload appointment to get updated status (should be completed now)
       await loadAppointment();
       
       // Wait a moment then redirect to dashboard
-      await new Promise(resolve => setTimeout(resolve, 800));
+      await new Promise(resolve => setTimeout(resolve, 1000));
       navigate('/app/doctor/dashboard');
     } catch (error: any) {
       console.error('❌ Failed to create medical record:', error);
-      addToast(error.response?.data?.error || 'Failed to create medical record', 'error');
+      console.error('❌ Error details:', error.response?.data);
+      const errorMsg = error.response?.data?.error || error.message || 'Failed to create medical record';
+      addToast(errorMsg, 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -187,7 +236,8 @@ export const DoctorAppointmentDetail: React.FC = () => {
   }
 
   const canUpdateStatus = ['pending', 'confirmed'].includes(appointment.status);
-  const canCreateRecord = appointment.status === 'completed' && !medicalRecord;
+  // Doctor can create record if appointment is confirmed or completed, and no record exists yet
+  const canCreateRecord = (appointment.status === 'confirmed' || appointment.status === 'completed') && !medicalRecord;
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -275,7 +325,7 @@ export const DoctorAppointmentDetail: React.FC = () => {
         )}
 
         {/* Medical Record */}
-        {appointment.status === 'completed' && (
+        {(appointment.status === 'confirmed' || appointment.status === 'completed') && (
           <div className="pt-4 border-t border-slate-200">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-slate-800">Medical Record</h3>

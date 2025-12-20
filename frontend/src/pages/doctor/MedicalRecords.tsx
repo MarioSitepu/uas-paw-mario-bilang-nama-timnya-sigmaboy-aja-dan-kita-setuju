@@ -5,9 +5,11 @@ import { authAPI } from '../../services/api';
 import type { MedicalRecord } from '../../types';
 import { LoadingSkeleton } from '../../components/ui/LoadingSkeleton';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { useToastContext } from '../../components/ui/Toast';
 
 export const MedicalRecords: React.FC = () => {
   const { user } = useAuth();
+  const { addToast } = useToastContext();
   const [records, setRecords] = useState<MedicalRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -23,9 +25,28 @@ export const MedicalRecords: React.FC = () => {
       const response = await authAPI.get('/api/medical-records');
       const all = response.data.medical_records || [];
       console.log('📋 Loaded medical records:', all);
-      setRecords(all.sort((a: MedicalRecord, b: MedicalRecord) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()));
+      console.log('📋 Total records:', all.length);
+      
+      // Transform backend format to frontend format
+      const transformed = all.map((rec: any) => ({
+        id: rec.id,
+        appointment_id: rec.appointment_id || rec.appointment?.id,
+        diagnosis: rec.diagnosis,
+        notes: rec.notes,
+        symptoms: rec.symptoms,
+        treatment: rec.treatment,
+        prescription: rec.prescription,
+        created_at: rec.created_at,
+        patient: rec.appointment?.patient || rec.patient,
+        appointment: rec.appointment,
+      }));
+      
+      setRecords(transformed.sort((a: MedicalRecord, b: MedicalRecord) => 
+        new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+      ));
     } catch (error) {
       console.error('Failed to load records:', error);
+      addToast('Failed to load medical records', 'error');
     } finally {
       setIsLoading(false);
     }

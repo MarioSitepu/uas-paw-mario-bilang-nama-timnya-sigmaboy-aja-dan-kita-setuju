@@ -371,6 +371,7 @@ def get_doctor_slots(request):
         slots = []
         current_time = datetime.combine(target_date, start_time)
         end_datetime = datetime.combine(target_date, end_time)
+        now = datetime.now()
         
         # Slot duration 30 mins (more flexible than 60 mins)
         slot_duration = 30
@@ -387,11 +388,17 @@ def get_doctor_slots(request):
             # Check if taken
             is_taken = slot_time in taken_times
             
-            # Only add valid slots (not in break)
+            # Check if time has passed (only for today)
+            is_past = False
+            if target_date == today:
+                if current_time < now:
+                    is_past = True
+            
+            # Only add valid slots (not in break and not past)
             if not in_break:
                 slots.append({
                     'time': slot_time.strftime('%H:%M'),
-                    'available': not is_taken
+                    'available': not is_taken and not is_past
                 })
             
             current_time += timedelta(minutes=slot_duration)
