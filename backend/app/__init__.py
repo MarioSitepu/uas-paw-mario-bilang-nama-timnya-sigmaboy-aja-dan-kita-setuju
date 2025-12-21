@@ -143,6 +143,18 @@ def cors_tween_factory(handler, registry):
 
 def main(global_config, **settings):
     """This function returns a Pyramid WSGI application."""
+    # Explicitly import views module to ensure all @view_config decorators are registered
+    # This is critical for config.scan() to discover all routes
+    try:
+        from . import views
+        import sys
+        print("[MAIN] Successfully imported views module", file=sys.stderr, flush=True)
+    except Exception as e:
+        import sys
+        print(f"[MAIN] ERROR: Failed to import views module: {e}", file=sys.stderr, flush=True)
+        import traceback
+        traceback.print_exc(file=sys.stderr)
+    
     # Handle PORT from environment for production
     # Waitress reads PORT from environment automatically, but we can also set it here
     port = os.environ.get('PORT')
@@ -315,7 +327,11 @@ def main(global_config, **settings):
     
     config.add_view(exception_view, context=Exception)
     
+    # Explicitly import views to ensure decorators are registered before scan
+    from . import views as views_module
+    
     # Scan for decorators - views are explicitly imported in views/__init__.py
+    # and also explicitly imported above to ensure they're discovered
     config.scan()
     
     app = config.make_wsgi_app()
