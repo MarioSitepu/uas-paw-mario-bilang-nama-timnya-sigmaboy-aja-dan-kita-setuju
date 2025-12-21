@@ -26,7 +26,7 @@ def upgrade() -> None:
     sa.Column('title', sa.String(length=100), nullable=False),
     sa.Column('message', sa.Text(), nullable=False),
     sa.Column('appointment_id', sa.Integer(), nullable=True),
-    sa.Column('is_read', sa.Boolean(), nullable=True),
+    sa.Column('is_read', sa.Boolean(), nullable=False, server_default=sa.false()),
     sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=True),
     sa.ForeignKeyConstraint(['appointment_id'], ['appointments.id'], ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),

@@ -46,6 +46,9 @@ export const NotificationsPage: React.FC = () => {
     useEffect(() => {
         if (user) {
             fetchNotifications();
+            // Poll notifications every 5 seconds
+            const interval = setInterval(fetchNotifications, 5000);
+            return () => clearInterval(interval);
         }
     }, [user]);
 
