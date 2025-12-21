@@ -5,6 +5,16 @@ from .auth import get_db_session, get_current_user, require_auth
 from datetime import date
 import json
 
+# Import all view modules to ensure they are discovered by config.scan()
+from . import appointments
+from . import doctors
+from . import health
+from . import messages
+from . import notifications
+from . import profile
+from . import medical_records
+from . import upload
+
 
 @view_config(route_name='home', request_method='GET', renderer='json')
 def home(request):
