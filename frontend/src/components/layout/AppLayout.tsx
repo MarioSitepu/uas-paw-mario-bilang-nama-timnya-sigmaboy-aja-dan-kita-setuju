@@ -116,6 +116,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }: AppLayoutProps
     { path: '/app/patient/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/app/patient/doctors', label: 'Find Doctors', icon: Stethoscope },
     { path: '/app/patient/appointments', label: 'My Appointments', icon: Calendar },
+    { path: '/app/patient/medical-records', label: 'Medical Records', icon: ClipboardList },
     { path: '/app/notifications', label: 'Notifications', icon: Bell, isNotification: true },
     { path: '/app/messages', label: 'Pesan', icon: MessageSquare, badge: unreadChatCount },
     { path: '/app/profile', label: 'Profile', icon: User },

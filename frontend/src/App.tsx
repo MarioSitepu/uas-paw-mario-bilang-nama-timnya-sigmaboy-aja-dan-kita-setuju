@@ -29,6 +29,7 @@ import { DoctorsList } from './pages/patient/DoctorsList';
 import { AppointmentsList } from './pages/patient/AppointmentsList';
 import { BookAppointment } from './pages/patient/BookAppointment';
 import { AppointmentDetail } from './pages/patient/AppointmentDetail';
+import { PatientMedicalRecords } from './pages/patient/PatientMedicalRecords';
 
 // Doctor Pages
 import { DoctorDashboard } from './pages/doctor/DoctorDashboard';
@@ -174,6 +175,16 @@ function App() {
                   <RequireRole allowedRoles={[UserRole.PATIENT]}>
                     <AppLayout>
                       <ChatPage />
+                    </AppLayout>
+                  </RequireRole>
+                }
+              />
+              <Route
+                path="/app/patient/medical-records"
+                element={
+                  <RequireRole allowedRoles={[UserRole.PATIENT]}>
+                    <AppLayout>
+                      <PatientMedicalRecords />
                     </AppLayout>
                   </RequireRole>
                 }

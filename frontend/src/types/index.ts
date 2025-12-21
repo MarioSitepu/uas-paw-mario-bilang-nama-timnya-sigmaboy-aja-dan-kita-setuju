@@ -70,6 +70,7 @@ export interface MedicalRecord {
     name: string;
     email: string;
   };
+  appointment?: Appointment;
 }
 
 export interface TimeSlot {
