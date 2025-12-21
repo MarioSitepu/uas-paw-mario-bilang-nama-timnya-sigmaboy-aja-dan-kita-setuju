@@ -163,7 +163,7 @@ export const PatientDashboard: React.FC = () => {
       value: 'Records',
       icon: FileText,
       color: 'bg-purple-500',
-      link: '/app/patient/records',
+      link: '/app/patient/medical-records',
     },
     {
       label: 'Notifications',
