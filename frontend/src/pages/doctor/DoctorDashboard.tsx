@@ -789,6 +789,8 @@ export const DoctorDashboard: React.FC = () => {
               </div>
             )}
           </div>
+        </div>
+      </div>
       <style>{`
         @keyframes float {
           0%, 100% { transform: translateY(0px) rotate(0deg); opacity: 0.2; }
