@@ -28,11 +28,16 @@ export const NotificationsPage: React.FC = () => {
     const fetchNotifications = async () => {
         try {
             setLoading(true);
+            console.log('🔔 Fetching notifications from API...');
             const response = await notificationsAPI.getAll();
+            console.log('📥 API Response:', response);
+            console.log('   Notifications:', response.data.notifications);
+            console.log('   Unread count:', response.data.unread_count);
             setNotifications(response.data.notifications || []);
             setUnreadCount(response.data.unread_count || 0);
+            console.log('✅ Notifications loaded successfully');
         } catch (error) {
-            console.error('Failed to fetch notifications:', error);
+            console.error('❌ Failed to fetch notifications:', error);
         } finally {
             setLoading(false);
         }

@@ -103,10 +103,13 @@ const ChatPage: React.FC = () => {
     const fetchConversations = async () => {
         setLoading(true);
         try {
+            console.log('💬 Fetching conversations...');
             const response = await chatAPI.getConversations();
+            console.log('📥 Conversations response:', response.data);
             setConversations(response.data);
+            console.log(`✅ Loaded ${response.data.length} conversation(s)`);
         } catch (error) {
-            console.error('Failed to fetch conversations', error);
+            console.error('❌ Failed to fetch conversations', error);
         } finally {
             setLoading(false);
         }
@@ -114,10 +117,13 @@ const ChatPage: React.FC = () => {
 
     const fetchMessages = async (partnerId: number) => {
         try {
+            console.log(`💬 Fetching messages with partner ${partnerId}...`);
             const response = await chatAPI.getMessages(partnerId);
+            console.log('📥 Messages response:', response.data);
             setMessages(response.data);
+            console.log(`✅ Loaded ${response.data.length} message(s)`);
         } catch (error) {
-            console.error('Failed to fetch messages', error);
+            console.error('❌ Failed to fetch messages', error);
         }
     };
 
