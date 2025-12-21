@@ -1,7 +1,7 @@
 """Add notification_history and message_history tables
 
 Revision ID: 004_add_history_tables
-Revises: 79d021df2315_add_notifications_table
+Revises: 005_add_messages_table
 Create Date: 2025-12-21 00:00:00.000000
 
 """
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = '004_add_history_tables'
-down_revision = '79d021df2315_add_notifications_table'
+down_revision = '005_add_messages_table'
 branch_labels = None
 depends_on = None
 
