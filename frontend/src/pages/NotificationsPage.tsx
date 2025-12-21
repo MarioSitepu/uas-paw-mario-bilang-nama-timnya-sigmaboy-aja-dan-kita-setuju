@@ -133,30 +133,51 @@ export const NotificationsPage: React.FC = () => {
     };
 
     const formatDate = (dateString: string) => {
-        const date = new Date(dateString);
-        const now = new Date();
-        const diffMs = now.getTime() - date.getTime();
+        // Parse the ISO string - ensure it's treated as UTC
+        let dateStr = dateString;
+        if (!dateStr.endsWith('Z')) {
+            dateStr += 'Z'; // Add Z to explicitly mark as UTC if missing
+        }
+        const dateUtc = new Date(dateStr);
+        
+        // Get current time in UTC
+        const nowUtc = new Date();
+        
+        // Calculate difference in milliseconds (this is timezone-independent)
+        const diffMs = nowUtc.getTime() - dateUtc.getTime();
         const diffMins = Math.floor(diffMs / 60000);
         const diffHours = Math.floor(diffMs / 3600000);
         const diffDays = Math.floor(diffMs / 86400000);
 
-        if (diffMins < 1) return 'Just now';
-        if (diffMins < 60) return `${diffMins} min ago`;
-        if (diffHours < 24) return `${diffHours} hours ago`;
-        if (diffDays < 7) return `${diffDays} days ago`;
-        return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+        if (diffMins < 1) return 'Baru saja';
+        if (diffMins < 60) return `${diffMins} min yang lalu`;
+        if (diffHours < 24) return `${diffHours} jam yang lalu`;
+        if (diffDays < 7) return `${diffDays} hari yang lalu`;
+        
+        // For older dates, show the UTC+7 formatted date
+        const utcPlus7 = new Date(dateUtc.getTime() + (7 * 60 * 60 * 1000));
+        return utcPlus7.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
     };
 
     const formatFullDateTime = (dateString: string) => {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('id-ID', {
+        // Parse the ISO string - ensure it's treated as UTC
+        let dateStr = dateString;
+        if (!dateStr.endsWith('Z')) {
+            dateStr += 'Z'; // Add Z to explicitly mark as UTC if missing
+        }
+        const dateUtc = new Date(dateStr);
+        
+        // Convert to UTC+7 by adding 7 hours
+        const utcPlus7 = new Date(dateUtc.getTime() + (7 * 60 * 60 * 1000));
+        
+        return utcPlus7.toLocaleDateString('id-ID', {
             day: 'numeric',
             month: 'long',
             year: 'numeric',
             hour: '2-digit',
             minute: '2-digit',
             second: '2-digit',
-        });
+        }) + ' (UTC+7)';
     };
 
     return (

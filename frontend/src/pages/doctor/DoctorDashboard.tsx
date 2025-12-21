@@ -32,6 +32,24 @@ export const DoctorDashboard: React.FC = () => {
   const [unreadChatCount, setUnreadChatCount] = useState(0);
   const { addToast } = useToastContext();
 
+  const formatNotificationTime = (dateString: string) => {
+    // Parse the ISO string - ensure it's treated as UTC
+    let dateStr = dateString;
+    if (!dateStr.endsWith('Z')) {
+      dateStr += 'Z'; // Add Z to explicitly mark as UTC if missing
+    }
+    const dateUtc = new Date(dateStr);
+    
+    // Convert UTC to UTC+7 by adding 7 hours
+    const utcPlus7 = new Date(dateUtc.getTime() + (7 * 60 * 60 * 1000));
+    return utcPlus7.toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
 
   useEffect(() => {
     if (!user?.id) return;
@@ -774,13 +792,7 @@ export const DoctorDashboard: React.FC = () => {
                         <p className="font-semibold text-slate-800">{notification.title}</p>
                         <p className="text-sm text-slate-600 mt-0.5">{notification.message}</p>
                         <p className="text-xs text-slate-400 mt-2">
-                          {new Date(notification.created_at).toLocaleDateString('id-ID', {
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
+                          {formatNotificationTime(notification.created_at)}
                         </p>
                       </div>
                     </div>
