@@ -1,6 +1,6 @@
 from pyramid.view import view_config
 from pyramid.httpexceptions import HTTPNotFound, HTTPForbidden, HTTPBadRequest
-from ..models import Appointment, Doctor, User, Notification
+from ..models import Appointment, Doctor, User, Notification, NotificationHistory
 from .auth import get_db_session, require_auth, get_current_user
 from datetime import datetime, date, time
 

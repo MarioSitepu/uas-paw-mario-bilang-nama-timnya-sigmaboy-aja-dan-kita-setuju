@@ -2,7 +2,7 @@ from pyramid.view import view_config
 from pyramid.response import Response
 from sqlalchemy.orm import joinedload, aliased
 from sqlalchemy import or_, and_, desc, func
-from ..models import Message, User, Appointment, Doctor, Notification
+from ..models import Message, User, Appointment, Doctor, Notification, MessageHistory
 import json
 from datetime import datetime
 
@@ -175,6 +175,15 @@ def send_message(request):
     )
     
     session.add(new_msg)
+    
+    # Record message in message_history
+    msg_history = MessageHistory(
+        sender_id=user_id,
+        recipient_id=recipient_id,
+        content=content,
+        is_read=False
+    )
+    session.add(msg_history)
     
     # Notify recipient
     sender = session.query(User).get(user_id)

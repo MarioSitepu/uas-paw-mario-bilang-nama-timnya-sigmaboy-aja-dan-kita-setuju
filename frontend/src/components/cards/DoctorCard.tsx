@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import type { Doctor } from '../../types';
 import { Link } from 'react-router-dom';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, MessageCircle } from 'lucide-react';
 
 interface DoctorCardProps {
   doctor: Doctor;
@@ -118,12 +118,22 @@ export const DoctorCard: React.FC<DoctorCardProps> = ({ doctor, showBookButton =
           </div>
 
           {showBookButton && (
-            <Link
-              to={`/app/patient/appointments/new?doctorId=${doctor.id}`}
-              className="block w-full text-center px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-bold text-sm shadow-md shadow-blue-500/20 transition-all transform hover:-translate-y-0.5"
-            >
-              Book
-            </Link>
+            <div className="space-y-2">
+              <Link
+                to={`/app/patient/appointments/new?doctorId=${doctor.id}`}
+                className="block w-full text-center px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg font-bold text-sm shadow-md shadow-blue-500/20 transition-all transform hover:-translate-y-0.5"
+              >
+                Book
+              </Link>
+              
+              <Link
+                to={`/app/patient/chat/${doctor.user_id}`}
+                className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white rounded-lg font-bold text-sm shadow-md shadow-emerald-500/20 transition-all transform hover:-translate-y-0.5"
+              >
+                <MessageCircle size={16} />
+                Message
+              </Link>
+            </div>
           )}
         </div>
       </div>

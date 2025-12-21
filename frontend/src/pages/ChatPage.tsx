@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useParams } from 'react-router-dom';
 import { Send, Search, Phone, Video, MoreVertical, ArrowLeft, Image as ImageIcon, Paperclip, MessageSquare } from 'lucide-react';
 import { chatAPI, usersAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -26,6 +26,7 @@ interface Message {
 const ChatPage: React.FC = () => {
     const { user } = useAuth();
     const [searchParams] = useSearchParams();
+    const { doctorId } = useParams<{ doctorId?: string }>();
     const [conversations, setConversations] = useState<User[]>([]);
     const [selectedPartner, setSelectedPartner] = useState<User | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
@@ -54,7 +55,7 @@ const ChatPage: React.FC = () => {
 
     // Auto-select partner from URL
     useEffect(() => {
-        const partnerId = searchParams.get('partnerId');
+        const partnerId = searchParams.get('partnerId') || doctorId;
         if (partnerId) {
             const pid = parseInt(partnerId);
             const partner = conversations.find((c: User) => c.id === pid);
@@ -74,7 +75,7 @@ const ChatPage: React.FC = () => {
                         const newUser: User = {
                             id: userData.id,
                             name: userData.name,
-                            photoUrl: userData.photo_url || '',
+                            photoUrl: userData.photo_url || userData.profile_photo_url || '',
                             role: userData.role,
                             unreadCount: 0
                         };
@@ -92,7 +93,7 @@ const ChatPage: React.FC = () => {
                 fetchPartner();
             }
         }
-    }, [conversations, searchParams]);
+    }, [conversations, searchParams, doctorId]);
 
     // Scroll to bottom
     useEffect(() => {

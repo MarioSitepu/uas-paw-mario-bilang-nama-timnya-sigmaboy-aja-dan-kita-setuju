@@ -168,6 +168,16 @@ function App() {
                   </RequireRole>
                 }
               />
+              <Route
+                path="/app/patient/chat/:doctorId"
+                element={
+                  <RequireRole allowedRoles={[UserRole.PATIENT]}>
+                    <AppLayout>
+                      <ChatPage />
+                    </AppLayout>
+                  </RequireRole>
+                }
+              />
 
               {/* Doctor Routes */}
               <Route

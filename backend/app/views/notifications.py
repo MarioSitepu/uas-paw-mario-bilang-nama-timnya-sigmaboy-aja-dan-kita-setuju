@@ -1,6 +1,7 @@
 from pyramid.view import view_config
 from ..models import Notification
 from .auth import get_db_session, require_auth
+from datetime import datetime
 
 @view_config(route_name='api_notifications', request_method='GET', renderer='json')
 def get_notifications(request):
@@ -60,7 +61,34 @@ def mark_as_read(request):
         notification.is_read = True
         session.commit()
         
-        return {'message': 'Notifikasi ditandai sebagai dibaca'}
+        return {'message': 'Notifikasi ditandai sebagai dibaca', 'notification': notification.to_dict()}
+    except Exception as e:
+        session.rollback()
+        return {'error': str(e)}
+    finally:
+        session.close()
+
+@view_config(route_name='api_notification_unread', request_method='PUT', renderer='json')
+def mark_as_unread(request):
+    """Menandai satu notifikasi sebagai belum dibaca"""
+    session = get_db_session(request)
+    try:
+        current_user = require_auth(request)
+        notification_id = int(request.matchdict['id'])
+        
+        notification = session.query(Notification).filter(
+            Notification.id == notification_id,
+            Notification.user_id == current_user.id
+        ).first()
+        
+        if not notification:
+            request.response.status_int = 404
+            return {'error': 'Notifikasi tidak ditemukan'}
+            
+        notification.is_read = False
+        session.commit()
+        
+        return {'message': 'Notifikasi ditandai sebagai belum dibaca', 'notification': notification.to_dict()}
     except Exception as e:
         session.rollback()
         return {'error': str(e)}

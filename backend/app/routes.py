@@ -43,6 +43,7 @@ def includeme(config):
     config.add_route('api_notifications', '/api/notifications')
     config.add_route('api_notifications_read', '/api/notifications/read-all')
     config.add_route('api_notification_read', '/api/notifications/{id}/read')
+    config.add_route('api_notification_unread', '/api/notifications/{id}/unread')
 
     # ==================== CHAT ROUTES ====================
     config.add_route('api_conversations', '/api/chat/conversations')
