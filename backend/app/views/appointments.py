@@ -88,7 +88,7 @@ def create_appointment(request):
         
         if user_role != 'patient':
             request.response.status_int = 403
-            return {'error': f'Hanya pasien yang dapat membuat appointment (your role: {current_user.role})'}
+            return {'error': f'Akses ditolak: Hanya pasien yang dapat membuat appointment. Role Anda saat ini: {current_user.role.upper()}'}
         
         data = request.json_body
         
@@ -255,12 +255,12 @@ def get_appointment(request):
         # Cek akses
         if current_user.role == 'patient' and appointment.patient_id != current_user.id:
             request.response.status_int = 403
-            return {'error': 'Anda tidak memiliki akses ke appointment ini'}
+            return {'error': 'Akses ditolak: Anda hanya dapat melihat appointment Anda sendiri'}
         elif current_user.role == 'doctor':
             doctor = session.query(Doctor).filter(Doctor.user_id == current_user.id).first()
             if not doctor or appointment.doctor_id != doctor.id:
                 request.response.status_int = 403
-                return {'error': 'Anda tidak memiliki akses ke appointment ini'}
+                return {'error': 'Akses ditolak: Anda hanya dapat melihat appointment dengan pasien Anda sendiri'}
         
         return {'appointment': appointment.to_dict()}
     finally:
@@ -303,7 +303,12 @@ def update_appointment(request):
         if not (is_patient or is_doctor or is_admin):
             print(f"DEBUG PUT: Access denied")
             request.response.status_int = 403
-            return {'error': 'Anda tidak memiliki akses untuk mengubah appointment ini'}
+            if user_role == 'patient':
+                return {'error': 'Akses ditolak: Anda hanya dapat mengubah appointment Anda sendiri'}
+            elif user_role == 'doctor':
+                return {'error': 'Akses ditolak: Anda hanya dapat mengubah appointment dengan pasien Anda sendiri'}
+            else:
+                return {'error': f'Akses ditolak: Role Anda ({current_user.role.upper()}) tidak memiliki izin untuk mengubah appointment ini'}
         
         data = request.json_body
         print(f"DEBUG PUT: Request data: {data}")
@@ -436,7 +441,12 @@ def cancel_appointment(request):
         if not (is_patient or is_doctor or is_admin):
             print(f"DEBUG DELETE: User does not have access")
             request.response.status_int = 403
-            return {'error': 'Anda tidak memiliki akses untuk membatalkan appointment ini'}
+            if user_role == 'patient':
+                return {'error': 'Akses ditolak: Anda hanya dapat membatalkan appointment Anda sendiri'}
+            elif user_role == 'doctor':
+                return {'error': 'Akses ditolak: Anda hanya dapat membatalkan appointment dengan pasien Anda sendiri'}
+            else:
+                return {'error': f'Akses ditolak: Role Anda ({current_user.role.upper()}) tidak memiliki izin untuk membatalkan appointment ini'}
         
         # Can only cancel if status is pending or confirmed (not already cancelled or completed)
         if appointment.status not in ['pending', 'confirmed']:
