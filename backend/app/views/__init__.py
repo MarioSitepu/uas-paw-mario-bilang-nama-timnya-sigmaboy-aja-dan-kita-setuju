@@ -5,6 +5,17 @@ from .auth import get_db_session, get_current_user, require_auth
 from datetime import date
 import json
 
+# Explicitly import all view modules so they are discovered by config.scan()
+# This ensures all @view_config decorators are registered
+from . import notifications
+from . import messages
+from . import appointments
+from . import doctors
+from . import medical_records
+from . import health
+from . import profile
+from . import upload
+
 
 @view_config(route_name='home', request_method='GET', renderer='json')
 def home(request):

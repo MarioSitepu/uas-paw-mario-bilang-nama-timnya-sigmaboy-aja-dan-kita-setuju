@@ -315,8 +315,8 @@ def main(global_config, **settings):
     
     config.add_view(exception_view, context=Exception)
     
-    # Scan for decorators - explicitly include views package to ensure all views are discovered
-    config.scan('.views')
+    # Scan for decorators - views are explicitly imported in views/__init__.py
+    config.scan()
     
     app = config.make_wsgi_app()
     
