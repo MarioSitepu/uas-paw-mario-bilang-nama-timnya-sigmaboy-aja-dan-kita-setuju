@@ -214,19 +214,22 @@ def create_appointment(request):
         session.flush() # Flush to get appointment id
         
         # Notify doctor
-        print(f"📝 Creating appointment: id={appointment.id}, doctor_id={doctor.id if doctor else 'N/A'}")
-        if doctor and doctor.user:
-            print(f"   Doctor user found: id={doctor.user.id}, name={doctor.user.name}")
-            notification = Notification(
-                user_id=doctor.user.id,
-                title="New Appointment Booking",
-                message=f"Patient {current_user.name} has booked a new appointment for {data['appointment_date']} at {data['appointment_time']}.",
-                appointment_id=appointment.id
-            )
-            session.add(notification)
-            print(f"   ✅ Notification added for doctor {doctor.user.id}")
-        else:
-            print(f"⚠️  Warning: Doctor or doctor.user is None - no notification created")
+        try:
+            print(f"📝 Creating appointment: id={appointment.id}, doctor_id={doctor.id if doctor else 'N/A'}")
+            if doctor and doctor.user:
+                print(f"   Doctor user found: id={doctor.user.id}, name={doctor.user.name}")
+                notification = Notification(
+                    user_id=doctor.user.id,
+                    title="New Appointment Booking",
+                    message=f"Patient {current_user.name} has booked a new appointment for {data['appointment_date']} at {data['appointment_time']}.",
+                    appointment_id=appointment.id
+                )
+                session.add(notification)
+                print(f"   ✅ Notification added for doctor {doctor.user.id}")
+            else:
+                print(f"⚠️  Warning: Doctor or doctor.user is None - no notification created")
+        except Exception as notif_error:
+            print(f"❌ Error creating notification: {str(notif_error)}")
         
         session.commit()
         print(f"✅ Appointment created and committed: id={appointment.id}")

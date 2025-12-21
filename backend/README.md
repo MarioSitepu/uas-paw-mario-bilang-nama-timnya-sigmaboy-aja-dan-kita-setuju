@@ -14,6 +14,7 @@ pip install -e .
 ```bash
 cp .env.example .env
 # Edit .env dengan konfigurasi database Anda
+# Database URL format: postgresql+psycopg://user:password@host:port/dbname
 ```
 
 3. Generate session secret:
@@ -22,10 +23,11 @@ python generate_secret.py
 # Copy output ke .env file
 ```
 
-4. Run database migrations:
+4. **IMPORTANT: Run database migrations**:
 ```bash
 alembic upgrade head
 ```
+This is required for notifications, messages, and other features to work. If you skip this, notifications and messages will NOT appear.
 
 5. Run development server:
 ```bash
