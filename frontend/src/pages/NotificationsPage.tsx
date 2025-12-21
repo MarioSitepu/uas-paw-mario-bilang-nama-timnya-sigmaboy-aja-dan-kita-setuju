@@ -88,6 +88,22 @@ export const NotificationsPage: React.FC = () => {
         }
     };
 
+    const handleToggleRead = async (id: number, isCurrentlyRead: boolean) => {
+        try {
+            if (isCurrentlyRead) {
+                await notificationsAPI.unreadOne(id);
+                setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: false } : n));
+                setUnreadCount(prev => prev + 1);
+            } else {
+                await notificationsAPI.readOne(id);
+                setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
+                setUnreadCount(prev => Math.max(0, prev - 1));
+            }
+        } catch (error) {
+            console.error('Failed to toggle notification read status:', error);
+        }
+    };
+
     const markAllAsRead = async () => {
         try {
             await notificationsAPI.readAll();
@@ -224,8 +240,7 @@ export const NotificationsPage: React.FC = () => {
                         {filteredNotifications.map((notification) => (
                             <div
                                 key={notification.id}
-                                onClick={() => handleMarkAsRead(notification.id, notification.appointment_id)}
-                                className={`p-5 hover:bg-slate-50 cursor-pointer transition-all relative ${!notification.is_read ? 'bg-blue-50/50' : ''
+                                className={`p-5 hover:bg-slate-50 transition-all relative group ${!notification.is_read ? 'bg-blue-50/50' : ''
                                     }`}
                             >
                                 {/* Unread indicator */}
@@ -246,17 +261,37 @@ export const NotificationsPage: React.FC = () => {
                                     {/* Content */}
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-start justify-between gap-4 mb-1">
-                                            <h4 className={`font-semibold ${!notification.is_read ? 'text-slate-900' : 'text-slate-700'}`}>
-                                                {notification.title}
-                                            </h4>
+                                            <div 
+                                                onClick={() => handleMarkAsRead(notification.id, notification.appointment_id)}
+                                                className="flex-1 cursor-pointer hover:opacity-80"
+                                            >
+                                                <h4 className={`font-semibold ${!notification.is_read ? 'text-slate-900' : 'text-slate-700'}`}>
+                                                    {notification.title}
+                                                </h4>
+                                            </div>
                                             <div className="flex items-center gap-2 shrink-0">
                                                 <Clock size={14} className="text-slate-400" />
                                                 <span className="text-xs text-slate-400 whitespace-nowrap">
                                                     {formatDate(notification.created_at)}
                                                 </span>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleToggleRead(notification.id, notification.is_read);
+                                                    }}
+                                                    className="ml-2 px-2 py-1 rounded-lg text-xs font-medium transition-all opacity-0 group-hover:opacity-100 hover:bg-slate-200"
+                                                    title={notification.is_read ? 'Mark as unread' : 'Mark as read'}
+                                                >
+                                                    {notification.is_read ? '↩️ Unread' : '✓ Read'}
+                                                </button>
                                             </div>
                                         </div>
-                                        <p className="text-sm text-slate-600 line-clamp-2">{notification.message}</p>
+                                        <p 
+                                            className="text-sm text-slate-600 line-clamp-2 cursor-pointer hover:opacity-80"
+                                            onClick={() => handleMarkAsRead(notification.id, notification.appointment_id)}
+                                        >
+                                            {notification.message}
+                                        </p>
 
                                         {/* Status badge */}
                                         {!notification.is_read && (

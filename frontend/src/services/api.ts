@@ -164,6 +164,7 @@ export const notificationsAPI = {
   getAll: () => api.get('/api/notifications'),
   readAll: () => api.post('/api/notifications/read-all'),
   readOne: (id: number) => api.put(`/api/notifications/${id}/read`),
+  unreadOne: (id: number) => api.put(`/api/notifications/${id}/unread`),
 };
 
 // ==================== CHAT API ====================

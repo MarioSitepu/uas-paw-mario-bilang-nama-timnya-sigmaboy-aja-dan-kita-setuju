@@ -133,7 +133,8 @@ def get_messages(request):
     for msg in unread_messages:
         msg.is_read = True
     
-    # Commit read status updates
+    session.commit() # Commit read status updates
+    
     # Creating a list of dicts for response
     results = []
     for msg in messages:
@@ -196,6 +197,7 @@ def send_message(request):
     session.add(notification)
     
     session.flush() # flush to get ID and created_at
+    session.commit() # commit to save to database
     
     return {
         'id': new_msg.id,
