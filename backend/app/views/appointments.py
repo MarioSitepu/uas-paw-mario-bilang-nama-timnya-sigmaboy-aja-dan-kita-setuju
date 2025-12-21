@@ -214,7 +214,9 @@ def create_appointment(request):
         session.flush() # Flush to get appointment id
         
         # Notify doctor
+        print(f"📝 Creating appointment: id={appointment.id}, doctor_id={doctor.id if doctor else 'N/A'}")
         if doctor and doctor.user:
+            print(f"   Doctor user found: id={doctor.user.id}, name={doctor.user.name}")
             notification = Notification(
                 user_id=doctor.user.id,
                 title="New Appointment Booking",
@@ -222,10 +224,12 @@ def create_appointment(request):
                 appointment_id=appointment.id
             )
             session.add(notification)
+            print(f"   ✅ Notification added for doctor {doctor.user.id}")
+        else:
+            print(f"⚠️  Warning: Doctor or doctor.user is None - no notification created")
         
         session.commit()
-        
-        print(f"DEBUG CREATE: Created appointment id={appointment.id}, patient_id={appointment.patient_id}, doctor_id={appointment.doctor_id}")
+        print(f"✅ Appointment created and committed: id={appointment.id}")
         
         return {
             'message': 'Appointment berhasil dibuat',
@@ -315,7 +319,7 @@ def update_appointment(request):
         
         # Update status (hanya dokter atau admin)
         if 'status' in data and (is_doctor or is_admin):
-            print(f"DEBUG PUT: Updating status to {data['status']}")
+            print(f"📝 Updating appointment {appointment_id} status to {data['status']}")
             valid_statuses = ['pending', 'confirmed', 'completed', 'cancelled']
             if data['status'] in valid_statuses:
                 old_status = appointment.status
@@ -323,6 +327,7 @@ def update_appointment(request):
                 
                 # Notify patient if confirmed
                 if data['status'] == 'confirmed' and old_status != 'confirmed':
+                    print(f"   Creating notification: appointment confirmed for patient {appointment.patient_id}")
                     notification = Notification(
                         user_id=appointment.patient_id,
                         title="Appointment Confirmed",
@@ -330,9 +335,11 @@ def update_appointment(request):
                         appointment_id=appointment.id
                     )
                     session.add(notification)
+                    print(f"   ✅ Notification added for patient {appointment.patient_id}")
                 
                 # Notify patient if completed
                 if data['status'] == 'completed' and old_status != 'completed':
+                    print(f"   Creating notification: appointment completed for patient {appointment.patient_id}")
                     notification = Notification(
                         user_id=appointment.patient_id,
                         title="Appointment Completed",
@@ -340,9 +347,11 @@ def update_appointment(request):
                         appointment_id=appointment.id
                     )
                     session.add(notification)
+                    print(f"   ✅ Notification added for patient {appointment.patient_id}")
                 
                 # Notify patient if cancelled by doctor
                 if data['status'] == 'cancelled' and old_status != 'cancelled':
+                    print(f"   Creating notification: appointment cancelled for patient {appointment.patient_id}")
                     notification = Notification(
                         user_id=appointment.patient_id,
                         title="Appointment Cancelled",
@@ -350,6 +359,7 @@ def update_appointment(request):
                         appointment_id=appointment.id
                     )
                     session.add(notification)
+                    print(f"   ✅ Notification added for patient {appointment.patient_id}")
         
         # Update jadwal (reschedule) - jika masih pending atau confirmed
         can_modify = appointment.can_be_modified()
@@ -459,6 +469,7 @@ def cancel_appointment(request):
         
         # Notify doctor when patient cancels
         if is_patient and appointment.doctor and appointment.doctor.user:
+            print(f"   Creating notification: appointment cancelled by patient for doctor {appointment.doctor.user.id}")
             notification = Notification(
                 user_id=appointment.doctor.user.id,
                 title="Appointment Cancelled by Patient",
@@ -466,9 +477,11 @@ def cancel_appointment(request):
                 appointment_id=appointment.id
             )
             session.add(notification)
+            print(f"   ✅ Notification added for doctor {appointment.doctor.user.id}")
         
         # Notify patient when doctor/admin cancels
         if (is_doctor or is_admin) and appointment.patient_id:
+            print(f"   Creating notification: appointment cancelled by doctor/admin for patient {appointment.patient_id}")
             notification = Notification(
                 user_id=appointment.patient_id,
                 title="Appointment Cancelled",
@@ -476,6 +489,7 @@ def cancel_appointment(request):
                 appointment_id=appointment.id
             )
             session.add(notification)
+            print(f"   ✅ Notification added for patient {appointment.patient_id}")
         
         session.commit()
 

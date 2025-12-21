@@ -9,14 +9,18 @@ def get_notifications(request):
     session = get_db_session(request)
     try:
         current_user = require_auth(request)
+        print(f"🔔 Fetching notifications for user {current_user.id} ({current_user.name})")
         
         notifications = session.query(Notification).filter(
             Notification.user_id == current_user.id
         ).order_by(Notification.created_at.desc()).all()
         
+        unread_count = sum(1 for n in notifications if not n.is_read)
+        print(f"   Found {len(notifications)} notification(s), {unread_count} unread")
+        
         return {
             'notifications': [n.to_dict() for n in notifications],
-            'unread_count': sum(1 for n in notifications if not n.is_read)
+            'unread_count': unread_count
         }
     finally:
         session.close()
@@ -49,6 +53,8 @@ def mark_as_read(request):
         current_user = require_auth(request)
         notification_id = int(request.matchdict['id'])
         
+        print(f"✓ Marking notification {notification_id} as read for user {current_user.id}")
+        
         notification = session.query(Notification).filter(
             Notification.id == notification_id,
             Notification.user_id == current_user.id
@@ -61,9 +67,11 @@ def mark_as_read(request):
         notification.is_read = True
         session.commit()
         
+        print(f"✅ Notification {notification_id} marked as read")
         return {'message': 'Notifikasi ditandai sebagai dibaca', 'notification': notification.to_dict()}
     except Exception as e:
         session.rollback()
+        print(f"❌ Error marking notification as read: {str(e)}")
         return {'error': str(e)}
     finally:
         session.close()
@@ -75,6 +83,8 @@ def mark_as_unread(request):
     try:
         current_user = require_auth(request)
         notification_id = int(request.matchdict['id'])
+        
+        print(f"↩️ Marking notification {notification_id} as unread for user {current_user.id}")
         
         notification = session.query(Notification).filter(
             Notification.id == notification_id,
@@ -88,9 +98,11 @@ def mark_as_unread(request):
         notification.is_read = False
         session.commit()
         
+        print(f"✅ Notification {notification_id} marked as unread")
         return {'message': 'Notifikasi ditandai sebagai belum dibaca', 'notification': notification.to_dict()}
     except Exception as e:
         session.rollback()
+        print(f"❌ Error marking notification as unread: {str(e)}")
         return {'error': str(e)}
     finally:
         session.close()

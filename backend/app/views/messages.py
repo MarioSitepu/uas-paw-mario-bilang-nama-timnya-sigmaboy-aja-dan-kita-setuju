@@ -21,6 +21,8 @@ def get_conversations(request):
     if not current_user:
         return Response(json.dumps({'error': 'User not found'}), status=404, content_type='application/json')
 
+    print(f"📱 Fetching conversations for user {user_id} ({current_user.name}, role={current_user.role})")
+    
     # Normalize role
     user_role = current_user.role.lower() if current_user.role else ''
 
@@ -31,7 +33,7 @@ def get_conversations(request):
         doctor = session.query(Doctor).filter(Doctor.user_id == user_id).first()
         if not doctor:
             # Try to log this issue or handle it gracefully
-            print(f"Warning: User {user_id} has role 'doctor' but no Doctor profile found.")
+            print(f"⚠️ Warning: User {user_id} has role 'doctor' but no Doctor profile found.")
             return []
             
         # Get unique patient IDs from appointments
@@ -40,6 +42,7 @@ def get_conversations(request):
             .filter(Appointment.doctor_id == doctor.id)\
             .distinct().all()
         partner_ids = [pid[0] for pid in patient_ids]
+        print(f"   Found {len(partner_ids)} patient(s)")
         
     elif user_role == 'patient':
         # Find all doctors booked by this patient
@@ -50,6 +53,7 @@ def get_conversations(request):
         # We have doctor IDs, but we need their User IDs for the Message table
         doc_ids = [did[0] for did in doctor_ids]
         if not doc_ids:
+            print(f"   No doctor bookings found")
             return []
             
         # Join Doctor table to get User IDs
@@ -57,12 +61,15 @@ def get_conversations(request):
             .filter(Doctor.id.in_(doc_ids))\
             .all()
         partner_ids = [uid[0] for uid in user_ids]
+        print(f"   Found {len(partner_ids)} doctor(s)")
     else:
         # Admin or other role
+        print(f"   Role '{user_role}' not supported for conversations")
         return []
 
     # Filter out empty list if no appointments
     if not partner_ids:
+        print(f"   No conversation partners found")
         return []
 
     # Get User details for these partners
@@ -100,6 +107,7 @@ def get_conversations(request):
         
     # Sort by recent activity (unread > last message time)
     results.sort(key=lambda x: x['lastMessageTime'] or '', reverse=True)
+    print(f"✅ Returning {len(results)} conversation(s)")
     
     return results
 
@@ -115,6 +123,8 @@ def get_messages(request):
     partner_id = int(partner_id)
     session = request.dbsession
     
+    print(f"💬 Fetching messages between user {user_id} and partner {partner_id}")
+    
     # Fetch messages
     messages = session.query(Message).filter(
         or_(
@@ -122,6 +132,8 @@ def get_messages(request):
             and_(Message.sender_id == partner_id, Message.recipient_id == user_id)
         )
     ).order_by(Message.created_at.asc()).all()
+    
+    print(f"   Found {len(messages)} message(s)")
     
     # Mark messages from partner as read
     unread_messages = session.query(Message).filter(
@@ -133,7 +145,9 @@ def get_messages(request):
     for msg in unread_messages:
         msg.is_read = True
     
-    session.commit() # Commit read status updates
+    if unread_messages:
+        session.commit() # Commit read status updates
+        print(f"   Marked {len(unread_messages)} message(s) as read")
     
     # Creating a list of dicts for response
     results = []
@@ -169,43 +183,50 @@ def send_message(request):
          
     session = request.dbsession
     
-    new_msg = Message(
-        sender_id=user_id,
-        recipient_id=recipient_id,
-        content=content
-    )
-    
-    session.add(new_msg)
-    
-    # Record message in message_history
-    msg_history = MessageHistory(
-        sender_id=user_id,
-        recipient_id=recipient_id,
-        content=content,
-        is_read=False
-    )
-    session.add(msg_history)
-    
-    # Notify recipient
-    sender = session.query(User).get(user_id)
-    notification = Notification(
-        user_id=recipient_id,
-        title=f"Pesan Baru dari {sender.name if sender else 'User'}",
-        message=content[:50] + ('...' if len(content) > 50 else ''),
-        is_read=False
-    )
-    session.add(notification)
-    
-    session.flush() # flush to get ID and created_at
-    session.commit() # commit to save to database
-    
-    return {
-        'id': new_msg.id,
-        'senderId': new_msg.sender_id,
-        'content': new_msg.content,
-        'createdAt': new_msg.created_at.isoformat(),
-        'isRead': False
-    }
+    try:
+        new_msg = Message(
+            sender_id=user_id,
+            recipient_id=recipient_id,
+            content=content
+        )
+        
+        session.add(new_msg)
+        
+        # Record message in message_history
+        msg_history = MessageHistory(
+            sender_id=user_id,
+            recipient_id=recipient_id,
+            content=content,
+            is_read=False
+        )
+        session.add(msg_history)
+        
+        # Notify recipient
+        sender = session.query(User).get(user_id)
+        notification = Notification(
+            user_id=recipient_id,
+            title=f"Pesan Baru dari {sender.name if sender else 'User'}",
+            message=content[:50] + ('...' if len(content) > 50 else ''),
+            is_read=False
+        )
+        session.add(notification)
+        
+        session.flush() # flush to get ID and created_at
+        session.commit() # commit to save to database
+        
+        print(f"✅ Message sent: ID={new_msg.id}, sender={user_id}, recipient={recipient_id}")
+        
+        return {
+            'id': new_msg.id,
+            'senderId': new_msg.sender_id,
+            'content': new_msg.content,
+            'createdAt': new_msg.created_at.isoformat(),
+            'isRead': False
+        }
+    except Exception as e:
+        session.rollback()
+        print(f"❌ Error sending message: {str(e)}")
+        return Response(json.dumps({'error': f'Failed to send message: {str(e)}'}), status=500, content_type='application/json')
 
 @view_config(route_name='api_messages_unread_count', renderer='json', request_method='GET')
 def get_total_unread_count(request):
