@@ -147,6 +147,18 @@ export const NotificationsPage: React.FC = () => {
         return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
     };
 
+    const formatFullDateTime = (dateString: string) => {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('id-ID', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+        });
+    };
+
     return (
         <div className="min-h-screen">
             {/* Header */}
@@ -276,7 +288,10 @@ export const NotificationsPage: React.FC = () => {
                                             </div>
                                             <div className="flex items-center gap-2 shrink-0">
                                                 <Clock size={14} className="text-slate-400" />
-                                                <span className="text-xs text-slate-400 whitespace-nowrap">
+                                                <span 
+                                                    className="text-xs text-slate-400 whitespace-nowrap cursor-help"
+                                                    title={formatFullDateTime(notification.created_at)}
+                                                >
                                                     {formatDate(notification.created_at)}
                                                 </span>
                                                 <button
