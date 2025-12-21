@@ -305,8 +305,9 @@ def login(request):
         
         email = data.get('email') if isinstance(data, dict) else None
         password = data.get('password') if isinstance(data, dict) else None
+        role_raw = data.get('role') if isinstance(data, dict) else None  # Get role from request
         
-        sys.stderr.write(f"[LOGIN] Email: {email}, Password provided: {bool(password)}\n")
+        sys.stderr.write(f"[LOGIN] Email: {email}, Password provided: {bool(password)}, Role: {role_raw}\n")
         sys.stderr.flush()
         
         if not email or not password:
@@ -325,7 +326,33 @@ def login(request):
         
         if not user or not user.check_password(password):
             request.response.status_code = 401
-            return {'error': 'Invalid email or password'}
+            return {'error': 'Email atau password salah'}
+        
+        # Check role mismatch if role is provided in request
+        if role_raw:
+            requested_role = role_raw.upper() if role_raw else None
+            user_role_upper = user.role.upper() if user.role else 'PATIENT'
+            
+            sys.stderr.write(f"[LOGIN] Role check: requested={requested_role}, user_role={user_role_upper}\n")
+            sys.stderr.flush()
+            
+            if requested_role and requested_role != user_role_upper:
+                request.response.status_code = 403
+                if user_role_upper == 'PATIENT':
+                    return {'error': 'Akses ditolak: Akun ini terdaftar sebagai PASIEN. Silakan login melalui halaman login pasien atau gunakan akun yang sesuai.'}
+                elif user_role_upper == 'DOCTOR':
+                    return {'error': 'Akses ditolak: Akun ini terdaftar sebagai DOKTER. Silakan login melalui halaman login dokter atau gunakan akun yang sesuai.'}
+                elif user_role_upper == 'ADMIN':
+                    return {'error': 'Akses ditolak: Akun ini terdaftar sebagai ADMIN. Silakan login melalui halaman login admin atau gunakan akun yang sesuai.'}
+                else:
+                    return {'error': f'Akses ditolak: Role akun Anda ({user_role_upper}) tidak sesuai dengan halaman login ini ({requested_role}).'}
+        
+        # Fix legacy lowercase roles
+        if user.role and user.role != user.role.upper():
+            sys.stderr.write(f"[LOGIN] Upgrading role to uppercase: {user.role} -> {user.role.upper()}\n")
+            sys.stderr.flush()
+            user.role = user.role.upper()
+            session.commit()
         
         # Ensure Doctor profile exists if role is DOCTOR
         if user.role == 'DOCTOR':
@@ -496,13 +523,13 @@ def google_login(request):
             # User exists with different role
             if user_role_upper == 'PATIENT':
                 request.response.status_code = 403
-                return {'error': 'Anda sudah terdaftar sebagai pasien. Silakan login sebagai pasien atau gunakan akun Google yang berbeda.'}
+                return {'error': 'Akses ditolak: Akun Google ini terdaftar sebagai PASIEN. Silakan login melalui halaman login pasien atau gunakan akun Google yang berbeda.'}
             elif user_role_upper == 'DOCTOR':
                 request.response.status_code = 403
-                return {'error': 'Anda sudah terdaftar sebagai dokter. Silakan login sebagai dokter atau gunakan akun Google yang berbeda.'}
+                return {'error': 'Akses ditolak: Akun Google ini terdaftar sebagai DOKTER. Silakan login melalui halaman login dokter atau gunakan akun Google yang berbeda.'}
             else:
                 request.response.status_code = 403
-                return {'error': f'Anda sudah terdaftar dengan role {user_role_upper}. Silakan login dengan role yang sesuai.'}
+                return {'error': f'Akses ditolak: Akun Google ini terdaftar dengan role {user_role_upper}. Silakan login dengan role yang sesuai atau gunakan akun Google yang berbeda.'}
 
         # Ensure Doctor profile exists if role is DOCTOR (for existing users)
         if user.role == 'DOCTOR':
