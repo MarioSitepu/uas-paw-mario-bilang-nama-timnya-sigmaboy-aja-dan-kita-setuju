@@ -39,7 +39,7 @@ const ChatPage: React.FC = () => {
     // Fetch conversations
     useEffect(() => {
         fetchConversations();
-        const interval = setInterval(fetchConversations, 10000); // Poll conversations list
+        const interval = setInterval(fetchConversations, 30000); // Poll conversations list every 30s
         return () => clearInterval(interval);
     }, []);
 
@@ -48,7 +48,7 @@ const ChatPage: React.FC = () => {
         if (selectedPartner) {
             fetchMessages(selectedPartner.id);
             setIsMobileListVisible(false);
-            const interval = setInterval(() => fetchMessages(selectedPartner.id), 3000); // Fast poll for chat
+            const interval = setInterval(() => fetchMessages(selectedPartner.id), 5000); // Poll messages every 5s
             return () => clearInterval(interval);
         }
     }, [selectedPartner]);

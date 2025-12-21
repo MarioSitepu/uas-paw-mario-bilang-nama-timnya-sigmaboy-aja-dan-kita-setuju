@@ -128,7 +128,7 @@ export const PatientDashboard: React.FC = () => {
     };
 
     void loadUnreadCount();
-    const notificationInterval = window.setInterval(() => void loadUnreadCount(), 30000);
+    const notificationInterval = window.setInterval(() => void loadUnreadCount(), 60000);
 
     return () => {
       isActive = false;

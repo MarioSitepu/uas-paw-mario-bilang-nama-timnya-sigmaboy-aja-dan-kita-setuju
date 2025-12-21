@@ -74,7 +74,7 @@ export const DoctorDashboard: React.FC = () => {
     };
 
     void loadUnreadCount();
-    const notificationInterval = window.setInterval(() => void loadUnreadCount(), 30000);
+    const notificationInterval = window.setInterval(() => void loadUnreadCount(), 60000);
 
     const loadDashboardData = async () => {
       try {
@@ -165,7 +165,7 @@ export const DoctorDashboard: React.FC = () => {
     };
 
     void loadDashboardData();
-    const intervalId = window.setInterval(() => void loadDashboardData(), 30000);
+    const intervalId = window.setInterval(() => void loadDashboardData(), 60000);
 
     return () => {
       isActive = false;

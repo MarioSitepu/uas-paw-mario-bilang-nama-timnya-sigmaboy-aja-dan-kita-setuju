@@ -108,7 +108,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }: AppLayoutProps
     };
 
     fetchCounts();
-    const interval = setInterval(fetchCounts, 10000); // 10s poll for snappier UI
+    const interval = setInterval(fetchCounts, 60000); // 60s poll to reduce server load
     return () => clearInterval(interval);
   }, [user]);
 
