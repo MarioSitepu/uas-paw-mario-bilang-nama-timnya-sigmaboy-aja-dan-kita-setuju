@@ -46,8 +46,8 @@ export const Login: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      console.log('📝 Email/Password login attempt...');
-      await login(email, password);
+      console.log('📝 Email/Password login attempt with role:', selectedRole);
+      await login(email, password, selectedRole);
       console.log('✅ Login successful, setting flag to navigate');
       addToast('Login successful!', 'success');
       setShouldNavigate(true);

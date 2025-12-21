@@ -46,7 +46,7 @@ export const authAPI = {
     specialization?: string;
   }) => api.post('/api/auth/register', data),
 
-  login: (data: { email: string; password: string }) =>
+  login: (data: { email: string; password: string; role?: string }) =>
     api.post('/api/auth/login', data),
 
   googleLogin: (token: string, role?: string) => api.post('/api/auth/google', { token, role }),

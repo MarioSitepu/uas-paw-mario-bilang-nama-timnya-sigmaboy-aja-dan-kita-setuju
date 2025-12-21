@@ -10,7 +10,7 @@ interface AuthContextType {
     isAuthenticated: boolean;
     needsProfileSetup: boolean;
     googleProfileSetup: { email: string; googleName: string; googleToken: string; selectedRole?: UserRole } | null;
-    login: (email: string, password: string) => Promise<void>;
+    login: (email: string, password: string, role?: string) => Promise<void>;
     googleLogin: (credential: string, role?: UserRole) => Promise<{ isNewUser: boolean }>;
     completeGoogleProfile: (name: string, role: UserRole) => Promise<void>;
     register: (data: RegisterData) => Promise<void>;
@@ -72,77 +72,115 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         console.log('🔓 AuthContext initialization complete');
     }, []);
 
-    const login = async (email: string, password: string) => {
-        console.log('🔐 Attempting login with email:', email);
-        const response = await authAPI.login({ email, password });
-        const data = response.data;
-        
-        console.log('📦 Login response:', data);
-        
-        // Check if response contains an error
-        if (data.error) {
-            console.error('⚠️ Login error:', data.error);
-            throw new Error(data.error);
-        }
-        
-        const { token: newToken, user: newUser } = data;
-        // Normalize role to lowercase
-        if (newUser.role) {
-            newUser.role = newUser.role.toLowerCase();
-        }
-        console.log('💾 Storing token and user...');
-        localStorage.setItem('token', newToken);
-        localStorage.setItem('user', JSON.stringify(newUser));
-        console.log('🔄 Updating auth context state...');
-        setToken(newToken);
-        setUser(newUser);
-        console.log('✓ Auth state updated');
-        setNeedsProfileSetup(false);
-        setGoogleProfileSetup(null);
-    };
-
-    const googleLogin = async (credential: string, role?: UserRole): Promise<{ isNewUser: boolean }> => {
-        // First step: verify token with Google
-        console.log('📡 Sending Google token to backend with role:', role);
-        const response = await authAPI.googleLogin(credential, role);
-        const data = response.data;
-        
-        console.log('📦 Backend response:', data);
-        
-        // Check if response contains an error
-        if (data.error) {
-            console.error('⚠️ Backend returned error:', data.error);
-            throw new Error(data.error);
-        }
-        
-        if (data.is_new_user) {
-            // New user - need profile setup
-            console.log('👤 New user, setting up profile state');
-            setNeedsProfileSetup(true);
-            setGoogleProfileSetup({
-                email: data.email,
-                googleName: data.google_name || data.email.split('@')[0],
-                googleToken: data.token,
-                selectedRole: role // Store the role selected in Login page
-            });
-            return { isNewUser: true };
-        } else {
-            // Existing user - login directly
-            console.log('✓ Existing user, setting auth state');
+    const login = async (email: string, password: string, role?: string) => {
+        try {
+            console.log('🔐 Attempting login with email:', email, 'role:', role);
+            const response = await authAPI.login({ email, password, role });
+            const data = response.data;
+            
+            console.log('📦 Login response:', data);
+            
+            // Check if response contains an error
+            if (data.error) {
+                console.error('⚠️ Login error:', data.error);
+                throw new Error(data.error);
+            }
+            
             const { token: newToken, user: newUser } = data;
             // Normalize role to lowercase
             if (newUser.role) {
                 newUser.role = newUser.role.toLowerCase();
             }
+            console.log('💾 Storing token and user...');
             localStorage.setItem('token', newToken);
             localStorage.setItem('user', JSON.stringify(newUser));
-            console.log('💾 Stored token and user in localStorage');
+            console.log('🔄 Updating auth context state...');
             setToken(newToken);
             setUser(newUser);
-            console.log('🔄 Updated auth context state');
+            console.log('✓ Auth state updated');
             setNeedsProfileSetup(false);
             setGoogleProfileSetup(null);
-            return { isNewUser: false };
+        } catch (error: any) {
+            // Extract error message from backend response
+            console.error('❌ Login error:', error);
+            
+            // Check if it's an axios error with response data
+            if (error.response && error.response.data && error.response.data.error) {
+                // Backend sent a specific error message
+                const errorMessage = error.response.data.error;
+                console.error('⚠️ Backend error message:', errorMessage);
+                throw new Error(errorMessage);
+            } else if (error.message) {
+                // Use the error message if available
+                throw new Error(error.message);
+            } else {
+                // Fallback error message
+                throw new Error('Login gagal. Silakan coba lagi.');
+            }
+        }
+    };
+
+    const googleLogin = async (credential: string, role?: UserRole): Promise<{ isNewUser: boolean }> => {
+        try {
+            // First step: verify token with Google
+            console.log('📡 Sending Google token to backend with role:', role);
+            const response = await authAPI.googleLogin(credential, role);
+            const data = response.data;
+            
+            console.log('📦 Backend response:', data);
+            
+            // Check if response contains an error
+            if (data.error) {
+                console.error('⚠️ Backend returned error:', data.error);
+                throw new Error(data.error);
+            }
+            
+            if (data.is_new_user) {
+                // New user - need profile setup
+                console.log('👤 New user, setting up profile state');
+                setNeedsProfileSetup(true);
+                setGoogleProfileSetup({
+                    email: data.email,
+                    googleName: data.google_name || data.email.split('@')[0],
+                    googleToken: data.token,
+                    selectedRole: role // Store the role selected in Login page
+                });
+                return { isNewUser: true };
+            } else {
+                // Existing user - login directly
+                console.log('✓ Existing user, setting auth state');
+                const { token: newToken, user: newUser } = data;
+                // Normalize role to lowercase
+                if (newUser.role) {
+                    newUser.role = newUser.role.toLowerCase();
+                }
+                localStorage.setItem('token', newToken);
+                localStorage.setItem('user', JSON.stringify(newUser));
+                console.log('💾 Stored token and user in localStorage');
+                setToken(newToken);
+                setUser(newUser);
+                console.log('🔄 Updated auth context state');
+                setNeedsProfileSetup(false);
+                setGoogleProfileSetup(null);
+                return { isNewUser: false };
+            }
+        } catch (error: any) {
+            // Extract error message from backend response
+            console.error('❌ googleLogin error:', error);
+            
+            // Check if it's an axios error with response data
+            if (error.response && error.response.data && error.response.data.error) {
+                // Backend sent a specific error message
+                const errorMessage = error.response.data.error;
+                console.error('⚠️ Backend error message:', errorMessage);
+                throw new Error(errorMessage);
+            } else if (error.message) {
+                // Use the error message if available
+                throw new Error(error.message);
+            } else {
+                // Fallback error message
+                throw new Error('Login gagal. Silakan coba lagi.');
+            }
         }
     };
 
