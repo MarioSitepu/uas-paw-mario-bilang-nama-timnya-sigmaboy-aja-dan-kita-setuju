@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, ClipboardList, FileText, Clock, Bell, MessageSquare } from 'lucide-react';
+import { Calendar, ClipboardList, FileText, Clock, Bell, MessageSquare, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { notificationsAPI, chatAPI } from '../../services/api';
 
@@ -9,12 +9,21 @@ import { AppointmentCard } from '../../components/cards/AppointmentCard';
 import { LoadingSkeleton } from '../../components/ui/LoadingSkeleton';
 import { useToastContext } from '../../components/ui/Toast';
 
+interface Notification {
+  id: number;
+  title: string;
+  message: string;
+  is_read: boolean;
+  created_at: string;
+}
+
 export const DoctorDashboard: React.FC = () => {
   const { user } = useAuth();
   const [allAppointments, setAllAppointments] = useState<Appointment[]>([]);
   const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([]);
   const [upcomingConfirmedAppointments, setUpcomingConfirmedAppointments] = useState<Appointment[]>([]);
   const [pendingAppointments, setPendingAppointments] = useState<Appointment[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [doctorRating, setDoctorRating] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [trendMode, setTrendMode] = useState<'daily' | 'weekly'>('daily');
@@ -31,9 +40,13 @@ export const DoctorDashboard: React.FC = () => {
 
     const loadUnreadCount = async () => {
       try {
-        const notifications = await notificationsAPI.getAll();
-        const count = notifications.filter((n: any) => !n.is_read).length;
-        if (isActive) setUnreadCount(count);
+        const notificationsData = await notificationsAPI.getAll();
+        const notifArray = notificationsData.data?.notifications || [];
+        const count = notifArray.filter((n: any) => !n.is_read).length;
+        if (isActive) {
+          setNotifications(notifArray.slice(0, 5)); // Get top 5 for dashboard
+          setUnreadCount(count);
+        }
 
         const chatResponse = await chatAPI.getUnreadCount();
         if (isActive) setUnreadChatCount(chatResponse.data.count || 0);
@@ -708,8 +721,74 @@ export const DoctorDashboard: React.FC = () => {
               </div>
             )}
           </div>
-        </div>
-      </div>
+
+          {/* Notifications Section */}
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center text-2xl shadow-lg">🔔</div>
+                <div>
+                  <h2 className="text-2xl font-bold text-slate-800">Notifikasi</h2>
+                  <p className="text-sm text-slate-500">{unreadCount > 0 ? `${unreadCount} belum dibaca` : 'Semua dibaca'}</p>
+                </div>
+              </div>
+              <Link
+                to="/app/notifications"
+                className="group flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-xl font-semibold hover:from-amber-700 hover:to-orange-700 shadow-lg hover:shadow-xl transition-all hover:scale-105"
+              >
+                Lihat Semua
+                <span className="group-hover:translate-x-1 transition-transform">→</span>
+              </Link>
+            </div>
+
+            {notifications.length === 0 ? (
+              <div className="backdrop-blur-xl bg-white/80 border border-white/20 rounded-3xl p-12 text-center shadow-xl">
+                <div className="max-w-md mx-auto space-y-4">
+                  <div className="text-5xl">✨</div>
+                  <h3 className="text-xl font-bold text-slate-800">All Read</h3>
+                  <p className="text-slate-600 text-sm">
+                    Anda telah membaca semua notifikasi. Tetap update dengan aktivitas terbaru!
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {notifications.map((notification) => (
+                  <div
+                    key={notification.id}
+                    className={`backdrop-blur-xl border rounded-2xl p-4 shadow-md transition-all ${
+                      notification.is_read
+                        ? 'bg-white/50 border-white/20'
+                        : 'bg-blue-50/80 border-blue-200/50'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0 mt-1">
+                        {notification.is_read ? (
+                          <CheckCircle2 size={20} className="text-slate-400" />
+                        ) : (
+                          <div className="w-2 h-2 rounded-full bg-blue-500 mt-1.5"></div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-slate-800">{notification.title}</p>
+                        <p className="text-sm text-slate-600 mt-0.5">{notification.message}</p>
+                        <p className="text-xs text-slate-400 mt-2">
+                          {new Date(notification.created_at).toLocaleDateString('id-ID', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
       <style>{`
         @keyframes float {
           0%, 100% { transform: translateY(0px) rotate(0deg); opacity: 0.2; }

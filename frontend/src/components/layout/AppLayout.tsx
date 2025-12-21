@@ -14,7 +14,7 @@ import {
   Activity,
   Bell,
   MessageSquare,
-  LucideIcon
+  type LucideIcon
 } from 'lucide-react';
 import { notificationsAPI, chatAPI } from '../../services/api';
 
