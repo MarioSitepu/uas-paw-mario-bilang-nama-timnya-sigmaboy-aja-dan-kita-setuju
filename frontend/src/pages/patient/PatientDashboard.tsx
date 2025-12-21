@@ -104,6 +104,12 @@ export const PatientDashboard: React.FC = () => {
       minute: '2-digit',
     });
   };
+
+  // Load notifications on mount
+  useEffect(() => {
+    let isActive = true;
+    
+    const loadUnreadCount = async () => {
       try {
         const notificationsData = await notificationsAPI.getAll();
         const notifArray = notificationsData.data?.notifications || [];
