@@ -22,6 +22,7 @@ export interface User {
 export interface Doctor {
   id: number;
   userId: number;
+  user_id?: number; // For backwards compatibility with backend response
   name: string;
   specialization: string;
   photoUrl: string;

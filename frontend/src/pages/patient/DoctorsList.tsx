@@ -24,6 +24,8 @@ export const DoctorsList: React.FC = () => {
       // Convert backend doctor format to frontend format
       allDoctors = allDoctors.map((doc: any) => ({
         id: doc.id,
+        userId: doc.user_id,
+        user_id: doc.user_id, // for backwards compatibility
         name: doc.name || 'Unknown',
         specialization: doc.specialization || 'General',
         photoUrl: doc.profile_photo_url || `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2'%3E%3Cpath d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'/%3E%3Ccircle cx='12' cy='7' r='4'/%3E%3C/svg%3E`,

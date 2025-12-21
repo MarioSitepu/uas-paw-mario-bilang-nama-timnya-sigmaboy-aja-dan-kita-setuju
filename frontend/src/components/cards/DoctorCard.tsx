@@ -127,7 +127,7 @@ export const DoctorCard: React.FC<DoctorCardProps> = ({ doctor, showBookButton =
               </Link>
               
               <Link
-                to={`/app/patient/chat/${doctor.user_id}`}
+                to={`/app/patient/chat/${doctor.user_id || doctor.userId}`}
                 className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white rounded-lg font-bold text-sm shadow-md shadow-emerald-500/20 transition-all transform hover:-translate-y-0.5"
               >
                 <MessageCircle size={16} />
