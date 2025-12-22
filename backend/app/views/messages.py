@@ -60,13 +60,17 @@ def get_conversations(request):
             )
         ).all()
         
-        # Extract unique partner IDs
+        # Extract unique partner IDs (exclude self-messages)
         partner_ids = set()
         for msg in all_messages:
             if msg.sender_id == user_id:
-                partner_ids.add(msg.recipient_id)
+                partner_id = msg.recipient_id
             else:
-                partner_ids.add(msg.sender_id)
+                partner_id = msg.sender_id
+            
+            # Never add self as partner
+            if partner_id != user_id:
+                partner_ids.add(partner_id)
         
         partner_ids = list(partner_ids)
         print(f"   Found {len(partner_ids)} unique message partner(s): {partner_ids}")
@@ -161,7 +165,7 @@ def get_messages(request):
         
         print(f"💬 Fetching messages between user {user_id} and partner {partner_id}")
         
-        # Fetch messages
+        # Fetch messages - only between these two specific users
         messages = session.query(Message).filter(
             or_(
                 and_(Message.sender_id == user_id, Message.recipient_id == partner_id),
@@ -169,7 +173,7 @@ def get_messages(request):
             )
         ).order_by(Message.created_at.asc()).all()
         
-        print(f"   Found {len(messages)} message(s)")
+        print(f"   Found {len(messages)} message(s) between {user_id} and {partner_id}")
         
         # Mark messages from partner as read
         unread_messages = session.query(Message).filter(
