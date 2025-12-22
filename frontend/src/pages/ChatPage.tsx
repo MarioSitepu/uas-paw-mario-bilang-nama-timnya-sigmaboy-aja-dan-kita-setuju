@@ -209,11 +209,15 @@ const ChatPage: React.FC = () => {
             console.log(`💬 Fetching messages with partner ${partnerId}...`);
             const response = await chatAPI.getMessages(partnerId);
             console.log('📥 Messages response:', response.data);
-            setMessages(response.data);
-            if (response.data.length > 0) {
-                setLastMessageId(response.data[response.data.length - 1].id);
+            
+            // Ensure we set an array
+            const messageList = Array.isArray(response.data) ? response.data : [];
+            setMessages(messageList);
+            
+            if (messageList.length > 0) {
+                setLastMessageId(messageList[messageList.length - 1].id);
             }
-            console.log(`✅ Loaded ${response.data.length} message(s)`);
+            console.log(`✅ Loaded ${messageList.length} message(s)`);
             
             // Refetch unread count immediately after opening chat
             await fetchUnreadCount();
@@ -222,6 +226,7 @@ const ChatPage: React.FC = () => {
             window.dispatchEvent(new Event('chatMessagesRead'));
         } catch (error) {
             console.error('❌ Failed to fetch messages', error);
+            setMessages([]); // Set empty array on error
         }
     };
 
