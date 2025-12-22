@@ -114,8 +114,15 @@ const ChatPage: React.FC = () => {
                 if (cachedUserData) {
                     try {
                         const cachedUser = JSON.parse(cachedUserData);
+                        // CRITICAL: Validate that cached user ID matches the requested partner ID
+                        // This prevents showing wrong partner data when user navigates between doctors
+                        if (cachedUser.id !== pid && cachedUser.userId !== pid) {
+                            console.warn(`⚠️ Cache mismatch! Requested ${pid} but cache has ${cachedUser.id}. Clearing cache.`);
+                            sessionStorage.removeItem(`chatUser_${pid}`);
+                            return;
+                        }
                         const cachedUserFormatted: User = {
-                            id: cachedUser.id || pid,
+                            id: cachedUser.id || cachedUser.userId || pid,
                             name: cachedUser.name || 'Unknown User',
                             photoUrl: cachedUser.photoUrl || `https://ui-avatars.com/api/?name=${cachedUser.name}&background=random`,
                             role: cachedUser.role || 'doctor',
@@ -123,11 +130,11 @@ const ChatPage: React.FC = () => {
                         };
                         console.log('✅ Using cached user from sessionStorage:', cachedUserFormatted);
                         setSelectedPartner(cachedUserFormatted);
-                        // Don't clear cache - let it persist for this session
-                        // Cache will auto-clear when browser session ends
                         return;
                     } catch (e) {
                         console.error('Failed to parse cached user:', e);
+                        // Clear corrupted cache
+                        sessionStorage.removeItem(`chatUser_${pid}`);
                     }
                 }
 

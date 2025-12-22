@@ -253,6 +253,17 @@ def send_message(request):
         
         print(f"💬 Sending message from {user_id} to {recipient_id}")
         
+        # Validate recipient_id is an integer and not self
+        try:
+            recipient_id = int(recipient_id)
+        except (ValueError, TypeError):
+            request.response.status_int = 400
+            return {'error': 'Invalid recipient_id format'}
+        
+        if recipient_id == user_id:
+            request.response.status_int = 400
+            return {'error': 'Cannot send message to yourself'}
+        
         new_msg = Message(
             sender_id=user_id,
             recipient_id=recipient_id,
@@ -277,6 +288,13 @@ def send_message(request):
         session.commit() # commit to save to database
         
         print(f"✅ Message sent: ID={new_msg.id}, sender={user_id}, recipient={recipient_id}")
+        
+        # CRITICAL: Log the message recipient to help debug mismatches
+        print(f"   📝 Message recorded in database:")
+        print(f"      - From user {user_id}")
+        print(f"      - To user {recipient_id}")
+        print(f"      - Content: {content[:50]}..." if len(content) > 50 else f"      - Content: {content}")
+        
         
         result = {
             'id': new_msg.id,
