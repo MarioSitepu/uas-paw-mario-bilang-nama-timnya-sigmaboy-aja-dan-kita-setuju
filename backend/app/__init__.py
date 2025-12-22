@@ -38,22 +38,39 @@ def auth_tween_factory(handler, registry):
             
             try:
                 # Get database session
-                session = request.registry.dbmaker()
-                
-                # Import Token model
-                from .models import Token
-                
-                # Query database for token
-                token = session.query(Token).filter(Token.token == token_string).first()
-                session.close()
-                
-                if token and not token.is_expired():
-                    request.user_id = token.user_id
-                    sys.stderr.write(f"[AUTH TWEEN] Token validated for user {token.user_id}\n")
+                try:
+                    session = request.registry.dbmaker()
+                except Exception as dbmaker_error:
+                    sys.stderr.write(f"[AUTH TWEEN] CRITICAL: dbmaker() failed: {str(dbmaker_error)}\n")
+                    traceback.print_exc(file=sys.stderr)
                     sys.stderr.flush()
-                else:
-                    sys.stderr.write(f"[AUTH TWEEN] Invalid or expired token\n")
-                    sys.stderr.flush()
+                    # Continue without setting user_id - endpoint will handle 401
+                    session = None
+                
+                if session:
+                    try:
+                        # Import Token model
+                        from .models import Token
+                        
+                        # Query database for token
+                        token = session.query(Token).filter(Token.token == token_string).first()
+                        session.close()
+                        
+                        if token and not token.is_expired():
+                            request.user_id = token.user_id
+                            sys.stderr.write(f"[AUTH TWEEN] Token validated for user {token.user_id}\n")
+                            sys.stderr.flush()
+                        else:
+                            sys.stderr.write(f"[AUTH TWEEN] Invalid or expired token\n")
+                            sys.stderr.flush()
+                    except Exception as query_error:
+                        sys.stderr.write(f"[AUTH TWEEN] Token query error: {str(query_error)}\n")
+                        traceback.print_exc(file=sys.stderr)
+                        sys.stderr.flush()
+                        try:
+                            session.close()
+                        except:
+                            pass
                     
             except Exception as e:
                 sys.stderr.write(f"[AUTH TWEEN] Token validation error: {str(e)}\n")

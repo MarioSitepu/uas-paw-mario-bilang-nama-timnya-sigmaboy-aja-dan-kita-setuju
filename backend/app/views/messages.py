@@ -24,6 +24,7 @@ def get_conversations(request):
         # Get current user
         user_id = request.user_id
         if not user_id:
+            print(f"🔴 ERROR: request.user_id is {request.user_id}, auth header: {request.headers.get('Authorization', 'NONE')}")
             request.response.status_int = 401
             return {'error': 'Unauthorized', 'conversations': []}
         
@@ -162,77 +163,94 @@ def get_conversations(request):
 @view_config(route_name='api_messages', renderer='json', request_method='GET')
 def get_messages(request):
     """Get message history with a specific user"""
-    user_id = request.user_id
-    if not user_id:
-        return Response(json.dumps({'error': 'Unauthorized'}), status=401, content_type='application/json')
-    
-    user_id = int(user_id)
-    partner_id = request.matchdict['partner_id']
-    partner_id = int(partner_id)
-    session = request.registry.dbmaker()
-    
-    print(f"💬 Fetching messages between user {user_id} and partner {partner_id}")
-    
-    # Fetch messages
-    messages = session.query(Message).filter(
-        or_(
-            and_(Message.sender_id == user_id, Message.recipient_id == partner_id),
-            and_(Message.sender_id == partner_id, Message.recipient_id == user_id)
-        )
-    ).order_by(Message.created_at.asc()).all()
-    
-    print(f"   Found {len(messages)} message(s)")
-    
-    # Mark messages from partner as read
-    unread_messages = session.query(Message).filter(
-        Message.sender_id == partner_id,
-        Message.recipient_id == user_id,
-        Message.is_read == False
-    ).all()
-    
-    for msg in unread_messages:
-        msg.is_read = True
-    
-    if unread_messages:
-        session.commit() # Commit read status updates
-        print(f"   Marked {len(unread_messages)} message(s) as read")
-    
-    # Creating a list of dicts for response
-    results = []
-    for msg in messages:
-        results.append({
-            'id': msg.id,
-            'senderId': msg.sender_id,
-            'content': msg.content,
-            'createdAt': to_utc7(msg.created_at),
-            'isRead': msg.is_read
-        })
-    
-    session.close()
-    return results
+    try:
+        user_id = request.user_id
+        if not user_id:
+            request.response.status_int = 401
+            return {'error': 'Unauthorized', 'messages': []}
+        
+        user_id = int(user_id)
+        
+        try:
+            partner_id = int(request.matchdict['partner_id'])
+        except (ValueError, KeyError):
+            request.response.status_int = 400
+            return {'error': 'Invalid partner_id'}
+        
+        session = request.registry.dbmaker()
+        
+        print(f"💬 Fetching messages between user {user_id} and partner {partner_id}")
+        
+        # Fetch messages
+        messages = session.query(Message).filter(
+            or_(
+                and_(Message.sender_id == user_id, Message.recipient_id == partner_id),
+                and_(Message.sender_id == partner_id, Message.recipient_id == user_id)
+            )
+        ).order_by(Message.created_at.asc()).all()
+        
+        print(f"   Found {len(messages)} message(s)")
+        
+        # Mark messages from partner as read
+        unread_messages = session.query(Message).filter(
+            Message.sender_id == partner_id,
+            Message.recipient_id == user_id,
+            Message.is_read == False
+        ).all()
+        
+        for msg in unread_messages:
+            msg.is_read = True
+        
+        if unread_messages:
+            session.commit() # Commit read status updates
+            print(f"   Marked {len(unread_messages)} message(s) as read")
+        
+        # Creating a list of dicts for response
+        results = []
+        for msg in messages:
+            results.append({
+                'id': msg.id,
+                'senderId': msg.sender_id,
+                'content': msg.content,
+                'createdAt': to_utc7(msg.created_at),
+                'isRead': msg.is_read
+            })
+        
+        session.close()
+        return results
+    except Exception as e:
+        print(f"❌ Error in get_messages: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        request.response.status_int = 500
+        return {'error': str(e), 'messages': []}
+
 
 @view_config(route_name='api_messages_send', renderer='json', request_method='POST')
 def send_message(request):
     """Send a new message"""
-    user_id = request.user_id
-    if not user_id:
-        return Response(json.dumps({'error': 'Unauthorized'}), status=401, content_type='application/json')
-        
-    user_id = int(user_id)
     try:
-        data = request.json_body
-    except:
-        return Response(json.dumps({'error': 'Invalid JSON'}), status=400, content_type='application/json')
+        user_id = request.user_id
+        if not user_id:
+            request.response.status_int = 401
+            return {'error': 'Unauthorized'}
+            
+        user_id = int(user_id)
+        try:
+            data = request.json_body
+        except:
+            request.response.status_int = 400
+            return {'error': 'Invalid JSON'}
+            
+        recipient_id = data.get('recipient_id')
+        content = data.get('content')
         
-    recipient_id = data.get('recipient_id')
-    content = data.get('content')
-    
-    if not recipient_id or not content:
-         return Response(json.dumps({'error': 'Missing recipient_id or content'}), status=400, content_type='application/json')
-         
-    session = request.registry.dbmaker()
-    
-    try:
+        if not recipient_id or not content:
+            request.response.status_int = 400
+            return {'error': 'Missing recipient_id or content'}
+             
+        session = request.registry.dbmaker()
+        
         new_msg = Message(
             sender_id=user_id,
             recipient_id=recipient_id,
@@ -264,29 +282,43 @@ def send_message(request):
             'isRead': False
         }
     except Exception as e:
-        session.rollback()
-        session.close()
         print(f"❌ Error sending message: {str(e)}")
-        return Response(json.dumps({'error': f'Failed to send message: {str(e)}'}), status=500, content_type='application/json')
+        import traceback
+        traceback.print_exc()
+        try:
+            session.rollback()
+            session.close()
+        except:
+            pass
+        request.response.status_int = 500
+        return {'error': f'Failed to send message: {str(e)}'}
+
 
 @view_config(route_name='api_messages_unread_count', renderer='json', request_method='GET')
 def get_total_unread_count(request):
     """Get count of unique conversation partners with unread messages"""
-    user_id = request.user_id
-    if not user_id:
-        return {'count': 0}
+    try:
+        user_id = request.user_id
+        if not user_id:
+            return {'count': 0}
+            
+        user_id = int(user_id)
+        session = request.registry.dbmaker()
         
-    user_id = int(user_id)
-    session = request.registry.dbmaker()
-    
-    # Count unique senders who have unread messages to this user
-    unique_senders = session.query(Message.sender_id).filter(
-        Message.recipient_id == user_id,
-        Message.is_read == False
-    ).distinct().count()
-    
-    session.close()
-    return {'count': unique_senders}
+        # Count unique senders who have unread messages to this user
+        unique_senders = session.query(Message.sender_id).filter(
+            Message.recipient_id == user_id,
+            Message.is_read == False
+        ).distinct().count()
+        
+        session.close()
+        return {'count': unique_senders}
+    except Exception as e:
+        print(f"❌ Error getting unread count: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return {'count': 0}
+
 
 @view_config(route_name='api_chat_user', renderer='json', request_method='GET')
 def get_chat_user(request):
@@ -295,20 +327,20 @@ def get_chat_user(request):
     This endpoint is used when starting a new chat with someone who may not have
     an appointment history. It only requires the requesting user to be authenticated.
     """
-    user_id = request.user_id
-    if not user_id:
-        request.response.status_int = 401
-        return {'error': 'Unauthorized'}
-    
     try:
-        target_user_id = int(request.matchdict['user_id'])
-    except (ValueError, KeyError):
-        request.response.status_int = 400
-        return {'error': 'Invalid user_id'}
-    
-    session = request.registry.dbmaker()
-    
-    try:
+        user_id = request.user_id
+        if not user_id:
+            request.response.status_int = 401
+            return {'error': 'Unauthorized'}
+        
+        try:
+            target_user_id = int(request.matchdict['user_id'])
+        except (ValueError, KeyError):
+            request.response.status_int = 400
+            return {'error': 'Invalid user_id'}
+        
+        session = request.registry.dbmaker()
+        
         target_user = session.query(User).filter(User.id == target_user_id).first()
         
         if not target_user:
@@ -317,14 +349,23 @@ def get_chat_user(request):
         
         print(f"✅ Fetching chat user {target_user_id}: {target_user.name}")
         
-        return {
-            'user': {
-                'id': target_user.id,
-                'name': target_user.name,
-                'email': target_user.email,
-                'role': target_user.role,
-                'profile_photo_url': target_user.profile_photo_url
-            }
+        result = {
+            'id': target_user.id,
+            'name': target_user.name,
+            'email': target_user.email,
+            'role': target_user.role,
+            'profile_photo_url': target_user.profile_photo_url
         }
-    finally:
         session.close()
+        return result
+    except Exception as e:
+        print(f"❌ Error in get_chat_user: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        try:
+            session.close()
+        except:
+            pass
+        request.response.status_int = 500
+        return {'error': str(e)}
+
