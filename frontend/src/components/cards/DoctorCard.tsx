@@ -14,14 +14,17 @@ export const DoctorCard: React.FC<DoctorCardProps> = ({ doctor, showBookButton =
   // Handle message button click - save doctor data to sessionStorage for quick access
   const handleMessageClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     // Cache doctor data in sessionStorage so ChatPage can display it immediately
+    // CRITICAL: Use user_id as the main id since chat is between Users, not Doctors
+    const chatUserId = doctor.user_id || doctor.userId;
     const doctorData = {
-      id: doctor.id,
-      userId: doctor.user_id || doctor.userId,
+      id: chatUserId,  // Must be user_id for chat to work correctly
+      doctorId: doctor.id,  // Keep doctor table ID separately if needed
       name: doctor.name,
       photoUrl: doctor.photoUrl,
       role: 'doctor'
     };
-    sessionStorage.setItem(`chatUser_${doctor.user_id || doctor.userId}`, JSON.stringify(doctorData));
+    console.log(`📝 Caching chat user: id=${chatUserId}, name=${doctor.name}`);
+    sessionStorage.setItem(`chatUser_${chatUserId}`, JSON.stringify(doctorData));
   };
 
   // Format schedule to show only available days with times
