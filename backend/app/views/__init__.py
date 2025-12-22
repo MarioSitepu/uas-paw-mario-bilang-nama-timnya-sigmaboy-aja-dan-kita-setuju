@@ -4,17 +4,85 @@ from ..models import User, Doctor, Appointment
 from .auth import get_db_session, get_current_user, require_auth
 from datetime import date
 import json
+import sys
 
 # Explicitly import all view modules so they are discovered by config.scan()
 # This ensures all @view_config decorators are registered
-from . import notifications
-from . import messages
-from . import appointments
-from . import doctors
-from . import medical_records
-from . import health
-from . import profile
-from . import upload
+try:
+    from . import notifications
+    print("[VIEWS] OK: Imported notifications", file=sys.stderr, flush=True)
+except Exception as e:
+    import traceback
+    print(f"[VIEWS] ERROR: Failed to import notifications: {str(e)}", file=sys.stderr, flush=True)
+    traceback.print_exc(file=sys.stderr)
+    raise
+
+try:
+    from . import messages
+    print("[VIEWS] OK: Imported messages", file=sys.stderr, flush=True)
+except Exception as e:
+    import traceback
+    print(f"[VIEWS] ERROR: Failed to import messages: {str(e)}", file=sys.stderr, flush=True)
+    traceback.print_exc(file=sys.stderr)
+    raise
+
+try:
+    from . import appointments
+    print("[VIEWS] OK: Imported appointments", file=sys.stderr, flush=True)
+except Exception as e:
+    import traceback
+    print(f"[VIEWS] ERROR: Failed to import appointments: {str(e)}", file=sys.stderr, flush=True)
+    traceback.print_exc(file=sys.stderr)
+    raise
+
+try:
+    from . import doctors
+    print("[VIEWS] OK: Imported doctors", file=sys.stderr, flush=True)
+except Exception as e:
+    import traceback
+    print(f"[VIEWS] ERROR: Failed to import doctors: {str(e)}", file=sys.stderr, flush=True)
+    traceback.print_exc(file=sys.stderr)
+    raise
+
+try:
+    from . import medical_records
+    print("[VIEWS] OK: Imported medical_records", file=sys.stderr, flush=True)
+except Exception as e:
+    import traceback
+    print(f"[VIEWS] ERROR: Failed to import medical_records: {str(e)}", file=sys.stderr, flush=True)
+    traceback.print_exc(file=sys.stderr)
+    raise
+
+try:
+    from . import health
+    print("[VIEWS] OK: Imported health", file=sys.stderr, flush=True)
+except Exception as e:
+    import traceback
+    print(f"[VIEWS] ERROR: Failed to import health: {str(e)}", file=sys.stderr, flush=True)
+    traceback.print_exc(file=sys.stderr)
+    raise
+
+try:
+    from . import profile
+    print("[VIEWS] OK: Imported profile", file=sys.stderr, flush=True)
+except Exception as e:
+    import traceback
+    print(f"[VIEWS] ERROR: Failed to import profile: {str(e)}", file=sys.stderr, flush=True)
+    traceback.print_exc(file=sys.stderr)
+    raise
+
+try:
+    from . import upload
+    print("[VIEWS] OK: Imported upload", file=sys.stderr, flush=True)
+except Exception as e:
+    import traceback
+    print(f"[VIEWS] ERROR: Failed to import upload: {str(e)}", file=sys.stderr, flush=True)
+    traceback.print_exc(file=sys.stderr)
+    raise
+
+print("[VIEWS] OK: All view modules imported successfully", file=sys.stderr, flush=True)
+sys.stderr.flush()
+
 
 
 @view_config(route_name='home', request_method='GET', renderer='json')
