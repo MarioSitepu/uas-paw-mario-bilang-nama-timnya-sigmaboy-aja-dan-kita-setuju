@@ -395,11 +395,30 @@ def main(global_config, **settings):
     config.add_view(exception_view, context=Exception)
     
     # Explicitly import views to ensure decorators are registered before scan
-    from . import views as views_module
+    try:
+        from . import views as views_module
+        import sys
+        print("[MAIN] Successfully imported views module for scan", file=sys.stderr, flush=True)
+    except Exception as e:
+        import sys
+        import traceback
+        print(f"[MAIN] ERROR: Failed to import views for scan: {e}", file=sys.stderr, flush=True)
+        traceback.print_exc(file=sys.stderr)
+        raise
     
     # Scan for decorators - views are explicitly imported in views/__init__.py
     # and also explicitly imported above to ensure they're discovered
-    config.scan()
+    try:
+        import sys
+        print("[MAIN] About to scan for decorators and view configs...", file=sys.stderr, flush=True)
+        config.scan()
+        print("[MAIN] Scan completed successfully", file=sys.stderr, flush=True)
+    except Exception as scan_error:
+        import sys
+        import traceback
+        print(f"[MAIN] ERROR during config.scan(): {str(scan_error)}", file=sys.stderr, flush=True)
+        traceback.print_exc(file=sys.stderr)
+        raise
     
     app = config.make_wsgi_app()
     
@@ -610,6 +629,18 @@ def main(global_config, **settings):
                 print(f"[WSGI WRAPPER] WARNING: start_response already called, cannot add CORS headers to error", file=sys.stderr, flush=True)
                 # Re-raise to let Waitress handle it (but it won't have CORS)
                 raise
+    
+    # Log registered routes for debugging
+    try:
+        import sys
+        routes = config.get_routes_mapper()
+        route_count = len(list(routes.get_routes()))
+        print(f"[MAIN] Registered {route_count} routes", file=sys.stderr, flush=True)
+        for route in routes.get_routes():
+            print(f"[MAIN]   - {route.name}: {route.pattern}", file=sys.stderr, flush=True)
+    except Exception as e:
+        import sys
+        print(f"[MAIN] WARNING: Could not log routes: {e}", file=sys.stderr, flush=True)
     
     # Verify wrapper is being returned
     import sys
