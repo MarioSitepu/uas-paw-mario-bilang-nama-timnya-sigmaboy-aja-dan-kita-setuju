@@ -319,18 +319,19 @@ def send_message(request):
         )
         
         session.add(new_msg)
+        print(f"   📤 Flushing to get IDs...")
+        session.flush() # flush to get ID and created_at
         
         # Record message in message_history
         msg_history = MessageHistory(
             sender_id=user_id,
             recipient_id=recipient_id,
+            message_id=new_msg.id,  # Link to the message we just created
             content=content,
             is_read=False
         )
         session.add(msg_history)
         
-        print(f"   📤 Flushing to get IDs...")
-        session.flush() # flush to get ID and created_at
         print(f"   💾 Committing to database...")
         session.commit() # commit to save to database
         
