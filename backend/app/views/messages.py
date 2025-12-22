@@ -49,67 +49,28 @@ def get_conversations(request):
 
         print(f"📱 Fetching conversations for user {user_id} ({current_user.name}, role={current_user.role})")
         
-        # Normalize role
-        user_role = current_user.role.lower() if current_user.role else ''
-
-        # Find eligible chat partners
-        partner_ids = []
+        # Simply query for all unique partners the user has messaged with
+        print(f"💬 Querying message partners...")
         
-        if user_role == 'doctor':
-            # Doctors can chat with:
-            # 1. All patients who have booked this doctor (from appointments)
-            # 2. All other patients (for new consultations)
-            doctor = session.query(Doctor).filter(Doctor.user_id == user_id).first()
-            if not doctor:
-                print(f"⚠️ Warning: User {user_id} has role 'doctor' but no Doctor profile found.")
-                session.close()
-                return []
-                
-            # Get appointment patients
-            appointment_patient_ids = session.query(Appointment.patient_id)\
-                .filter(Appointment.doctor_id == doctor.id)\
-                .distinct().all()
-            appointment_patient_ids = [pid[0] for pid in appointment_patient_ids]
-            
-            # Get all patient users
-            all_patient_ids = session.query(User.id).filter(User.role == 'patient').all()
-            all_patient_ids = [uid[0] for uid in all_patient_ids]
-            
-            # Combine both (appointment patients first, then others)
-            partner_ids = list(set(appointment_patient_ids + all_patient_ids))
-            print(f"   Found {len(partner_ids)} patient(s) (appointments: {len(appointment_patient_ids)}, total: {len(all_patient_ids)})")
-            
-        elif user_role == 'patient':
-            # Patients can chat with:
-            # 1. All doctors who have appointments with this patient
-            # 2. All other doctors (for new consultations)
-            
-            # Get appointment doctors
-            appointment_doctor_ids = session.query(Appointment.doctor_id)\
-                .filter(Appointment.patient_id == user_id)\
-                .distinct().all()
-            appointment_doctor_ids = [did[0] for did in appointment_doctor_ids]
-            
-            # Get user IDs of those doctors
-            appointment_doctor_user_ids = session.query(Doctor.user_id)\
-                .filter(Doctor.id.in_(appointment_doctor_ids))\
-                .all()
-            appointment_doctor_user_ids = [uid[0] for uid in appointment_doctor_user_ids]
-            
-            # Get all doctor users
-            all_doctor_user_ids = session.query(Doctor.user_id).all()
-            all_doctor_user_ids = [uid[0] for uid in all_doctor_user_ids]
-            
-            # Combine both
-            partner_ids = list(set(appointment_doctor_user_ids + all_doctor_user_ids))
-            print(f"   Found {len(partner_ids)} doctor(s) (appointments: {len(appointment_doctor_user_ids)}, total: {len(all_doctor_user_ids)})")
-        else:
-            # Admin or other role
-            print(f"   Role '{user_role}' not supported for conversations")
-            session.close()
-            return []
-
-        # Filter out empty list if no appointments
+        distinct_partner_query = session.query(
+            func.distinct(
+                func.case(
+                    (Message.sender_id == user_id, Message.recipient_id),
+                    (Message.recipient_id == user_id, Message.sender_id)
+                )
+            )
+        ).filter(
+            or_(
+                Message.sender_id == user_id,
+                Message.recipient_id == user_id
+            )
+        )
+        
+        distinct_partners = distinct_partner_query.all()
+        partner_ids = [p[0] for p in distinct_partners if p[0] is not None]
+        
+        print(f"   Found {len(partner_ids)} unique message partner(s): {partner_ids}")
+        
         if not partner_ids:
             print(f"   No conversation partners found")
             session.close()
@@ -119,36 +80,10 @@ def get_conversations(request):
         partners = session.query(User).filter(User.id.in_(partner_ids)).all()
         
         # Calculate unread counts and last message for each partner
-        # Only include partners who have message history
         results = []
         
-        print(f"📨 Total partners found: {len(partners)}")
-        for i, partner in enumerate(partners):
-            print(f"   [{i+1}] Checking partner {partner.id} ({partner.name})...", end=" ")
-            
-            # Check if there's any message history with this partner
-            messages_query = session.query(Message).filter(
-                or_(
-                    and_(Message.sender_id == user_id, Message.recipient_id == partner.id),
-                    and_(Message.sender_id == partner.id, Message.recipient_id == user_id)
-                )
-            )
-            
-            # Debug: count messages first
-            msg_count = messages_query.count()
-            print(f"(found {msg_count} messages)", end=" ")
-            
-            has_messages = messages_query.first()
-            
-            if has_messages:
-                print(f"✓ Has messages")
-            else:
-                print(f"✗ No messages - SKIP")
-            
-            # Skip partners without message history
-            if not has_messages:
-                continue
-            
+        print(f"   Loading details for {len(partners)} partner(s)...")
+        for i, partner in enumerate(partners, 1):
             # Unread count (messages FROM partner TO me, is_read=False)
             unread = session.query(Message).filter(
                 Message.sender_id == partner.id,
@@ -156,13 +91,15 @@ def get_conversations(request):
                 Message.is_read == False
             ).count()
             
-            # Last message (we already know it exists from above)
+            # Last message
             last_msg = session.query(Message).filter(
                 or_(
                     and_(Message.sender_id == user_id, Message.recipient_id == partner.id),
                     and_(Message.sender_id == partner.id, Message.recipient_id == user_id)
                 )
             ).order_by(desc(Message.created_at)).first()
+            
+            print(f"      [{i}] {partner.name} - {unread} unread, last: {last_msg.created_at if last_msg else 'none'}")
             
             results.append({
                 'id': partner.id,
@@ -174,7 +111,7 @@ def get_conversations(request):
                 'lastMessageTime': to_utc7(last_msg.created_at) if last_msg else None
             })
             
-        # Sort by recent activity (unread > last message time)
+        # Sort by recent activity
         results.sort(key=lambda x: x['lastMessageTime'] or '', reverse=True)
         print(f"✅ Returning {len(results)} conversation(s)")
         
