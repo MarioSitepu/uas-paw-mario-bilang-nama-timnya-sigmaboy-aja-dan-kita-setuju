@@ -6,8 +6,10 @@ from datetime import datetime
 @view_config(route_name='api_notifications', request_method='GET', renderer='json')
 def get_notifications(request):
     """Mendapatkan daftar notifikasi user"""
-    session = get_db_session(request)
+    import sys
+    session = None
     try:
+        session = get_db_session(request)
         current_user = require_auth(request)
         print(f"🔔 Fetching notifications for user {current_user.id} ({current_user.name})")
         
@@ -18,18 +20,33 @@ def get_notifications(request):
         unread_count = sum(1 for n in notifications if not n.is_read)
         print(f"   Found {len(notifications)} notification(s), {unread_count} unread")
         
-        return {
+        result = {
             'notifications': [n.to_dict() for n in notifications],
             'unread_count': unread_count
         }
-    finally:
         session.close()
+        return result
+    except Exception as e:
+        import traceback
+        print(f"❌ Error in get_notifications: {str(e)}")
+        traceback.print_exc()
+        sys.stderr.write(f"[GET_NOTIFICATIONS] ERROR: {str(e)}\n")
+        sys.stderr.flush()
+        try:
+            if session:
+                session.close()
+        except:
+            pass
+        request.response.status_int = 500
+        raise  # Re-raise so exception view can handle it with CORS headers
 
 @view_config(route_name='api_notifications_read', request_method='POST', renderer='json')
 def mark_all_as_read(request):
     """Menandai semua notifikasi user sebagai sudah dibaca"""
-    session = get_db_session(request)
+    import sys
+    session = None
     try:
+        session = get_db_session(request)
         current_user = require_auth(request)
         
         session.query(Notification).filter(
@@ -38,12 +55,23 @@ def mark_all_as_read(request):
         ).update({Notification.is_read: True}, synchronize_session=False)
         
         session.commit()
-        return {'message': 'Semua notifikasi telah dibaca'}
-    except Exception as e:
-        session.rollback()
-        return {'error': str(e)}
-    finally:
+        result = {'message': 'Semua notifikasi telah dibaca'}
         session.close()
+        return result
+    except Exception as e:
+        import traceback
+        print(f"❌ Error in mark_all_as_read: {str(e)}")
+        traceback.print_exc()
+        sys.stderr.write(f"[MARK_ALL_READ] ERROR: {str(e)}\n")
+        sys.stderr.flush()
+        try:
+            if session:
+                session.rollback()
+                session.close()
+        except:
+            pass
+        request.response.status_int = 500
+        raise
 
 @view_config(route_name='api_notification_read', request_method='PUT', renderer='json')
 def mark_as_read(request):
