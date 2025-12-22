@@ -20,16 +20,27 @@ def to_utc7(dt):
 @view_config(route_name='api_conversations', renderer='json', request_method='GET')
 def get_conversations(request):
     """Get list of users eligible for chat based on appointment history"""
+    import sys
+    session = None
     try:
         # Get current user
         user_id = request.user_id
         if not user_id:
             print(f"🔴 ERROR: request.user_id is {request.user_id}, auth header: {request.headers.get('Authorization', 'NONE')}")
+            sys.stderr.write(f"[GET_CONVERSATIONS] Unauthorized: request.user_id is {request.user_id}\n")
+            sys.stderr.flush()
             request.response.status_int = 401
             return {'error': 'Unauthorized', 'conversations': []}
         
         user_id = int(user_id)
-        session = request.registry.dbmaker()
+        try:
+            session = request.registry.dbmaker()
+        except Exception as dbmaker_error:
+            sys.stderr.write(f"[GET_CONVERSATIONS] CRITICAL: dbmaker() failed: {str(dbmaker_error)}\n")
+            sys.stderr.flush()
+            request.response.status_int = 500
+            return {'error': 'Database connection failed', 'conversations': []}
+        
         current_user = session.query(User).get(user_id)
         
         if not current_user:
@@ -153,10 +164,17 @@ def get_conversations(request):
         session.close()
         return results
     except Exception as e:
-        session.close()
-        print(f"❌ Error in get_conversations: {str(e)}")
+        import sys
         import traceback
+        print(f"❌ Error in get_conversations: {str(e)}")
         traceback.print_exc()
+        sys.stderr.write(f"[GET_CONVERSATIONS] ERROR: {str(e)}\n")
+        sys.stderr.flush()
+        try:
+            if session:
+                session.close()
+        except:
+            pass
         request.response.status_int = 500
         return {'error': str(e), 'conversations': []}
 
@@ -177,7 +195,14 @@ def get_messages(request):
             request.response.status_int = 400
             return {'error': 'Invalid partner_id'}
         
-        session = request.registry.dbmaker()
+        try:
+            session = request.registry.dbmaker()
+        except Exception as dbmaker_error:
+            import sys
+            sys.stderr.write(f"[GET_MESSAGES] CRITICAL: dbmaker() failed: {str(dbmaker_error)}\n")
+            sys.stderr.flush()
+            request.response.status_int = 500
+            return {'error': 'Database connection failed', 'messages': []}
         
         print(f"💬 Fetching messages between user {user_id} and partner {partner_id}")
         
@@ -219,9 +244,16 @@ def get_messages(request):
         session.close()
         return results
     except Exception as e:
-        print(f"❌ Error in get_messages: {str(e)}")
         import traceback
+        import sys
+        print(f"❌ Error in get_messages: {str(e)}")
         traceback.print_exc()
+        sys.stderr.write(f"[GET_MESSAGES] ERROR: {str(e)}\n")
+        sys.stderr.flush()
+        try:
+            session.close()
+        except:
+            pass
         request.response.status_int = 500
         return {'error': str(e), 'messages': []}
 
@@ -248,8 +280,15 @@ def send_message(request):
         if not recipient_id or not content:
             request.response.status_int = 400
             return {'error': 'Missing recipient_id or content'}
-             
-        session = request.registry.dbmaker()
+         
+        try:
+            session = request.registry.dbmaker()
+        except Exception as dbmaker_error:
+            import sys
+            sys.stderr.write(f"[SEND_MESSAGE] CRITICAL: dbmaker() failed: {str(dbmaker_error)}\n")
+            sys.stderr.flush()
+            request.response.status_int = 500
+            return {'error': 'Database connection failed'}
         
         new_msg = Message(
             sender_id=user_id,
@@ -282,9 +321,12 @@ def send_message(request):
             'isRead': False
         }
     except Exception as e:
-        print(f"❌ Error sending message: {str(e)}")
         import traceback
+        import sys
+        print(f"❌ Error sending message: {str(e)}")
         traceback.print_exc()
+        sys.stderr.write(f"[SEND_MESSAGE] ERROR: {str(e)}\n")
+        sys.stderr.flush()
         try:
             session.rollback()
             session.close()
@@ -297,13 +339,21 @@ def send_message(request):
 @view_config(route_name='api_messages_unread_count', renderer='json', request_method='GET')
 def get_total_unread_count(request):
     """Get count of unique conversation partners with unread messages"""
+    import sys
+    session = None
     try:
         user_id = request.user_id
         if not user_id:
             return {'count': 0}
             
         user_id = int(user_id)
-        session = request.registry.dbmaker()
+        try:
+            session = request.registry.dbmaker()
+        except Exception as dbmaker_error:
+            sys.stderr.write(f"[GET_UNREAD_COUNT] CRITICAL: dbmaker() failed: {str(dbmaker_error)}\n")
+            sys.stderr.flush()
+            request.response.status_int = 500
+            return {'error': 'Database connection failed', 'count': 0}
         
         # Count unique senders who have unread messages to this user
         unique_senders = session.query(Message.sender_id).filter(
@@ -313,6 +363,19 @@ def get_total_unread_count(request):
         
         session.close()
         return {'count': unique_senders}
+    except Exception as e:
+        import traceback
+        print(f"❌ Error in get_total_unread_count: {str(e)}")
+        traceback.print_exc()
+        sys.stderr.write(f"[GET_UNREAD_COUNT] ERROR: {str(e)}\n")
+        sys.stderr.flush()
+        try:
+            if session:
+                session.close()
+        except:
+            pass
+        request.response.status_int = 500
+        return {'error': str(e), 'count': 0}
     except Exception as e:
         print(f"❌ Error getting unread count: {str(e)}")
         import traceback
@@ -327,9 +390,13 @@ def get_chat_user(request):
     This endpoint is used when starting a new chat with someone who may not have
     an appointment history. It only requires the requesting user to be authenticated.
     """
+    import sys
+    session = None
     try:
         user_id = request.user_id
         if not user_id:
+            sys.stderr.write(f"[GET_CHAT_USER] Unauthorized: request.user_id is None\n")
+            sys.stderr.flush()
             request.response.status_int = 401
             return {'error': 'Unauthorized'}
         
@@ -339,7 +406,13 @@ def get_chat_user(request):
             request.response.status_int = 400
             return {'error': 'Invalid user_id'}
         
-        session = request.registry.dbmaker()
+        try:
+            session = request.registry.dbmaker()
+        except Exception as dbmaker_error:
+            sys.stderr.write(f"[GET_CHAT_USER] CRITICAL: dbmaker() failed: {str(dbmaker_error)}\n")
+            sys.stderr.flush()
+            request.response.status_int = 500
+            return {'error': 'Database connection failed'}
         
         target_user = session.query(User).filter(User.id == target_user_id).first()
         
@@ -359,11 +432,14 @@ def get_chat_user(request):
         session.close()
         return result
     except Exception as e:
-        print(f"❌ Error in get_chat_user: {str(e)}")
         import traceback
+        print(f"❌ Error in get_chat_user: {str(e)}")
         traceback.print_exc()
+        sys.stderr.write(f"[GET_CHAT_USER] ERROR: {str(e)}\n")
+        sys.stderr.flush()
         try:
-            session.close()
+            if session:
+                session.close()
         except:
             pass
         request.response.status_int = 500
