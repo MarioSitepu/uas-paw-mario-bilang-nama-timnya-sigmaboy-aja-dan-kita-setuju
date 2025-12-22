@@ -18,6 +18,53 @@ except ImportError:
     # python-dotenv not installed, skip
     pass
 
+def auth_tween_factory(handler, registry):
+    """Authentication tween to validate Bearer tokens and set user_id on request"""
+    def auth_tween(request):
+        import sys
+        import traceback
+        from sqlalchemy.orm import sessionmaker
+        from sqlalchemy import engine_from_config
+        
+        sys.stderr.write(f"[AUTH TWEEN] Processing {request.method} {request.path}\n")
+        sys.stderr.flush()
+        
+        # Parse Authorization header for Bearer token
+        auth_header = request.headers.get('Authorization', '')
+        request.user_id = None  # Initialize as None
+        
+        if auth_header.startswith('Bearer '):
+            token_string = auth_header.replace('Bearer ', '')
+            
+            try:
+                # Get database session
+                session = request.registry.dbmaker()
+                
+                # Import Token model
+                from .models import Token
+                
+                # Query database for token
+                token = session.query(Token).filter(Token.token == token_string).first()
+                session.close()
+                
+                if token and not token.is_expired():
+                    request.user_id = token.user_id
+                    sys.stderr.write(f"[AUTH TWEEN] Token validated for user {token.user_id}\n")
+                    sys.stderr.flush()
+                else:
+                    sys.stderr.write(f"[AUTH TWEEN] Invalid or expired token\n")
+                    sys.stderr.flush()
+                    
+            except Exception as e:
+                sys.stderr.write(f"[AUTH TWEEN] Token validation error: {str(e)}\n")
+                traceback.print_exc(file=sys.stderr)
+                sys.stderr.flush()
+        
+        # Call the handler with the request that has user_id set
+        return handler(request)
+    
+    return auth_tween
+
 def cors_tween_factory(handler, registry):
     """CORS tween to add CORS headers to all responses - runs early in the pipeline"""
     def cors_tween(request):
@@ -163,6 +210,9 @@ def main(global_config, **settings):
         settings.setdefault('listen', f'*:{port}')
     
     config = Configurator(settings=settings)
+    
+    # Add authentication tween - must be early to set authenticated_userid
+    config.add_tween('app.auth_tween_factory', under=tweens.INGRESS)
     
     # Add CORS tween - must be added EARLY
     # This ensures CORS headers are added to all responses, including errors

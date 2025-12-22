@@ -170,6 +170,7 @@ export const notificationsAPI = {
 // ==================== CHAT API ====================
 export const chatAPI = {
   getConversations: () => api.get('/api/chat/conversations'),
+  getUser: (userId: number) => api.get(`/api/chat/user/${userId}`),
   getMessages: (partnerId: number) => api.get(`/api/chat/${partnerId}/messages`),
   sendMessage: (recipientId: number, content: string) => api.post('/api/chat/send', { recipient_id: recipientId, content }),
   getUnreadCount: () => api.get('/api/chat/unread'),

@@ -4,124 +4,172 @@ from sqlalchemy.orm import joinedload, aliased
 from sqlalchemy import or_, and_, desc, func
 from ..models import Message, User, Appointment, Doctor, Notification, MessageHistory
 import json
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
+
+def to_utc7(dt):
+    """Convert datetime to UTC+7 timezone for JSON serialization"""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        # Assume UTC if naive
+        dt = dt.replace(tzinfo=timezone.utc)
+    # Convert to UTC+7
+    utc7 = timezone(timedelta(hours=7))
+    return dt.astimezone(utc7).isoformat()
 
 @view_config(route_name='api_conversations', renderer='json', request_method='GET')
 def get_conversations(request):
     """Get list of users eligible for chat based on appointment history"""
-    # Get current user
-    user_id = request.authenticated_userid
-    if not user_id:
-        return Response(json.dumps({'error': 'Unauthorized'}), status=401, content_type='application/json')
-    
-    user_id = int(user_id)
-    session = request.dbsession
-    current_user = session.query(User).get(user_id)
-    
-    if not current_user:
-        return Response(json.dumps({'error': 'User not found'}), status=404, content_type='application/json')
+    try:
+        # Get current user
+        user_id = request.user_id
+        if not user_id:
+            request.response.status_int = 401
+            return {'error': 'Unauthorized', 'conversations': []}
+        
+        user_id = int(user_id)
+        session = request.registry.dbmaker()
+        current_user = session.query(User).get(user_id)
+        
+        if not current_user:
+            request.response.status_int = 404
+            return {'error': 'User not found', 'conversations': []}
 
-    print(f"📱 Fetching conversations for user {user_id} ({current_user.name}, role={current_user.role})")
-    
-    # Normalize role
-    user_role = current_user.role.lower() if current_user.role else ''
+        print(f"📱 Fetching conversations for user {user_id} ({current_user.name}, role={current_user.role})")
+        
+        # Normalize role
+        user_role = current_user.role.lower() if current_user.role else ''
 
-    # Find eligible chat partners from appointments
-    if user_role == 'doctor':
-        # Find all patients who have booked this doctor
-        # We need to find the doctor ID first (since user_id is user table id)
-        doctor = session.query(Doctor).filter(Doctor.user_id == user_id).first()
-        if not doctor:
-            # Try to log this issue or handle it gracefully
-            print(f"⚠️ Warning: User {user_id} has role 'doctor' but no Doctor profile found.")
+        # Find eligible chat partners
+        partner_ids = []
+        
+        if user_role == 'doctor':
+            # Doctors can chat with:
+            # 1. All patients who have booked this doctor (from appointments)
+            # 2. All other patients (for new consultations)
+            doctor = session.query(Doctor).filter(Doctor.user_id == user_id).first()
+            if not doctor:
+                print(f"⚠️ Warning: User {user_id} has role 'doctor' but no Doctor profile found.")
+                return []
+                
+            # Get appointment patients
+            appointment_patient_ids = session.query(Appointment.patient_id)\
+                .filter(Appointment.doctor_id == doctor.id)\
+                .distinct().all()
+            appointment_patient_ids = [pid[0] for pid in appointment_patient_ids]
+            
+            # Get all patient users
+            all_patient_ids = session.query(User.id).filter(User.role == 'patient').all()
+            all_patient_ids = [uid[0] for uid in all_patient_ids]
+            
+            # Combine both (appointment patients first, then others)
+            partner_ids = list(set(appointment_patient_ids + all_patient_ids))
+            print(f"   Found {len(partner_ids)} patient(s) (appointments: {len(appointment_patient_ids)}, total: {len(all_patient_ids)})")
+            
+        elif user_role == 'patient':
+            # Patients can chat with:
+            # 1. All doctors who have appointments with this patient
+            # 2. All other doctors (for new consultations)
+            
+            # Get appointment doctors
+            appointment_doctor_ids = session.query(Appointment.doctor_id)\
+                .filter(Appointment.patient_id == user_id)\
+                .distinct().all()
+            appointment_doctor_ids = [did[0] for did in appointment_doctor_ids]
+            
+            # Get user IDs of those doctors
+            appointment_doctor_user_ids = session.query(Doctor.user_id)\
+                .filter(Doctor.id.in_(appointment_doctor_ids))\
+                .all()
+            appointment_doctor_user_ids = [uid[0] for uid in appointment_doctor_user_ids]
+            
+            # Get all doctor users
+            all_doctor_user_ids = session.query(Doctor.user_id).all()
+            all_doctor_user_ids = [uid[0] for uid in all_doctor_user_ids]
+            
+            # Combine both
+            partner_ids = list(set(appointment_doctor_user_ids + all_doctor_user_ids))
+            print(f"   Found {len(partner_ids)} doctor(s) (appointments: {len(appointment_doctor_user_ids)}, total: {len(all_doctor_user_ids)})")
+        else:
+            # Admin or other role
+            print(f"   Role '{user_role}' not supported for conversations")
             return []
-            
-        # Get unique patient IDs from appointments
-        # Include ALL appointments regardless of status so Pending requests can chat
-        patient_ids = session.query(Appointment.patient_id)\
-            .filter(Appointment.doctor_id == doctor.id)\
-            .distinct().all()
-        partner_ids = [pid[0] for pid in patient_ids]
-        print(f"   Found {len(partner_ids)} patient(s)")
-        
-    elif user_role == 'patient':
-        # Find all doctors booked by this patient
-        doctor_ids = session.query(Appointment.doctor_id)\
-            .filter(Appointment.patient_id == user_id)\
-            .distinct().all()
-            
-        # We have doctor IDs, but we need their User IDs for the Message table
-        doc_ids = [did[0] for did in doctor_ids]
-        if not doc_ids:
-            print(f"   No doctor bookings found")
+
+        # Filter out empty list if no appointments
+        if not partner_ids:
+            print(f"   No conversation partners found")
             return []
+
+        # Get User details for these partners
+        partners = session.query(User).filter(User.id.in_(partner_ids)).all()
+        
+        # Calculate unread counts and last message for each partner
+        # Only include partners who have message history
+        results = []
+        
+        for partner in partners:
+            # Check if there's any message history with this partner
+            has_messages = session.query(Message).filter(
+                or_(
+                    and_(Message.sender_id == user_id, Message.recipient_id == partner.id),
+                    and_(Message.sender_id == partner.id, Message.recipient_id == user_id)
+                )
+            ).first()
             
-        # Join Doctor table to get User IDs
-        user_ids = session.query(Doctor.user_id)\
-            .filter(Doctor.id.in_(doc_ids))\
-            .all()
-        partner_ids = [uid[0] for uid in user_ids]
-        print(f"   Found {len(partner_ids)} doctor(s)")
-    else:
-        # Admin or other role
-        print(f"   Role '{user_role}' not supported for conversations")
-        return []
-
-    # Filter out empty list if no appointments
-    if not partner_ids:
-        print(f"   No conversation partners found")
-        return []
-
-    # Get User details for these partners
-    partners = session.query(User).filter(User.id.in_(partner_ids)).all()
-    
-    # Calculate unread counts and last message for each partner
-    results = []
-    
-    # Pre-fetch counts could be optimized but looping is fine for small scale
-    for partner in partners:
-        # Unread count (messages FROM partner TO me, is_read=False)
-        unread = session.query(Message).filter(
-            Message.sender_id == partner.id,
-            Message.recipient_id == user_id,
-            Message.is_read == False
-        ).count()
+            # Skip partners without message history
+            if not has_messages:
+                continue
+            
+            # Unread count (messages FROM partner TO me, is_read=False)
+            unread = session.query(Message).filter(
+                Message.sender_id == partner.id,
+                Message.recipient_id == user_id,
+                Message.is_read == False
+            ).count()
+            
+            # Last message (we already know it exists from above)
+            last_msg = session.query(Message).filter(
+                or_(
+                    and_(Message.sender_id == user_id, Message.recipient_id == partner.id),
+                    and_(Message.sender_id == partner.id, Message.recipient_id == user_id)
+                )
+            ).order_by(desc(Message.created_at)).first()
+            
+            results.append({
+                'id': partner.id,
+                'name': partner.name,
+                'role': partner.role,
+                'photoUrl': partner.profile_photo_url,
+                'unreadCount': unread,
+                'lastMessage': last_msg.content if last_msg else None,
+                'lastMessageTime': to_utc7(last_msg.created_at) if last_msg else None
+            })
+            
+        # Sort by recent activity (unread > last message time)
+        results.sort(key=lambda x: x['lastMessageTime'] or '', reverse=True)
+        print(f"✅ Returning {len(results)} conversation(s)")
         
-        # Last message
-        last_msg = session.query(Message).filter(
-            or_(
-                and_(Message.sender_id == user_id, Message.recipient_id == partner.id),
-                and_(Message.sender_id == partner.id, Message.recipient_id == user_id)
-            )
-        ).order_by(desc(Message.created_at)).first()
-        
-        results.append({
-            'id': partner.id,
-            'name': partner.name,
-            'role': partner.role,
-            'photoUrl': partner.profile_photo_url,
-            'unreadCount': unread,
-            'lastMessage': last_msg.content if last_msg else None,
-            'lastMessageTime': last_msg.created_at.isoformat() if last_msg else None
-        })
-        
-    # Sort by recent activity (unread > last message time)
-    results.sort(key=lambda x: x['lastMessageTime'] or '', reverse=True)
-    print(f"✅ Returning {len(results)} conversation(s)")
-    
-    return results
+        session.close()
+        return results
+    except Exception as e:
+        session.close()
+        print(f"❌ Error in get_conversations: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        request.response.status_int = 500
+        return {'error': str(e), 'conversations': []}
 
 @view_config(route_name='api_messages', renderer='json', request_method='GET')
 def get_messages(request):
     """Get message history with a specific user"""
-    user_id = request.authenticated_userid
+    user_id = request.user_id
     if not user_id:
         return Response(json.dumps({'error': 'Unauthorized'}), status=401, content_type='application/json')
     
     user_id = int(user_id)
     partner_id = request.matchdict['partner_id']
     partner_id = int(partner_id)
-    session = request.dbsession
+    session = request.registry.dbmaker()
     
     print(f"💬 Fetching messages between user {user_id} and partner {partner_id}")
     
@@ -156,16 +204,17 @@ def get_messages(request):
             'id': msg.id,
             'senderId': msg.sender_id,
             'content': msg.content,
-            'createdAt': msg.created_at.isoformat(),
+            'createdAt': to_utc7(msg.created_at),
             'isRead': msg.is_read
         })
-        
+    
+    session.close()
     return results
 
 @view_config(route_name='api_messages_send', renderer='json', request_method='POST')
 def send_message(request):
     """Send a new message"""
-    user_id = request.authenticated_userid
+    user_id = request.user_id
     if not user_id:
         return Response(json.dumps({'error': 'Unauthorized'}), status=401, content_type='application/json')
         
@@ -181,7 +230,7 @@ def send_message(request):
     if not recipient_id or not content:
          return Response(json.dumps({'error': 'Missing recipient_id or content'}), status=400, content_type='application/json')
          
-    session = request.dbsession
+    session = request.registry.dbmaker()
     
     try:
         new_msg = Message(
@@ -201,46 +250,81 @@ def send_message(request):
         )
         session.add(msg_history)
         
-        # Notify recipient
-        sender = session.query(User).get(user_id)
-        notification = Notification(
-            user_id=recipient_id,
-            title=f"Pesan Baru dari {sender.name if sender else 'User'}",
-            message=content[:50] + ('...' if len(content) > 50 else ''),
-            is_read=False
-        )
-        session.add(notification)
-        
         session.flush() # flush to get ID and created_at
         session.commit() # commit to save to database
         
         print(f"✅ Message sent: ID={new_msg.id}, sender={user_id}, recipient={recipient_id}")
         
+        session.close()
         return {
             'id': new_msg.id,
             'senderId': new_msg.sender_id,
             'content': new_msg.content,
-            'createdAt': new_msg.created_at.isoformat(),
+            'createdAt': to_utc7(new_msg.created_at),
             'isRead': False
         }
     except Exception as e:
         session.rollback()
+        session.close()
         print(f"❌ Error sending message: {str(e)}")
         return Response(json.dumps({'error': f'Failed to send message: {str(e)}'}), status=500, content_type='application/json')
 
 @view_config(route_name='api_messages_unread_count', renderer='json', request_method='GET')
 def get_total_unread_count(request):
-    """Get total unread messages count for sidebar badge"""
-    user_id = request.authenticated_userid
+    """Get count of unique conversation partners with unread messages"""
+    user_id = request.user_id
     if not user_id:
         return {'count': 0}
         
     user_id = int(user_id)
-    session = request.dbsession
+    session = request.registry.dbmaker()
     
-    count = session.query(Message).filter(
+    # Count unique senders who have unread messages to this user
+    unique_senders = session.query(Message.sender_id).filter(
         Message.recipient_id == user_id,
         Message.is_read == False
-    ).count()
+    ).distinct().count()
     
-    return {'count': count}
+    session.close()
+    return {'count': unique_senders}
+
+@view_config(route_name='api_chat_user', renderer='json', request_method='GET')
+def get_chat_user(request):
+    """Get user details for chat - minimal permission check
+    
+    This endpoint is used when starting a new chat with someone who may not have
+    an appointment history. It only requires the requesting user to be authenticated.
+    """
+    user_id = request.user_id
+    if not user_id:
+        request.response.status_int = 401
+        return {'error': 'Unauthorized'}
+    
+    try:
+        target_user_id = int(request.matchdict['user_id'])
+    except (ValueError, KeyError):
+        request.response.status_int = 400
+        return {'error': 'Invalid user_id'}
+    
+    session = request.registry.dbmaker()
+    
+    try:
+        target_user = session.query(User).filter(User.id == target_user_id).first()
+        
+        if not target_user:
+            request.response.status_int = 404
+            return {'error': 'User not found'}
+        
+        print(f"✅ Fetching chat user {target_user_id}: {target_user.name}")
+        
+        return {
+            'user': {
+                'id': target_user.id,
+                'name': target_user.name,
+                'email': target_user.email,
+                'role': target_user.role,
+                'profile_photo_url': target_user.profile_photo_url
+            }
+        }
+    finally:
+        session.close()

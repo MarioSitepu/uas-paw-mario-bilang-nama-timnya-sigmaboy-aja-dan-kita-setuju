@@ -11,6 +11,19 @@ interface DoctorCardProps {
 export const DoctorCard: React.FC<DoctorCardProps> = ({ doctor, showBookButton = true }) => {
   const [isScheduleExpanded, setIsScheduleExpanded] = useState(false);
 
+  // Handle message button click - save doctor data to sessionStorage for quick access
+  const handleMessageClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    // Cache doctor data in sessionStorage so ChatPage can display it immediately
+    const doctorData = {
+      id: doctor.id,
+      userId: doctor.user_id || doctor.userId,
+      name: doctor.name,
+      photoUrl: doctor.photoUrl,
+      role: 'doctor'
+    };
+    sessionStorage.setItem(`chatUser_${doctor.user_id || doctor.userId}`, JSON.stringify(doctorData));
+  };
+
   // Format schedule to show only available days with times
   const formatScheduleForDisplay = () => {
     if (!doctor.schedule || typeof doctor.schedule !== 'object') {
@@ -128,6 +141,7 @@ export const DoctorCard: React.FC<DoctorCardProps> = ({ doctor, showBookButton =
               
               <Link
                 to={`/app/patient/chat/${doctor.user_id || doctor.userId}`}
+                onClick={handleMessageClick}
                 className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white rounded-lg font-bold text-sm shadow-md shadow-emerald-500/20 transition-all transform hover:-translate-y-0.5"
               >
                 <MessageCircle size={16} />

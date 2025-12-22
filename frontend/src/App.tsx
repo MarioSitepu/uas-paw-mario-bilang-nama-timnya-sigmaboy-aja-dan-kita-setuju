@@ -107,7 +107,7 @@ function App() {
                 }
               />
               <Route
-                path="/app/messages"
+                path="/app/chat"
                 element={
                   <RequireAuth>
                     <AppLayout>

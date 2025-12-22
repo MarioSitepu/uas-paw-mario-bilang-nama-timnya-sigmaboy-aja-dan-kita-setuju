@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Bell, CheckCircle2, Calendar } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { notificationsAPI } from '../services/api';
+import { notificationsAPI, chatAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 interface Notification {
@@ -16,27 +16,98 @@ interface Notification {
 export const NotificationBell: React.FC = () => {
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
+    const [unreadMessageCount, setUnreadMessageCount] = useState(0);
     const [isOpen, setIsOpen] = useState(false);
+    const [isPageVisible, setIsPageVisible] = useState(true);
+    const [lastFetch, setLastFetch] = useState<number>(0);
+    const [lastMessageFetch, setLastMessageFetch] = useState<number>(0);
     const { user } = useAuth();
     const navigate = useNavigate();
+
+    // Track page visibility
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            setIsPageVisible(!document.hidden);
+            // Fetch immediately when page becomes visible
+            if (!document.hidden) {
+                fetchNotifications();
+                fetchUnreadMessages();
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        
+        // Listen for chat messages being read
+        const handleChatMessagesRead = () => {
+            console.log('📢 Chat messages read event received, refetching unread count...');
+            fetchUnreadMessages();
+        };
+        window.addEventListener('chatMessagesRead', handleChatMessagesRead);
+        
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            window.removeEventListener('chatMessagesRead', handleChatMessagesRead);
+        };
+    }, []);
 
     const fetchNotifications = async () => {
         try {
             const response = await notificationsAPI.getAll();
             setNotifications(response.data.notifications);
             setUnreadCount(response.data.unread_count);
+            setLastFetch(Date.now());
         } catch (error) {
             console.error('Failed to fetch notifications:', error);
         }
     };
 
+    const fetchUnreadMessages = async () => {
+        try {
+            const response = await chatAPI.getUnreadCount();
+            setUnreadMessageCount(response.data.count || 0);
+            setLastMessageFetch(Date.now());
+        } catch (error) {
+            console.error('Failed to fetch unread messages:', error);
+        }
+    };
+
     useEffect(() => {
         if (user) {
+            // Initial fetch immediately on login
             fetchNotifications();
-            const interval = setInterval(fetchNotifications, 30000);
-            return () => clearInterval(interval);
+            fetchUnreadMessages();
+            
+            // Poll every 5 minutes for notifications
+            if (isPageVisible) {
+                const interval = setInterval(() => {
+                    const now = Date.now();
+                    // Only fetch if more than 5 minutes since last fetch
+                    if (now - lastFetch > 300000) {
+                        fetchNotifications();
+                    }
+                }, 300000); // Check every 5 minutes
+
+                return () => clearInterval(interval);
+            }
         }
-    }, [user]);
+    }, [user, isPageVisible]);
+
+    // Poll unread messages every 10 seconds when page is visible
+    useEffect(() => {
+        if (!user || !isPageVisible) return;
+
+        // Initial fetch
+        fetchUnreadMessages();
+
+        const interval = setInterval(() => {
+            const now = Date.now();
+            // Fetch if more than 10 seconds since last fetch
+            if (now - lastMessageFetch > 10000) {
+                fetchUnreadMessages();
+            }
+        }, 10000); // Poll every 10 seconds
+
+        return () => clearInterval(interval);
+    }, [user, isPageVisible]);
 
     const handleMarkAsRead = async (id: number, appointmentId: number) => {
         try {
@@ -67,16 +138,18 @@ export const NotificationBell: React.FC = () => {
         }
     };
 
+    const totalUnread = unreadCount + unreadMessageCount;
+
     return (
         <div className="relative">
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 className="relative p-2 rounded-full hover:bg-gray-100 transition-colors"
             >
-                <Bell className={`${unreadCount > 0 ? 'text-amber-500 fill-amber-500 animate-swing' : 'text-gray-500'}`} size={24} />
-                {unreadCount > 0 && (
+                <Bell className={`${totalUnread > 0 ? 'text-amber-500 fill-amber-500 animate-swing' : 'text-gray-500'}`} size={24} />
+                {totalUnread > 0 && (
                     <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
-                        {unreadCount}
+                        {totalUnread}
                     </span>
                 )}
             </button>
@@ -86,9 +159,9 @@ export const NotificationBell: React.FC = () => {
                     <div className="p-4 border-b border-gray-50 flex items-center justify-between bg-gray-50/50">
                         <h3 className="font-bold text-gray-900 flex items-center gap-2">
                             <Bell size={18} className="text-amber-500" />
-                            Notifications
+                            Activity
                         </h3>
-                        {unreadCount > 0 && (
+                        {(unreadCount > 0 || unreadMessageCount > 0) && (
                             <button
                                 onClick={markAllAsRead}
                                 className="text-xs font-semibold text-primary-600 hover:text-primary-700"
@@ -99,12 +172,23 @@ export const NotificationBell: React.FC = () => {
                     </div>
 
                     <div className="max-h-[400px] overflow-y-auto">
-                        {notifications.length === 0 ? (
+                        {unreadMessageCount > 0 && (
+                            <div className="p-4 bg-blue-50 border-b border-blue-100">
+                                <p className="text-sm font-bold text-blue-900 mb-1">💬 {unreadMessageCount} unread message{unreadMessageCount > 1 ? 's' : ''}</p>
+                                <p className="text-xs text-blue-700">
+                                    <a href="/app/patient/chat" className="font-semibold hover:underline" onClick={() => setIsOpen(false)}>
+                                        Go to messages →
+                                    </a>
+                                </p>
+                            </div>
+                        )}
+                        
+                        {notifications.length === 0 && unreadMessageCount === 0 ? (
                             <div className="p-8 text-center">
                                 <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
                                     <Bell size={24} className="text-gray-300" />
                                 </div>
-                                <p className="text-sm text-gray-500">No notifications yet</p>
+                                <p className="text-sm text-gray-500">No activity yet</p>
                             </div>
                         ) : (
                             <div className="divide-y divide-gray-50">
@@ -140,7 +224,7 @@ export const NotificationBell: React.FC = () => {
                         )}
                     </div>
 
-                    {notifications.length > 0 && (
+                    {(notifications.length > 0 || unreadMessageCount > 0) && (
                         <div className="p-3 bg-gray-50/50 border-t border-gray-50 text-center">
                             <button
                                 onClick={() => setIsOpen(false)}

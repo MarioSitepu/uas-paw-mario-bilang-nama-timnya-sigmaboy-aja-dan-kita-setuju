@@ -47,6 +47,7 @@ def includeme(config):
 
     # ==================== CHAT ROUTES ====================
     config.add_route('api_conversations', '/api/chat/conversations')
+    config.add_route('api_chat_user', '/api/chat/user/{user_id}')
     config.add_route('api_messages', '/api/chat/{partner_id}/messages')
     config.add_route('api_messages_send', '/api/chat/send')
     config.add_route('api_messages_unread_count', '/api/chat/unread')
