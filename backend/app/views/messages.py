@@ -30,7 +30,7 @@ def get_conversations(request):
             sys.stderr.write(f"[GET_CONVERSATIONS] Unauthorized: request.user_id is {request.user_id}\n")
             sys.stderr.flush()
             request.response.status_int = 401
-            return {'error': 'Unauthorized', 'conversations': []}
+            return []
         
         user_id = int(user_id)
         try:
@@ -39,13 +39,13 @@ def get_conversations(request):
             sys.stderr.write(f"[GET_CONVERSATIONS] CRITICAL: dbmaker() failed: {str(dbmaker_error)}\n")
             sys.stderr.flush()
             request.response.status_int = 500
-            return {'error': 'Database connection failed', 'conversations': []}
+            return []
         
         current_user = session.query(User).get(user_id)
         
         if not current_user:
             request.response.status_int = 404
-            return {'error': 'User not found', 'conversations': []}
+            return []
 
         print(f"📱 Fetching conversations for user {user_id} ({current_user.name}, role={current_user.role})")
         
@@ -187,16 +187,17 @@ def get_conversations(request):
         except:
             pass
         request.response.status_int = 500
-        return {'error': str(e), 'conversations': []}
+        return []
 
 @view_config(route_name='api_messages', renderer='json', request_method='GET')
 def get_messages(request):
     """Get message history with a specific user"""
+    session = None
     try:
         user_id = request.user_id
         if not user_id:
             request.response.status_int = 401
-            return {'error': 'Unauthorized', 'messages': []}
+            return []
         
         user_id = int(user_id)
         
@@ -204,7 +205,7 @@ def get_messages(request):
             partner_id = int(request.matchdict['partner_id'])
         except (ValueError, KeyError):
             request.response.status_int = 400
-            return {'error': 'Invalid partner_id'}
+            return []
         
         try:
             session = request.registry.dbmaker()
@@ -213,7 +214,7 @@ def get_messages(request):
             sys.stderr.write(f"[GET_MESSAGES] CRITICAL: dbmaker() failed: {str(dbmaker_error)}\n")
             sys.stderr.flush()
             request.response.status_int = 500
-            return {'error': 'Database connection failed', 'messages': []}
+            return []
         
         print(f"💬 Fetching messages between user {user_id} and partner {partner_id}")
         
@@ -261,17 +262,19 @@ def get_messages(request):
         traceback.print_exc()
         sys.stderr.write(f"[GET_MESSAGES] ERROR: {str(e)}\n")
         sys.stderr.flush()
-        try:
-            session.close()
-        except:
-            pass
+        if session:
+            try:
+                session.close()
+            except:
+                pass
         request.response.status_int = 500
-        return {'error': str(e), 'messages': []}
+        return []
 
 
 @view_config(route_name='api_messages_send', renderer='json', request_method='POST')
 def send_message(request):
     """Send a new message"""
+    session = None
     try:
         user_id = request.user_id
         if not user_id:
@@ -323,14 +326,16 @@ def send_message(request):
         
         print(f"✅ Message sent: ID={new_msg.id}, sender={user_id}, recipient={recipient_id}")
         
-        session.close()
-        return {
+        result = {
             'id': new_msg.id,
             'senderId': new_msg.sender_id,
             'content': new_msg.content,
             'createdAt': to_utc7(new_msg.created_at),
             'isRead': False
         }
+        session.close()
+        return result
+        
     except Exception as e:
         import traceback
         import sys
@@ -338,11 +343,14 @@ def send_message(request):
         traceback.print_exc()
         sys.stderr.write(f"[SEND_MESSAGE] ERROR: {str(e)}\n")
         sys.stderr.flush()
-        try:
-            session.rollback()
-            session.close()
-        except:
-            pass
+        if session:
+            try:
+                session.rollback()
+                session.close()
+            except:
+                pass
+        request.response.status_int = 500
+        return {'error': str(e)}
         request.response.status_int = 500
         return {'error': f'Failed to send message: {str(e)}'}
 
