@@ -91,23 +91,24 @@ export const NotificationBell: React.FC = () => {
         }
     }, [user, isPageVisible]);
 
-    // Poll unread messages every 10 seconds when page is visible
+    // Poll unread messages - reduced frequency to prevent overload
     useEffect(() => {
         if (!user || !isPageVisible) return;
 
         // Initial fetch
         fetchUnreadMessages();
 
+        // Poll every 30 seconds instead of 10 to reduce server load
         const interval = setInterval(() => {
             const now = Date.now();
-            // Fetch if more than 10 seconds since last fetch
-            if (now - lastMessageFetch > 10000) {
+            // Only fetch if more than 30 seconds since last fetch
+            if (now - lastMessageFetch > 30000) {
                 fetchUnreadMessages();
             }
-        }, 10000); // Poll every 10 seconds
+        }, 30000); // Check every 30 seconds
 
         return () => clearInterval(interval);
-    }, [user, isPageVisible]);
+    }, [user, isPageVisible, lastMessageFetch]);
 
     const handleMarkAsRead = async (id: number, appointmentId: number) => {
         try {

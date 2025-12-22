@@ -49,48 +49,41 @@ const ChatPage: React.FC = () => {
         return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
     }, []);
 
-    // Fetch conversations with smart polling (longer interval, only when visible)
+    // Fetch conversations with smart polling (reduced frequency, only when visible)
     useEffect(() => {
         // Always fetch on page load or when visibility changes
         fetchConversations();
         
         if (!isPageVisible) return;
         
-        // Poll only every 2 minutes when page is visible
+        // Poll only every 5 minutes when page is visible to reduce server load
         const interval = setInterval(() => {
             const now = Date.now();
-            // Only fetch if more than 2 minutes since last fetch
-            if (now - lastConvoFetch > 120000) {
+            // Only fetch if more than 5 minutes since last fetch
+            if (now - lastConvoFetch > 300000) {
                 fetchConversations();
             }
-        }, 120000); // Check every 2 minutes
+        }, 300000); // Check every 5 minutes
 
         return () => clearInterval(interval);
-    }, [isPageVisible]);
+    }, [isPageVisible, lastConvoFetch]);
 
-    // Smart polling for messages - fetch only after user sends or page becomes visible
+    // Smart polling for messages - reduced to 60 seconds to prevent server overload
     useEffect(() => {
         if (!selectedPartner) return;
 
         let interval: NodeJS.Timeout | null = null;
-        let pollCount = 0;
 
-        // Initial fetch
-        const smartFetchMessages = async () => {
-            // Only fetch if page is visible OR if very recently sent a message
-            if (isPageVisible || pollCount < 3) {
-                await fetchMessages(selectedPartner.id);
-                pollCount++;
-            } else if (pollCount >= 3) {
-                // Stop polling after 3 checks if page is hidden
-                if (interval) clearInterval(interval);
-            }
-        };
+        // Initial fetch when partner selected
+        fetchMessages(selectedPartner.id);
 
-        smartFetchMessages();
-
-        // Poll only every 15 seconds instead of 5 seconds
-        interval = setInterval(smartFetchMessages, 15000);
+        // Only poll if page is visible AND user is in chat
+        if (isPageVisible) {
+            // Poll every 60 seconds instead of 15 to reduce server load
+            interval = setInterval(() => {
+                fetchMessages(selectedPartner.id);
+            }, 60000); // 60 seconds
+        }
 
         return () => {
             if (interval) clearInterval(interval);
