@@ -36,7 +36,6 @@ const ChatPage: React.FC = () => {
     const [isMobileListVisible, setIsMobileListVisible] = useState(true);
     const [lastMessageId, setLastMessageId] = useState<number | null>(null);
     const [isPageVisible, setIsPageVisible] = useState(true);
-    const [lastConvoFetch, setLastConvoFetch] = useState<number>(0);
     const [userSelectedPartnerId, setUserSelectedPartnerId] = useState<number | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -49,24 +48,23 @@ const ChatPage: React.FC = () => {
         return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
     }, []);
 
-    // Fetch conversations with smart polling (reduced frequency, only when visible)
+    // Fetch conversations on mount and when visibility changes
     useEffect(() => {
-        // Always fetch on page load or when visibility changes
+        // Always fetch when page becomes visible or component mounts
         fetchConversations();
-        
+    }, []);
+
+    // Poll conversations periodically when visible
+    useEffect(() => {
         if (!isPageVisible) return;
         
-        // Poll only every 5 minutes when page is visible to reduce server load
+        // Poll every 5 minutes when page is visible to reduce server load
         const interval = setInterval(() => {
-            const now = Date.now();
-            // Only fetch if more than 5 minutes since last fetch
-            if (now - lastConvoFetch > 300000) {
-                fetchConversations();
-            }
-        }, 300000); // Check every 5 minutes
+            fetchConversations();
+        }, 300000); // 5 minutes
 
         return () => clearInterval(interval);
-    }, [isPageVisible, lastConvoFetch]);
+    }, [isPageVisible]);
 
     // Smart polling for messages - reduced to 60 seconds to prevent server overload
     useEffect(() => {
@@ -179,7 +177,6 @@ const ChatPage: React.FC = () => {
 
     const fetchConversations = async () => {
         setLoading(true);
-        setLastConvoFetch(Date.now());
         try {
             console.log('💬 Fetching conversations...');
             const response = await chatAPI.getConversations();
@@ -237,6 +234,9 @@ const ChatPage: React.FC = () => {
 
         try {
             await chatAPI.sendMessage(selectedPartner.id, tempMsg);
+            
+            // Refresh conversations to show the new message
+            await fetchConversations();
             
             // Add partner to conversations if not already there
             setConversations(prev => {
