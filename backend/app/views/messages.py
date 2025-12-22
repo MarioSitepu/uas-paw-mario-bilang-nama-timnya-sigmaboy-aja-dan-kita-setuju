@@ -127,12 +127,18 @@ def get_conversations(request):
             print(f"   [{i+1}] Checking partner {partner.id} ({partner.name})...", end=" ")
             
             # Check if there's any message history with this partner
-            has_messages = session.query(Message).filter(
+            messages_query = session.query(Message).filter(
                 or_(
                     and_(Message.sender_id == user_id, Message.recipient_id == partner.id),
                     and_(Message.sender_id == partner.id, Message.recipient_id == user_id)
                 )
-            ).first()
+            )
+            
+            # Debug: count messages first
+            msg_count = messages_query.count()
+            print(f"(found {msg_count} messages)", end=" ")
+            
+            has_messages = messages_query.first()
             
             if has_messages:
                 print(f"✓ Has messages")
@@ -304,6 +310,8 @@ def send_message(request):
             request.response.status_int = 500
             return {'error': 'Database connection failed'}
         
+        print(f"💬 Sending message from {user_id} to {recipient_id}")
+        
         new_msg = Message(
             sender_id=user_id,
             recipient_id=recipient_id,
@@ -321,7 +329,9 @@ def send_message(request):
         )
         session.add(msg_history)
         
+        print(f"   📤 Flushing to get IDs...")
         session.flush() # flush to get ID and created_at
+        print(f"   💾 Committing to database...")
         session.commit() # commit to save to database
         
         print(f"✅ Message sent: ID={new_msg.id}, sender={user_id}, recipient={recipient_id}")
