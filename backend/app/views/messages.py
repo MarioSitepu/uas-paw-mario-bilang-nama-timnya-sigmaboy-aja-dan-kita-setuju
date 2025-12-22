@@ -52,23 +52,23 @@ def get_conversations(request):
         # Simply query for all unique partners the user has messaged with
         print(f"💬 Querying message partners...")
         
-        distinct_partner_query = session.query(
-            func.distinct(
-                func.case(
-                    (Message.sender_id == user_id, Message.recipient_id),
-                    (Message.recipient_id == user_id, Message.sender_id)
-                )
-            )
-        ).filter(
+        # Get all messages where user is sender or recipient
+        all_messages = session.query(Message).filter(
             or_(
                 Message.sender_id == user_id,
                 Message.recipient_id == user_id
             )
-        )
+        ).all()
         
-        distinct_partners = distinct_partner_query.all()
-        partner_ids = [p[0] for p in distinct_partners if p[0] is not None]
+        # Extract unique partner IDs
+        partner_ids = set()
+        for msg in all_messages:
+            if msg.sender_id == user_id:
+                partner_ids.add(msg.recipient_id)
+            else:
+                partner_ids.add(msg.sender_id)
         
+        partner_ids = list(partner_ids)
         print(f"   Found {len(partner_ids)} unique message partner(s): {partner_ids}")
         
         if not partner_ids:
