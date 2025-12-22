@@ -62,6 +62,7 @@ def get_conversations(request):
             doctor = session.query(Doctor).filter(Doctor.user_id == user_id).first()
             if not doctor:
                 print(f"⚠️ Warning: User {user_id} has role 'doctor' but no Doctor profile found.")
+                session.close()
                 return []
                 
             # Get appointment patients
@@ -105,11 +106,13 @@ def get_conversations(request):
         else:
             # Admin or other role
             print(f"   Role '{user_role}' not supported for conversations")
+            session.close()
             return []
 
         # Filter out empty list if no appointments
         if not partner_ids:
             print(f"   No conversation partners found")
+            session.close()
             return []
 
         # Get User details for these partners
@@ -119,7 +122,10 @@ def get_conversations(request):
         # Only include partners who have message history
         results = []
         
-        for partner in partners:
+        print(f"📨 Total partners found: {len(partners)}")
+        for i, partner in enumerate(partners):
+            print(f"   [{i+1}] Checking partner {partner.id} ({partner.name})...", end=" ")
+            
             # Check if there's any message history with this partner
             has_messages = session.query(Message).filter(
                 or_(
@@ -127,6 +133,11 @@ def get_conversations(request):
                     and_(Message.sender_id == partner.id, Message.recipient_id == user_id)
                 )
             ).first()
+            
+            if has_messages:
+                print(f"✓ Has messages")
+            else:
+                print(f"✗ No messages - SKIP")
             
             # Skip partners without message history
             if not has_messages:
